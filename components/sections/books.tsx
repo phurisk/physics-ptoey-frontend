@@ -1,12 +1,17 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { ShoppingCart, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useAuth } from "@/components/auth-provider"
+import LoginModal from "@/components/login-modal"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 
 type Ebook = {
   id: string
@@ -17,12 +22,38 @@ type Ebook = {
   discountPrice: number
   coverImageUrl?: string | null
   averageRating?: number
+  isPhysical?: boolean
 }
 
 export default function Books() {
   const [ebooks, setEbooks] = useState<Ebook[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { isAuthenticated, user } = useAuth()
+  const router = useRouter()
+  const [loginOpen, setLoginOpen] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [orderInfo, setOrderInfo] = useState<{ orderId: string; total: number } | null>(null)
+  const [slip, setSlip] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadMsg, setUploadMsg] = useState<string | null>(null)
+
+  // Purchase modal state
+  const [purchaseOpen, setPurchaseOpen] = useState(false)
+  const [selectedBook, setSelectedBook] = useState<Ebook | null>(null)
+  const [couponCode, setCouponCode] = useState("")
+  const [discount, setDiscount] = useState<number>(0)
+  const [couponError, setCouponError] = useState<string | null>(null)
+  const [validatingCoupon, setValidatingCoupon] = useState(false)
+  const [shipping, setShipping] = useState({
+    name: "",
+    phone: "",
+    address: "",
+    district: "",
+    province: "",
+    postalCode: "",
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -52,7 +83,88 @@ export default function Books() {
     return Math.round(((original - discounted) / original) * 100)
   }
 
+  const handleBuy = async (ebookId: string) => {
+    if (!isAuthenticated) { setLoginOpen(true); return }
+    const book = ebooks.find(b => b.id === ebookId) || null
+    setSelectedBook(book)
+    setCouponCode("")
+    setDiscount(0)
+    setCouponError(null)
+    setPurchaseOpen(true)
+  }
+
+  const applyCoupon = async () => {
+    if (!selectedBook) return
+    if (!couponCode) { setCouponError("กรอกรหัสคูปอง"); return }
+    try {
+      setValidatingCoupon(true)
+      setCouponError(null)
+      const subtotal = selectedBook.discountPrice || selectedBook.price
+      const res = await fetch(`/api/coupons/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponCode, userId: user?.id ?? "guest", itemType: "ebook", itemId: selectedBook.id, subtotal }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) throw new Error(json?.error || "ใช้คูปองไม่สำเร็จ")
+      setDiscount(Number(json?.data?.discount || 0))
+    } catch (e: any) {
+      setCouponError(e?.message ?? "ใช้คูปองไม่สำเร็จ")
+      setDiscount(0)
+    } finally {
+      setValidatingCoupon(false)
+    }
+  }
+
+  const confirmPurchase = async () => {
+    if (!selectedBook) return
+    try {
+      setCreating(true)
+      const payload: any = { userId: user?.id, itemType: "ebook", itemId: selectedBook.id }
+      if (couponCode) payload.couponCode = couponCode
+      if (selectedBook.isPhysical) payload.shippingAddress = shipping
+      const res = await fetch(`/api/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) throw new Error(json?.error || "สั่งซื้อไม่สำเร็จ")
+      setPurchaseOpen(false)
+      if (json?.data?.isFree) {
+        router.push(`/order-success/${json?.data?.orderId}`)
+      } else {
+        setOrderInfo({ orderId: json?.data?.orderId, total: json?.data?.total })
+        setUploadOpen(true)
+      }
+    } catch (e: any) {
+      alert(e?.message ?? "สั่งซื้อไม่สำเร็จ")
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  const uploadSlip = async () => {
+    if (!orderInfo || !slip) return
+    try {
+      setUploading(true)
+      setUploadMsg(null)
+      const form = new FormData()
+      form.append("orderId", orderInfo.orderId)
+      form.append("slip", slip)
+      const res = await fetch(`/api/payments/upload-slip`, { method: "POST", body: form })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) throw new Error(json?.error || "อัพโหลดไม่สำเร็จ")
+      setUploadMsg("อัพโหลดสลิปสำเร็จ กำลังรอตรวจสอบ")
+    } catch (e: any) {
+      setUploadMsg(e?.message ?? "อัพโหลดไม่สำเร็จ")
+    } finally {
+      setUploading(false)
+    }
+  }
+
   return (
+    <>
     <section className="py-12 lg:py-24 bg-white"> 
       <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8">
     
@@ -195,9 +307,11 @@ export default function Books() {
                       w-full bg-yellow-400 hover:bg-yellow-500 text-white font-medium
                       py-2 md:py-3 text-sm md:text-base  /* MOBILE-ONLY: ปุ่มเตี้ยลง + ฟอนต์เล็กลง */
                     "
+                    onClick={() => handleBuy(book.id)}
+                    disabled={creating}
                   >
                     <ShoppingCart className="w-4 h-4 mr-2" />
-                    สั่งซื้อเลย
+                    {creating ? "กำลังดำเนินการ..." : "สั่งซื้อเลย"}
                   </Button>
                 </div>
               </CardContent>
@@ -223,5 +337,75 @@ export default function Books() {
         </div>
       </div>
     </section>
+    <LoginModal isOpen={loginOpen} onClose={() => setLoginOpen(false)} />
+    <Dialog open={purchaseOpen} onOpenChange={setPurchaseOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>ยืนยันการสั่งซื้อหนังสือ</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="text-sm text-gray-700">
+            สินค้า: <span className="font-medium">{selectedBook?.title}</span>
+          </div>
+          <div className="space-y-2">
+            <div className="text-sm font-medium">คูปองส่วนลด</div>
+            <div className="flex gap-2">
+              <Input placeholder="กรอกรหัสคูปอง" value={couponCode} onChange={(e) => setCouponCode(e.target.value)} />
+              <Button variant="outline" disabled={validatingCoupon} onClick={applyCoupon}>ใช้คูปอง</Button>
+            </div>
+            {couponError && <div className="text-xs text-red-600">{couponError}</div>}
+          </div>
+          {selectedBook?.isPhysical && (
+            <div className="space-y-2">
+              <div className="text-sm font-medium">ที่อยู่จัดส่ง</div>
+              <div className="grid md:grid-cols-2 gap-2">
+                <Input placeholder="ชื่อผู้รับ" value={shipping.name} onChange={(e) => setShipping({ ...shipping, name: e.target.value })} />
+                <Input placeholder="เบอร์โทร" value={shipping.phone} onChange={(e) => setShipping({ ...shipping, phone: e.target.value })} />
+              </div>
+              <Input placeholder="ที่อยู่" value={shipping.address} onChange={(e) => setShipping({ ...shipping, address: e.target.value })} />
+              <div className="grid md:grid-cols-3 gap-2">
+                <Input placeholder="อำเภอ/เขต" value={shipping.district} onChange={(e) => setShipping({ ...shipping, district: e.target.value })} />
+                <Input placeholder="จังหวัด" value={shipping.province} onChange={(e) => setShipping({ ...shipping, province: e.target.value })} />
+                <Input placeholder="รหัสไปรษณีย์" value={shipping.postalCode} onChange={(e) => setShipping({ ...shipping, postalCode: e.target.value })} />
+              </div>
+            </div>
+          )}
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-700">ยอดชำระ</div>
+            <div className="text-lg font-semibold text-gray-900">
+              ฿{Math.max(0, (selectedBook ? selectedBook.discountPrice || selectedBook.price : 0) - (discount || 0)).toLocaleString()}
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setPurchaseOpen(false)}>ยกเลิก</Button>
+            <Button disabled={creating} onClick={confirmPurchase} className="bg-yellow-400 hover:bg-yellow-500 text-white">
+              {creating ? "กำลังดำเนินการ..." : "ยืนยันการสั่งซื้อ"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+    <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>อัพโหลดหลักฐานการชำระเงิน</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="text-sm text-gray-700">ยอดชำระ: ฿{(orderInfo?.total ?? 0).toLocaleString()}</div>
+          <Input type="file" accept="image/*" onChange={(e) => setSlip(e.target.files?.[0] || null)} />
+          {uploadMsg && <div className={uploadMsg.includes("สำเร็จ") ? "text-green-600" : "text-red-600"}>{uploadMsg}</div>}
+          <div className="flex justify-end gap-2">
+            {orderInfo && (
+              <Button variant="outline" onClick={() => router.push(`/order-success/${orderInfo.orderId}`)} className="mr-auto">รายละเอียดคำสั่งซื้อ</Button>
+            )}
+            <Button variant="outline" onClick={() => setUploadOpen(false)}>ปิด</Button>
+            <Button disabled={!slip || uploading} onClick={uploadSlip} className="bg-yellow-400 hover:bg-yellow-500 text-white">
+              {uploading ? "กำลังอัพโหลด..." : "อัพโหลดสลิป"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

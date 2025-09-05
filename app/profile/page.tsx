@@ -1,36 +1,66 @@
 "use client"
 
+import Link from "next/link"
 import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { BookOpen, Receipt } from "lucide-react"
 
 export default function ProfilePage() {
   const { user, isAuthenticated, logout } = useAuth()
-
-  if (!isAuthenticated) {
-    return (
-      <div className="max-w-3xl mx-auto px-4 py-12">
-        <h1 className="text-2xl font-bold mb-2">โปรไฟล์</h1>
-        <p className="text-gray-600">กรุณาเข้าสู่ระบบเพื่อดูโปรไฟล์ของคุณ</p>
-      </div>
-    )
-  }
 
   const name = (user as any)?.name || (user as any)?.displayName || "ผู้ใช้"
   const email = (user as any)?.email || ""
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12">
-      <h1 className="text-2xl font-bold mb-4">โปรไฟล์</h1>
-      <div className="bg-white border rounded-lg p-6 space-y-2">
-        <div className="text-lg font-medium">{name}</div>
-        {email && <div className="text-gray-600">{email}</div>}
+    <div className="max-w-4xl mx-auto px-4 py-12 space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold">โปรไฟล์</h1>
+        {!isAuthenticated ? (
+          <p className="text-gray-600">กรุณาเข้าสู่ระบบเพื่อจัดการโปรไฟล์และการสั่งซื้อ</p>
+        ) : (
+          <div className="bg-white border rounded-lg p-6 space-y-1">
+            <div className="text-lg font-medium">{name}</div>
+            {email && <div className="text-gray-600">{email}</div>}
+          </div>
+        )}
       </div>
-      <div className="mt-6">
-        <Button onClick={() => logout()} variant="outline">
-          ออกจากระบบ
-        </Button>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Link href="/profile/my-courses">
+          <Card className="group cursor-pointer hover:shadow-lg transition-shadow pt-0">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="h-12 w-12 rounded-xl bg-yellow-100 text-yellow-700 flex items-center justify-center">
+                <BookOpen className="h-6 w-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-lg font-semibold text-gray-900 group-hover:text-yellow-700">คอร์สของฉัน</div>
+                <div className="text-sm text-gray-600 truncate">ดูและเข้าเรียนคอร์สที่คุณซื้อไว้</div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/profile/orders">
+          <Card className="group cursor-pointer hover:shadow-lg transition-shadow pt-0">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="h-12 w-12 rounded-xl bg-yellow-100 text-yellow-700 flex items-center justify-center">
+                <Receipt className="h-6 w-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-lg font-semibold text-gray-900 group-hover:text-yellow-700">คำสั่งซื้อของฉัน</div>
+                <div className="text-sm text-gray-600 truncate">ตรวจสถานะและอัพโหลดหลักฐานการชำระเงิน</div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
+
+      {isAuthenticated && (
+        <div className="pt-2">
+          <Button onClick={() => logout()} variant="outline">ออกจากระบบ</Button>
+        </div>
+      )}
     </div>
   )
 }
-
