@@ -10,7 +10,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url)
     const search = url.search || ""
 
-    const backendUrl = `${baseUrl}/api/auth/line/callback${search}`
+    const backendUrl = `${baseUrl}/api/auth/callback/line${search}`
     const res = await fetch(backendUrl, {
       redirect: "manual",
       cache: "no-store",
@@ -26,4 +26,3 @@ export async function GET(req: Request) {
     return NextResponse.redirect("/")
   }
 }
-
