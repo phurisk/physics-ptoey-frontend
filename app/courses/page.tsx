@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
@@ -8,7 +8,7 @@ import { Star, Users, BookOpen, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { courses, courseCategories } from "@/lib/dummy-data"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/sections/footer"
 
@@ -26,11 +26,73 @@ const staggerContainer = {
   },
 }
 
-export default function CoursesPage() {
-  const [selectedCategory, setSelectedCategory] = useState("all")
+type ApiCourse = {
+  id: string
+  title: string
+  description: string
+  price: number
+  duration: string | null
+  isFree: boolean
+  status: string
+  instructorId: string
+  categoryId: string
+  coverImageUrl: string | null
+  createdAt: string
+  updatedAt: string
+  instructor?: { id: string; name: string; email: string }
+  category?: { id: string; name: string; description?: string }
+  _count?: { enrollments: number; chapters: number }
+}
 
-  const filteredCourses =
-    selectedCategory === "all" ? courses : courses.filter((course) => course.category === selectedCategory)
+type ApiResponse = {
+  success: boolean
+  data: ApiCourse[]
+}
+
+const COURSES_API = "/api/courses"
+
+export default function CoursesPage() {
+  const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [data, setData] = useState<ApiCourse[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+    const load = async () => {
+      try {
+        setLoading(true)
+        const res = await fetch(COURSES_API, { cache: "no-store" })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const json: ApiResponse = await res.json()
+        if (active) setData(json.data || [])
+      } catch (e: any) {
+        if (active) setError(e?.message ?? "Failed to load courses")
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    load()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const categories = useMemo(() => {
+    const names = Array.from(
+      new Set(
+        (data || [])
+          .map((c) => c.category?.name)
+          .filter((v): v is string => typeof v === "string" && v.length > 0)
+      )
+    )
+    return [{ id: "all", name: "คอร์สทั้งหมด" }, ...names.map((n) => ({ id: n, name: n }))]
+  }, [data])
+
+  const filteredCourses = useMemo(() => {
+    if (selectedCategory === "all") return data
+    return (data || []).filter((c) => c.category?.name === selectedCategory)
+  }, [data, selectedCategory])
 
   return (
     <>
@@ -57,7 +119,7 @@ export default function CoursesPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            {courseCategories.map((category) => (
+            {categories.map((category) => (
               <Button
                 key={category.id}
                 variant={selectedCategory === category.id ? "default" : "outline"}
@@ -80,29 +142,55 @@ export default function CoursesPage() {
             initial="initial"
             animate="animate"
           >
-            {filteredCourses.map((course) => (
+            {loading && (
+              Array.from({ length: 6 }).map((_, idx) => (
+                <motion.div key={`skeleton-${idx}`} variants={fadeInUp}>
+                  <Card className="h-full group pt-0">
+                    <CardContent className="p-0">
+                      <div className="aspect-video relative overflow-hidden rounded-t-lg">
+                        <Skeleton className="absolute inset-0" />
+                        <div className="absolute top-4 left-4">
+                          <Skeleton className="h-6 w-20 rounded-full" />
+                        </div>
+                      </div>
+                      <div className="p-6 space-y-4">
+                        <Skeleton className="h-6 w-3/4" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-5/6" />
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <Skeleton className="h-4 w-16" />
+                          <Skeleton className="h-4 w-20" />
+                          <Skeleton className="h-4 w-24" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-6 w-24" />
+                        </div>
+                        <Skeleton className="h-10 w-full rounded-md" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))
+            )}
+            {!loading && error && (
+              <div className="col-span-full text-center text-red-600">เกิดข้อผิดพลาด: {error}</div>
+            )}
+            {!loading && !error && filteredCourses.map((course) => (
               <motion.div key={course.id} variants={fadeInUp}>
                 <Card className="h-full hover:shadow-xl transition-shadow duration-300 group pt-0">
                   <CardContent className="p-0">
                 
                     <div className="aspect-video relative overflow-hidden rounded-t-lg">
                       <Image
-                        src={course.image || "/placeholder.svg?height=200&width=350"}
+                        src={course.coverImageUrl || "/placeholder.svg?height=200&width=350"}
                         alt={course.title}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute top-4 left-4">
-                        <Badge className="bg-yellow-400 text-white">{course.level}</Badge>
-                      </div>
-                      <div className="absolute top-4 right-4">
-                        <Badge variant="secondary" className="bg-white/90">
-                          {course.discountPrice < course.originalPrice && (
-                            <span className="text-red-500 font-semibold">
-                              -{Math.round((1 - course.discountPrice / course.originalPrice) * 100)}%
-                            </span>
-                          )}
-                        </Badge>
+                        <Badge className="bg-yellow-400 text-white">{course.category?.name ?? "คอร์ส"}</Badge>
                       </div>
                     </div>
 
@@ -115,46 +203,26 @@ export default function CoursesPage() {
                       <div className="flex items-center gap-4 mb-4 text-sm text-gray-500">
                         <div className="flex items-center gap-1">
                           <Users className="h-4 w-4" />
-                          <span>{course.students}</span>
+                          <span>{course._count?.enrollments ?? 0}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <BookOpen className="h-4 w-4" />
-                          <span>{course.lectures} บทเรียน</span>
+                          <span>{course._count?.chapters ?? 0} บทเรียน</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
-                          <span>{course.duration}</span>
+                          <span>{course.duration ?? "-"}</span>
                         </div>
                       </div>
 
-                 
-                      {course.rating > 0 && (
-                        <div className="flex items-center gap-2 mb-4">
-                          <div className="flex items-center">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`h-4 w-4 ${
-                                  i < Math.floor(course.rating) ? "text-yellow-400 fill-current" : "text-gray-300"
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          <span className="text-sm text-gray-600">
-                            {course.rating} ({course.reviews} รีวิว)
-                          </span>
-                        </div>
-                      )}
+                      {/* No rating data from API; hide rating block */}
 
                
                       <div className="flex items-center gap-2 mb-6">
-                        <span className="text-2xl font-bold text-yellow-600">
-                          ฿{course.discountPrice.toLocaleString()}
-                        </span>
-                        {course.discountPrice < course.originalPrice && (
-                          <span className="text-lg text-gray-400 line-through">
-                            ฿{course.originalPrice.toLocaleString()}
-                          </span>
+                        {course.isFree || course.price === 0 ? (
+                          <span className="text-2xl font-bold text-green-600">ฟรี</span>
+                        ) : (
+                          <span className="text-2xl font-bold text-yellow-600">฿{(course.price || 0).toLocaleString()}</span>
                         )}
                       </div>
 
@@ -170,7 +238,7 @@ export default function CoursesPage() {
           </motion.div>
 
       
-          {filteredCourses.length === 0 && (
+          {!loading && !error && filteredCourses.length === 0 && (
             <motion.div
               className="text-center py-12"
               initial={{ opacity: 0 }}

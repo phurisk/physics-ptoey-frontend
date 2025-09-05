@@ -1,15 +1,16 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { GeistMono } from "geist/font/mono"
 import { Sarabun } from "next/font/google"
 import "./globals.css"
 import { Navigation } from "@/components/navigation"
+import { AuthProvider } from "@/components/auth-provider"
 
 const sarabun = Sarabun({
   subsets: ["thai", "latin"],
-  weight: ["200", "300", "400", "500", "600", "700", "800"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-sarabun",
   display: "swap",
+  preload: false,
 })
 
 export const metadata: Metadata = {
@@ -29,9 +30,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="th">
-      <body className={`font-sans ${sarabun.variable} ${GeistMono.variable} antialiased`}>
-        <Navigation />
-        <main className="pt-16 lg:pt-20">{children}</main>
+      <body className={`font-sans ${sarabun.variable} antialiased`}>
+        <AuthProvider>
+          <Navigation />
+          <main className="pt-16 lg:pt-20">{children}</main>
+        </AuthProvider>
       </body>
     </html>
   )

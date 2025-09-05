@@ -1,12 +1,54 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import { ShoppingCart, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { books } from "@/lib/dummy-data"
+import { Skeleton } from "@/components/ui/skeleton"
+
+type Ebook = {
+  id: string
+  title: string
+  description?: string | null
+  author?: string | null
+  price: number
+  discountPrice: number
+  coverImageUrl?: string | null
+  averageRating?: number
+}
 
 export default function Books() {
+  const [ebooks, setEbooks] = useState<Ebook[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function run() {
+      try {
+        // Use same-origin proxy route to avoid CORS
+        const res = await fetch(`/api/ebooks`, { cache: "no-store" })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const json = await res.json()
+        if (!cancelled) {
+          setEbooks(Array.isArray(json?.data) ? json.data : [])
+        }
+      } catch (e: any) {
+        if (!cancelled) setError(e?.message ?? "โหลดข้อมูลไม่สำเร็จ")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const calculateDiscount = (original: number, discounted: number) => {
+    if (!original || original <= 0) return 0
     return Math.round(((original - discounted) / original) * 100)
   }
 
@@ -26,13 +68,66 @@ export default function Books() {
      
         <div
           className="
-            grid grid-cols-2        /* MOBILE-ONLY: 2 คอลัมน์ */
+            grid grid-cols-1        /* MOBILE: 1 คอลัมน์ (แสดงทีละเล่ม) */
             md:grid-cols-2          /* tablet เหมือนเดิม */
             lg:grid-cols-4          /* desktop เหมือนเดิม */
-            gap-4 md:gap-8          /* MOBILE-ONLY: ลดช่องไฟ */
+            gap-4 md:gap-8          /* MOBILE: ลดช่องไฟ */
           "
         >
-          {books.map((book) => (
+          {loading && (
+            <>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Card
+                  key={`skeleton-${i}`}
+                  className="overflow-hidden"
+                >
+                  <CardContent className="p-0">
+                    {/* Cover skeleton */}
+                    <div className="relative">
+                      <div className="aspect-[640/906] w-full overflow-hidden">
+                        <Skeleton className="h-full w-full" />
+                      </div>
+                      {/* Discount badge skeleton */}
+                      <Skeleton className="absolute top-2 right-2 lg:top-4 lg:right-4 h-5 w-12 rounded-full" />
+                    </div>
+
+                    {/* Content skeleton */}
+                    <div className="p-3 md:p-6 space-y-3 md:space-y-4">
+                      {/* Title lines */}
+                      <Skeleton className="h-4 md:h-5 w-4/5" />
+                      <Skeleton className="hidden md:block h-4 w-3/5" />
+
+                      {/* Rating row */}
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-3 w-10" />
+                      </div>
+
+                      {/* Price row */}
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-6 md:h-7 w-24" />
+                        <Skeleton className="h-4 w-16" />
+                      </div>
+
+                      {/* CTA button */}
+                      <Skeleton className="h-9 md:h-11 w-full rounded-md" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </>
+          )}
+          {!loading && error && (
+            <div className="col-span-1 md:col-span-2 lg:col-span-4 text-center text-red-600 py-10">
+              โหลดข้อมูลไม่สำเร็จ: {error}
+            </div>
+          )}
+          {!loading && !error && ebooks.length === 0 && (
+            <div className="col-span-1 md:col-span-2 lg:col-span-4 text-center text-gray-500 py-10">
+              ยังไม่มีรายการหนังสือ
+            </div>
+          )}
+          {!loading && !error && ebooks.map((book) => (
             <Card
               key={book.id}
               className="
@@ -43,7 +138,7 @@ export default function Books() {
             
                 <div className="aspect-[640/906] relative overflow-hidden">
                   <Image
-                    src={book.image || "/placeholder.svg"}
+                    src={book.coverImageUrl || "/placeholder.svg"}
                     alt={book.title}
                     fill
                     className="object-cover group-hover:scale-102 transition-transform duration-300"
@@ -56,7 +151,7 @@ export default function Books() {
                       px-1.5 py-0.5 lg:px-2 lg:py-0.5              /* MOBILE-ONLY: ย่อ padding */
                     "
                   >
-                    -{calculateDiscount(book.originalPrice, book.discountPrice)}%
+                    -{calculateDiscount(book.price, book.discountPrice)}%
                   </Badge>
                 </div>
 
@@ -67,9 +162,9 @@ export default function Books() {
                     {book.title}
                   </h3>
 
-                
-                  <p className="hidden md:block text-gray-600 mb-4 text-pretty leading-relaxed">
-                    {book.description}
+               
+                  <p className="hidden md:block text-gray-600 mb-4 text-pretty leading-relaxed line-clamp-2 lg:line-clamp-3">
+                    {book.description || ""}
                   </p>
 
                
@@ -79,7 +174,7 @@ export default function Books() {
                         <Star key={i} className="w-3.5 h-3.5 md:w-4 md:h-4 text-yellow-400 fill-current" />
                       ))}
                     </div>
-                    <span className="text-xs md:text-sm text-gray-500 ml-2">(4.9)</span>
+                    <span className="text-xs md:text-sm text-gray-500 ml-2">({(book.averageRating ?? 0).toFixed(1)})</span>
                   </div>
 
                  
@@ -89,7 +184,7 @@ export default function Books() {
                         ฿{book.discountPrice}
                       </span>
                       <span className="text-sm md:text-lg text-gray-400 line-through">
-                        ฿{book.originalPrice}
+                        ฿{book.price}
                       </span>
                     </div>
                   </div>

@@ -2,61 +2,57 @@ import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import { motion } from "framer-motion"
+import { Award, Target } from "lucide-react"
 
 export default function AboutTeacher() {
-  const teacherInfo = {
-    name: "พี่เต้ย (อ.เชษฐา)",
-    title: "โรงเรียนกวดวิชาฟิสิกส์อาจารย์เต้ย",
-    subtitle: "(ในความควบคุมของกระทรวงศึกษาธิการ)",
-    image: "/teacher(1).png",
-    achievements: [
-      "ที่ 1 ฟิสิกส์สามัญ ประเทศ",
-      "ชนะเลิศการแข่งขันฟิสิกส์สัประยุทธ์ กลุ่มภาคกลางและกลุ่มภาคตะวันออก",
-      "ที่ 1 ชนะเลิศการตอบปัญหาวิศวกรรมศาสตร์ (มหาวิทยาลัยเกษตรศาสตร์)",
-      "นักเรียนฟิสิกส์โอลิมปิค มหาวิทยาลัยศิลปากร (สนามจันทร์)",
-      "นักเรียนทุนส่งเสริมความเป็นเลิศทางวิทยาศาสตร์และเทคโนโลยี JSTP ของสวทช และอพวช",
-      "รับเชิญเข้าร่วมประชุมสัมนาฟิสิกส์ศึกษา เกี่ยวกับการเรียนการสอนและงานวิจัยด้านฟิสิกส์ศึกษาของประเทศไทย",
-    ],
-    currentPosition: ["อาจารย์ฟิสิกส์ สถาบันฟิสิกส์ อ.เต้ย", "อาจารย์พิเศษห้องเรียนพิเศษทั่วประเทศ"],
-  }
 
   return (
-    <section className="py-16 lg:py-24 bg-gray-50">
+    <section className="py-16 lg:py-24 bg-gradient-to-br from-yellow-50 to-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
 
       
-          <div className="order-1 lg:order-2 lg:col-span-1 space-y-4">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 text-balance">{teacherInfo.name}</h2>
+          <div className="order-1 lg:order-2 lg:col-span-1 space-y-4 text-center lg:text-left max-w-2xl mx-auto lg:mx-0">
+            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 text-balance">พี่เต้ย (อ.เชษฐา)</h2>
             <div className="space-y-2">
-              <h3 className="text-xl lg:text-2xl font-semibold text-yellow-600 text-pretty">{teacherInfo.title}</h3>
-              <p className="text-gray-600 text-pretty">{teacherInfo.subtitle}</p>
+              <h3 className="text-2xl font-semibold text-gray-900 text-pretty">โรงเรียนกวดวิชาฟิสิกส์อาจารย์เต้ย</h3>
+              <p className="text-gray-600 text-pretty">(ในความควบคุมของกระทรวงศึกษาธิการ)</p>
             </div>
           </div>
 
         
           <div className="order-2 lg:order-1 lg:row-span-2">
-            <div className="relative">
-              <div className="aspect-[4/5] relative overflow-hidden rounded-2xl shadow-2xl">
-                <Image
-                  src={teacherInfo.image || "/placeholder.svg"}
-                  alt={teacherInfo.name}
-                  fill
-                  className="object-cover"
-                />
-              </div>
+            <div className="relative w-full max-w-[260px] sm:max-w-sm md:max-w-md mx-auto lg:mx-0">
+              <Card className="overflow-hidden shadow-2xl p-0">
+                <CardContent className="p-0">
+                  <div className="relative aspect-[4/5]">
+                    <Image
+                      src="/teacher(1).png"
+                      alt="พี่เต้ย (อ.เชษฐา)"
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                      priority
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent" />
+                  </div>
+                </CardContent>
+              </Card>
 
-              <div className="absolute -top-4 -right-4 w-24 h-24 bg-yellow-400 rounded-full opacity-20"></div>
-              <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-yellow-400 rounded-full opacity-30"></div>
+
+              <div className="absolute -right-3 -bottom-3 z-10 bg-yellow-400 text-white rounded-2xl shadow-xl p-3 md:p-4">
+                <Award className="h-6 w-6 md:h-8 md:w-8" />
+              </div>
             </div>
 
            
-            <div className="mt-14 hidden md:flex flex-row gap-3 justify-start flex-nowrap mb-10 ">
+            <div className="mt-10 hidden md:flex flex-row gap-3 justify-center lg:justify-start flex-nowrap mb-10 ">
               <Link
                 href="/courses"
                 className="min-w-[160px] px-4 py-2 text-lg md:min-w-[220px] md:px-8 md:py-3 md:text-xl
-                  bg-[#2688DF] hover:bg-[#1f6fba] text-white rounded-sm font-semibold 
+                  bg-[#2688DF] hover:bg-[#1f6fba] text-white rounded-lg font-semibold 
                   shadow-md hover:shadow-lg transition-transform duration-300 
                   cursor-pointer flex items-center justify-center gap-2 hover:scale-105"
               >
@@ -87,7 +83,7 @@ export default function AboutTeacher() {
               <Link
                 href="/live"
                 className="min-w-[160px] px-4 py-2 text-lg md:min-w-[250px] md:px-8 md:py-3 md:text-xl
-                  bg-[#FEBE01] hover:bg-[#e5aa00] text-black rounded-sm font-semibold 
+                  bg-[#FEBE01] hover:bg-[#e5aa00] text-black rounded-lg font-semibold 
                   shadow-md hover:shadow-lg transition-transform duration-300 
                   cursor-pointer flex items-center justify-center gap-2 hover:scale-105 text-nowrap"
               >
@@ -109,32 +105,52 @@ export default function AboutTeacher() {
           </div>
 
        
-          <div className="order-3 lg:order-3 lg:col-span-1 space-y-8">
+          <div className="order-3 lg:order-3 lg:col-span-1 space-y-8 max-w-2xl mx-auto lg:mx-0 text-left">
            
             <div className="space-y-6">
-              <h4 className="text-xl font-semibold text-gray-900">ประวัติ / ประสบการณ์การสอน</h4>
+              <h4 className="text-2xl font-semibold text-gray-900 flex items-center justify-start gap-2">
+                <Award className="h-6 w-6 text-yellow-500" /> ประวัติ / ประสบการณ์การสอน
+              </h4>
               <div className="space-y-3">
-                {teacherInfo.achievements.map((achievement, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <div className="w-2 h-2 bg-yellow-400 rounded-full mt-2 flex-shrink-0"></div>
-                    <p className="text-gray-700 text-pretty leading-relaxed">{achievement}</p>
-                  </div>
+                {[
+                  "ที่ 1 ฟิสิกส์สามัญ ประเทศ",
+                  "ชนะเลิศการแข่งขันฟิสิกส์สัประยุทธ์\nกลุ่มภาคกลางและกลุ่มภาคตะวันออก",
+                  "ที่ 1 ชนะเลิศการตอบปัญหาวิศวกรรมศาสตร์ \n(มหาวิทยาลัยเกษตรศาสตร์)",
+                  "นักเรียนฟิสิกส์โอลิมปิค มหาวิทยาลัยศิลปากร (สนามจันทร์)",
+                  "นักเรียนทุนส่งเสริมความเป็นเลิศทางวิทยาศาสตร์และเทคโนโลยี JSTP ของสวทช และอพวช",
+                  "รับเชิญเข้าร่วมประชุมสัมนาฟิสิกส์ศึกษา เกี่ยวกับการเรียนการสอนและงานวิจัยด้านฟิสิกส์ศึกษาของประเทศไทย",
+                ].map((achievement, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true, amount: 0.2 }}
+                    transition={{ duration: 0.4, delay: 0.05 * index }}
+                    className="flex items-start gap-3 min-w-0"
+                  >
+                    <div className="w-2 h-2 bg-yellow-400 rounded-full mt-2 flex-shrink-0" />
+                    <p className="text-gray-700 leading-relaxed text-pretty break-words whitespace-pre-line sm:whitespace-normal">{achievement}</p>
+                  </motion.div>
                 ))}
               </div>
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-xl font-semibold text-gray-900">ปัจจุบัน</h4>
+              <h4 className="text-2xl font-semibold text-gray-900 flex items-center justify-start gap-2">
+                <Target className="h-6 w-6 text-yellow-500" /> ปัจจุบัน
+              </h4>
               <div className="flex flex-wrap gap-2">
-                {teacherInfo.currentPosition.map((position, index) => (
-                  <Badge
-                    key={index}
-                    variant="secondary"
-                    className="bg-yellow-100 text-yellow-800 px-3 py-1 text-sm cursor-default"
-                  >
-                    {position}
-                  </Badge>
-                ))}
+                {["อาจารย์ฟิสิกส์ สถาบันฟิสิกส์ อ.เต้ย", "อาจารย์พิเศษห้องเรียนพิเศษทั่วประเทศ"].map(
+                  (position, index) => (
+                    <Badge
+                      key={index}
+                      variant="secondary"
+                      className="bg-yellow-100 text-yellow-800 px-3 py-1 text-sm cursor-default"
+                    >
+                      {position}
+                    </Badge>
+                  )
+                )}
               </div>
             </div>
 
@@ -156,8 +172,8 @@ export default function AboutTeacher() {
             <div className="mt-6 flex flex-row gap-3 justify-center flex-nowrap md:hidden">
               <Link
                 href="/courses"
-                className="min-w-[160px] px-4 py-2 text-lg md:min-w-[250px] md:px-8 md:py-3 md:text-2xl
-                  bg-[#2688DF] hover:bg-[#1f6fba] text-white rounded-sm font-semibold 
+                className="min-w-[140px] px-4 py-2 text-base sm:text-lg
+                  bg-[#2688DF] hover:bg-[#1f6fba] text-white rounded-lg font-semibold whitespace-nowrap
                   shadow-md hover:shadow-lg transition-transform duration-300 
                   cursor-pointer flex items-center justify-center gap-2 hover:scale-105"
               >
@@ -165,7 +181,7 @@ export default function AboutTeacher() {
                 <svg
                   viewBox="0 0 32 32"
                   aria-hidden="true"
-                  className="w-5 h-5 md:w-7 md:h-7"
+                  className="w-5 h-5"
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <path
@@ -187,8 +203,8 @@ export default function AboutTeacher() {
 
               <Link
                 href="/live"
-                className="min-w-[160px] px-4 py-2 text-lg md:min-w-[250px] md:px-8 md:py-3 md:text-2xl
-                  bg-[#FEBE01] hover:bg-[#e5aa00] text-black rounded-sm font-semibold 
+                className="min-w-[140px] px-4 py-2 text-base sm:text-lg
+                  bg-[#FEBE01] hover:bg-[#e5aa00] text-black rounded-lg font-semibold whitespace-nowrap
                   shadow-md hover:shadow-lg transition-transform duration-300 
                   cursor-pointer flex items-center justify-center gap-2 hover:scale-105"
               >
@@ -196,7 +212,7 @@ export default function AboutTeacher() {
                 <svg
                   viewBox="0 0 24 24"
                   aria-hidden="true"
-                  className="w-5 h-5 md:w-8 md:h-8"
+                  className="w-5 h-5"
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <path fill="none" d="M0 0h24v24H0z" />
@@ -211,7 +227,7 @@ export default function AboutTeacher() {
         </div>
       </div>
 
-      <Card className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-200 hidden md:flex">
+      <Card className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-200 hidden md:flex max-w-3xl mx-auto mt-10">
               <CardContent className="p-6">
                 <div className="text-center space-y-4">
                   <h5 className="text-lg font-semibold text-gray-900">พร้อมเรียนกับครูพี่เต้ยแล้วหรือยัง?</h5>

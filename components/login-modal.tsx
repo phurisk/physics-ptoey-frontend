@@ -5,6 +5,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, Loader2 } from "lucide-react"
 import { SiLine } from "react-icons/si"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAuth } from "@/components/auth-provider"
 
 interface LoginModalProps {
   isOpen: boolean
@@ -12,17 +14,58 @@ interface LoginModalProps {
 }
 
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
-  const [loading, setLoading] = useState<"line" | "google" | null>(null)
+  const [loading, setLoading] = useState<"line" | "google" | "email" | null>(null)
+  const [error, setError] = useState<string>("")
+  const [success, setSuccess] = useState<string>("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [tab, setTab] = useState<"login" | "register">("login")
+  const [formData, setFormData] = useState({ email: "", password: "" })
+  const [registerData, setRegisterData] = useState({ name: "", email: "", password: "", confirm: "" })
+  const { login, register: registerFn, loginWithLine } = useAuth()
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+    setError("")
+  }
+
+  const handleRegisterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRegisterData((prev) => ({ ...prev, [e.target.name]: e.target.value }))
+    setError("")
+  }
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (loading) return
+    setLoading("email")
+    setError("")
+    setSuccess("")
+    try {
+      const result = await login(formData.email, formData.password)
+      if (!result.success) {
+        setError(result.error || "อีเมลหรือรหัสผ่านไม่ถูกต้อง")
+        return
+      }
+      setSuccess("เข้าสู่ระบบสำเร็จ")
+     
+      setTimeout(() => {
+        onClose()
+        setSuccess("")
+      }, 1000)
+    } catch (err) {
+      setError("เกิดข้อผิดพลาดในการเข้าสู่ระบบ")
+    } finally {
+      setLoading(null)
+    }
+  }
 
   const handleLineLogin = async () => {
     if (loading) return
     try {
       setLoading("line")
-      console.log("Line login")
-      alert("เข้าสู่ระบบด้วย LINE")
-      onClose()
+      loginWithLine()
     } finally {
-      setLoading(null)
+  
+      setTimeout(() => setLoading(null), 5000)
     }
   }
 
@@ -30,9 +73,50 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     if (loading) return
     try {
       setLoading("google")
-      console.log("Google login")
-      alert("เข้าสู่ระบบด้วย Google")
-      onClose()
+
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  const handleEmailRegister = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (loading) return
+    if (!registerData.name || !registerData.email || !registerData.password || !registerData.confirm) {
+      setError("กรุณากรอกข้อมูลให้ครบถ้วน")
+      return
+    }
+    if (registerData.password !== registerData.confirm) {
+      setError("รหัสผ่านไม่ตรงกัน")
+      return
+    }
+    if (registerData.password.length < 6) {
+      setError("รหัสผ่านควรมีอย่างน้อย 6 ตัวอักษร")
+      return
+    }
+    setLoading("email")
+    setError("")
+    setSuccess("")
+    try {
+      const result = await registerFn({
+        name: registerData.name,
+        email: registerData.email,
+        password: registerData.password,
+        confirmPassword: registerData.confirm,
+      })
+      if (!result.success) {
+        setError(result.error || "สมัครใช้งานไม่สำเร็จ")
+        return
+      }
+      
+      setSuccess("สมัครใช้งานสำเร็จ")
+      setTimeout(() => {
+        onClose()
+        setSuccess("")
+      }, 1000)
+      setRegisterData({ name: "", email: "", password: "", confirm: "" })
+    } catch (err) {
+      setError("เกิดข้อผิดพลาดในการสมัครใช้งาน")
     } finally {
       setLoading(null)
     }
@@ -50,18 +134,23 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           p-0 overflow-hidden
         "
       >
-        <DialogHeader className="px-6 pt-6 pb-2 text-center">
+        <DialogHeader className="px-6 pt-6 pb-3 text-center">
           <DialogTitle className="text-xl font-semibold text-gray-900 text-center">
-            เข้าสู่ระบบ
+            {tab === "login" ? "เข้าสู่ระบบ" : "สมัครใช้งาน"}
           </DialogTitle>
-          <p className="mt-1 text-sm text-gray-500 text-center">
-            เข้าสู่ระบบเพื่อเข้าถึงคอร์สเรียนและข้อสอบทั้งหมด
-          </p>
+          <div className="mt-3 flex justify-center">
+            <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="w-full max-w-xs">
+              <TabsList className="w-full">
+                <TabsTrigger value="login" className="flex-1">เข้าสู่ระบบ</TabsTrigger>
+                <TabsTrigger value="register" className="flex-1">สมัครใช้งาน</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </DialogHeader>
 
-
+     
         <div className="px-6">
-          <ul className="mx-auto mt-3 grid grid-cols-1 gap-2 text-sm text-gray-600">
+          <ul className="mx-auto mt-1 grid grid-cols-1 gap-2 text-sm text-gray-600">
             <li className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-gray-400" />
               บันทึกความคืบหน้าการเรียนอัตโนมัติ
@@ -79,50 +168,192 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
 
         <div className="px-6 pt-5 pb-6 space-y-3">
-          <Button
-            onClick={handleLineLogin}
-            disabled={!!loading}
-            className="
-              w-full py-3 rounded-lg
-              bg-[#06C755] hover:bg-[#05b84f]
-              text-white font-medium
-              shadow-sm transition-all
-              flex items-center justify-center gap-3
-              cursor-pointer
-            "
-          >
-            {loading === "line" ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <SiLine className="h-6 w-6" />
-            )}
-            เข้าสู่ระบบด้วย LINE
-          </Button>
+      
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+              {success}
+            </div>
+          )}
 
-          <Button
-            onClick={handleGoogleLogin}
-            variant="outline"
-            disabled={!!loading}
-            className="
-              w-full py-3 rounded-lg
-              bg-white
-              border border-gray-300 hover:bg-gray-50
-              text-gray-800 font-medium
-              flex items-center justify-center gap-3
-              cursor-pointer
-            "
-          >
-            {loading === "google" ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <GoogleIcon className="h-6 w-6" />
-            )}
-            เข้าสู่ระบบด้วย Google
-          </Button>
+          <Tabs value={tab} onValueChange={(v) => { setTab(v as typeof tab); setError(""); setSuccess("") }}>
+            <TabsContent value="login" className="space-y-3">
+              <form onSubmit={handleEmailLogin} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">อีเมล</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none bg-white"
+                    placeholder="you@example.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">รหัสผ่าน</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none bg-white"
+                      placeholder="รหัสผ่านของคุณ"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 text-sm"
+                    >
+                      {showPassword ? "ซ่อน" : "แสดง"}
+                    </button>
+                  </div>
+                </div>
 
-     
+                <Button
+                  type="submit"
+                  disabled={loading === "email"}
+                  className="w-full py-3 rounded-lg bg-[linear-gradient(180deg,#4eb5ed_0%,#01579b)] hover:bg-[linear-gradient(180deg,#01579b,#00acc1)] text-white font-semibold"
+                >
+                  {loading === "email" ? (
+                    <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> กำลังเข้าสู่ระบบ...</span>
+                  ) : (
+                    "เข้าสู่ระบบ"
+                  )}
+                </Button>
+              </form>
+
+              <div className="relative py-1">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-white px-2 text-xs text-gray-500">หรือเข้าสู่ระบบด้วย</span>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleLineLogin}
+                disabled={!!loading}
+                className="
+                  w-full py-3 rounded-lg
+                  bg-[#06C755] hover:bg-[#05b84f]
+                  text-white font-medium
+                  shadow-sm transition-all
+                  flex items-center justify-center gap-3
+                  cursor-pointer
+                "
+              >
+                {loading === "line" ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <SiLine className="h-6 w-6" />
+                )}
+                เข้าสู่ระบบด้วย LINE
+              </Button>
+
+              <Button
+                onClick={handleGoogleLogin}
+                variant="outline"
+                disabled={!!loading}
+                className="
+                  w-full py-3 rounded-lg
+                  bg-white
+                  border border-gray-300 hover:bg-gray-50
+                  text-gray-800 font-medium
+                  flex items-center justify-center gap-3
+                  cursor-pointer
+                "
+              >
+                {loading === "google" ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <GoogleIcon className="h-6 w-6" />
+                )}
+                เข้าสู่ระบบด้วย Google
+              </Button>
+            </TabsContent>
+
+            <TabsContent value="register" className="space-y-3">
+              <form onSubmit={handleEmailRegister} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">ชื่อ-นามสกุล</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={registerData.name}
+                    onChange={handleRegisterChange}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none bg-white"
+                    placeholder="เช่น สมชาย ใจดี"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">อีเมล</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={registerData.email}
+                    onChange={handleRegisterChange}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none bg-white"
+                    placeholder="you@example.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">รหัสผ่าน</label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={registerData.password}
+                    onChange={handleRegisterChange}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none bg-white"
+                    placeholder="อย่างน้อย 6 ตัวอักษร"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">ยืนยันรหัสผ่าน</label>
+                  <input
+                    type="password"
+                    name="confirm"
+                    value={registerData.confirm}
+                    onChange={handleRegisterChange}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none bg-white"
+                    placeholder="พิมพ์รหัสผ่านอีกครั้ง"
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={loading === "email"}
+                  className="w-full py-3 rounded-lg bg-[linear-gradient(180deg,#4eb5ed_0%,#01579b)] hover:bg-[linear-gradient(180deg,#01579b,#00acc1)] text-white font-semibold"
+                >
+                  {loading === "email" ? (
+                    <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> กำลังสมัครใช้งาน...</span>
+                  ) : (
+                    "สมัครใช้งาน"
+                  )}
+                </Button>
+              </form>
+
+              <p className="pt-1 text-center text-xs text-gray-400">
+                มีบัญชีอยู่แล้ว? {" "}
+                <button type="button" className="underline underline-offset-2 hover:text-gray-600" onClick={() => setTab("login")}>เข้าสู่ระบบ</button>
+              </p>
+            </TabsContent>
+          </Tabs>
+
           <p className="pt-1 text-center text-xs text-gray-400">
-            โดยการเข้าสู่ระบบ คุณยอมรับ{" "}
+            โดยการใช้งาน คุณยอมรับ{" "}
             <a href="/terms" className="underline underline-offset-2 hover:text-gray-600">
               ข้อกำหนดการใช้งาน
             </a>{" "}

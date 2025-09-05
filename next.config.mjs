@@ -8,13 +8,6 @@ const nextConfig = {
   images: { unoptimized: true },
 
 
-  experimental: {
-    allowedDevOrigins: [
-      `http://localhost:${PORT}`,
-      `http://127.0.0.1:${PORT}`,
-      `http://192.168.1.34:${PORT}`,
-    ],
-  },
 }
 
 export default nextConfig

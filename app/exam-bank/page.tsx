@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,29 +9,119 @@ import { Download, Eye, FileText, Search, Calendar } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { examCategories, examBank } from "@/lib/dummy-data"
+import { examCategories } from "@/lib/dummy-data"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/sections/footer"
 import Link from "next/link"
 
+type ApiExam = {
+  id: string
+  title: string
+  description: string | null
+  categoryId: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+  category?: { id: string; name: string }
+  _count?: { files: number }
+}
+
+type ApiResponse = {
+  success: boolean
+  data: ApiExam[]
+}
+
+type UiExam = {
+  id: string
+  title: string
+  categoryName: string
+  year: number
+  examType: string
+  subject?: string
+  pdfUrl?: string
+  downloadUrl?: string
+}
+
+const EXAMS_API = "/api/exams"
+
 export default function ExamBankPage() {
-  const [selectedCategory, setSelectedCategory] = useState("all")
-  const [selectedYear, setSelectedYear] = useState("all")
+  const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [selectedYear, setSelectedYear] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedExam, setSelectedExam] = useState<any>(null)
+  const [selectedExam, setSelectedExam] = useState<UiExam | null>(null)
+  const [data, setData] = useState<ApiExam[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => {
+    let active = true
+    const load = async () => {
+      try {
+        setLoading(true)
+        const res = await fetch(EXAMS_API, { cache: "no-store" })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const json: ApiResponse = await res.json()
+        if (active) setData(json.data || [])
+      } catch (e: any) {
+        if (active) setError(e?.message ?? "Failed to load exams")
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    load()
+    return () => {
+      active = false
+    }
+  }, [])
 
-  const availableYears = [...new Set(examBank.map((exam) => exam.year))].sort((a, b) => b - a)
+  const getCategoryColor = (name?: string) => {
+    if (!name) return "rgb(250 202 21)"
+    const match = examCategories.find((c) => c.name === name)
+    return match?.color ?? "rgb(250 202 21)"
+  }
 
-  const filteredExams = examBank.filter((exam) => {
-    const matchesCategory = selectedCategory === "all" || exam.category === selectedCategory
-    const matchesYear = selectedYear === "all" || exam.year.toString() === selectedYear
-    const matchesSearch =
-      exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      exam.examType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      exam.year.toString().includes(searchTerm)
-    return matchesCategory && matchesYear && matchesSearch
-  })
+  const uiExams: UiExam[] = useMemo(() => {
+    return (data || [])
+      .filter((e) => e.isActive)
+      .map((e) => {
+        const year = new Date(e.createdAt).getFullYear()
+        const categoryName = e.category?.name ?? "ไม่ระบุ"
+        return {
+          id: e.id,
+          title: e.title,
+          categoryName,
+          year,
+          examType: categoryName,
+          subject: undefined,
+          pdfUrl: undefined,
+          downloadUrl: undefined,
+        }
+      })
+  }, [data])
+
+  const availableYears = useMemo(
+    () => Array.from(new Set(uiExams.map((exam) => exam.year))).sort((a, b) => b - a),
+    [uiExams]
+  )
+
+  const categories = useMemo(() => {
+    const names = Array.from(
+      new Set(uiExams.map((e) => e.categoryName).filter((n) => !!n))
+    ) as string[]
+    return [{ id: "all", name: "ทั้งหมด" }, ...names.map((n) => ({ id: n, name: n }))]
+  }, [uiExams])
+
+  const filteredExams = useMemo(() => {
+    return uiExams.filter((exam) => {
+      const matchesCategory = selectedCategory === "all" || exam.categoryName === selectedCategory
+      const matchesYear = selectedYear === "all" || exam.year.toString() === selectedYear
+      const matchesSearch =
+        exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        exam.categoryName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        exam.year.toString().includes(searchTerm)
+      return matchesCategory && matchesYear && matchesSearch
+    })
+  }, [uiExams, selectedCategory, selectedYear, searchTerm])
 
   const handleViewPDF = (pdfUrl: string, title: string) => {
     console.log(` Opening PDF: ${title} at ${pdfUrl}`)
@@ -109,7 +199,7 @@ export default function ExamBankPage() {
             className="mb-8"
           >
             <div className="flex flex-wrap justify-center gap-3">
-              {examCategories.map((category) => (
+              {categories.map((category) => (
                 <Button
                   key={category.id}
                   variant={selectedCategory === category.id ? "default" : "outline"}
@@ -117,9 +207,10 @@ export default function ExamBankPage() {
                   className={`px-6 py-2 rounded-full transition-all duration-300 ${selectedCategory === category.id ? "text-white shadow-lg transform scale-105" : "hover:scale-105"
                     }`}
                   style={{
-                    backgroundColor: selectedCategory === category.id ? category.color : "transparent",
-                    borderColor: category.color,
-                    color: selectedCategory === category.id ? "white" : category.color,
+                    backgroundColor:
+                      selectedCategory === category.id ? getCategoryColor(category.name) : "transparent",
+                    borderColor: getCategoryColor(category.name),
+                    color: selectedCategory === category.id ? "white" : getCategoryColor(category.name),
                   }}
                 >
                   {category.name}
@@ -145,8 +236,13 @@ export default function ExamBankPage() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
           >
-            {filteredExams.map((exam, index) => {
-              const category = examCategories.find((cat) => cat.id === exam.category)
+            {loading && (
+              <div className="col-span-full text-center text-gray-500 py-10">กำลังโหลด...</div>
+            )}
+            {!loading && error && (
+              <div className="col-span-full text-center text-red-600 py-10">เกิดข้อผิดพลาด: {error}</div>
+            )}
+            {!loading && !error && filteredExams.map((exam, index) => {
               return (
                 <motion.div
                   key={exam.id}
@@ -159,25 +255,26 @@ export default function ExamBankPage() {
                   <Card
                     className="h-full cursor-pointer transition-all duration-300 border-2 hover:shadow-xl"
                     style={{
-                      borderColor: category?.color + "20",
+                      borderColor: getCategoryColor(exam.categoryName) + "20",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = category?.color || "#000"
-                      e.currentTarget.style.backgroundColor = category?.color + "05"
+                      const c = getCategoryColor(exam.categoryName)
+                      e.currentTarget.style.borderColor = c || "#000"
+                      e.currentTarget.style.backgroundColor = c + "05"
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = category?.color + "20"
+                      e.currentTarget.style.borderColor = getCategoryColor(exam.categoryName) + "20"
                       e.currentTarget.style.backgroundColor = ""
                     }}
                     onClick={() => setSelectedExam(exam)}
                   >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between mb-2">
-                        <FileText className="h-8 w-8 flex-shrink-0 mt-1" style={{ color: category?.color }} />
+                        <FileText className="h-8 w-8 flex-shrink-0 mt-1" style={{ color: getCategoryColor(exam.categoryName) }} />
                         <Badge
                           variant="secondary"
                           className="text-white text-xs"
-                          style={{ backgroundColor: category?.color }}
+                          style={{ backgroundColor: getCategoryColor(exam.categoryName) }}
                         >
                           ปี {exam.year}
                         </Badge>
@@ -203,39 +300,29 @@ export default function ExamBankPage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-gray-600">ประเภท:</span>
+                    <span className="text-gray-600">หมวดหมู่:</span>
                     <p className="font-semibold">{selectedExam?.examType}</p>
                   </div>
                   <div>
                     <span className="text-gray-600">ปี:</span>
                     <p className="font-semibold">{selectedExam?.year}</p>
                   </div>
-                  <div>
-                    <span className="text-gray-600">วิชา:</span>
-                    <p className="font-semibold">{selectedExam?.subject}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">หมวดหมู่:</span>
-                    <p className="font-semibold">
-                      {examCategories.find((cat) => cat.id === selectedExam?.category)?.name}
-                    </p>
-                  </div>
                 </div>
 
                 <div className="flex gap-3 pt-4">
                   <Button
                     variant="outline"
-                    onClick={() => handleViewPDF(selectedExam?.pdfUrl, selectedExam?.title)}
+                    onClick={() => handleViewPDF(selectedExam?.pdfUrl || "", selectedExam?.title || "")}
                     className="flex-1 hover:bg-blue-50 hover:border-blue-300"
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     ดู PDF
                   </Button>
                   <Button
-                    onClick={() => handleDownload(selectedExam?.downloadUrl, selectedExam?.title)}
+                    onClick={() => handleDownload(selectedExam?.downloadUrl || "", selectedExam?.title || "")}
                     className="flex-1"
                     style={{
-                      backgroundColor: examCategories.find((cat) => cat.id === selectedExam?.category)?.color,
+                      backgroundColor: getCategoryColor(selectedExam?.categoryName),
                     }}
                   >
                     <Download className="h-4 w-4 mr-2" />
@@ -247,7 +334,7 @@ export default function ExamBankPage() {
           </Dialog>
 
 
-          {filteredExams.length === 0 && (
+          {!loading && !error && filteredExams.length === 0 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

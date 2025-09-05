@@ -6,12 +6,23 @@ import { usePathname } from "next/navigation"
 import { Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import LoginModal from "@/components/login-modal"
+import { useAuth } from "@/components/auth-provider"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const pathname = usePathname() 
+  const { isAuthenticated, user, logout } = useAuth()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -25,6 +36,10 @@ export function Navigation() {
     setIsLoginModalOpen(true)
     setIsOpen(false)
   }
+
+  const avatarUrl = (user as any)?.image || (user as any)?.avatarUrl || (user as any)?.picture || (user as any)?.profileImageUrl || null
+  const displayName = (user as any)?.name || (user as any)?.displayName || (user as any)?.email || "ผู้ใช้"
+  const initial = String(displayName || "").trim().charAt(0).toUpperCase() || "U"
 
  
   const menuItems = [
@@ -67,12 +82,47 @@ export function Navigation() {
                 </Link>
               ))}
 
-              <Button
-                onClick={handleLoginClick}
-                className="ml-5 px-4 py-6 bg-[linear-gradient(180deg,#4eb5ed_0%,#01579b)] hover:bg-[linear-gradient(180deg,#01579b,#00acc1)] text-white rounded-lg text-base font-bold transition-colors duration-200 cursor-pointer"
-              >
-                สมัครเรียนออนไลน์
-              </Button>
+              {!isAuthenticated ? (
+                <Button
+                  onClick={handleLoginClick}
+                  className="ml-5 px-4 py-6 bg-[linear-gradient(180deg,#4eb5ed_0%,#01579b)] hover:bg-[linear-gradient(180deg,#01579b,#00acc1)] text-white rounded-lg text-base font-bold transition-colors duration-200 cursor-pointer"
+                >
+                  สมัครเรียนออนไลน์
+                </Button>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="ml-4 inline-flex items-center gap-2 focus:outline-none">
+                      <Avatar>
+                        {avatarUrl ? (
+                          <AvatarImage src={avatarUrl} alt={displayName} />
+                        ) : (
+                          <AvatarFallback className="bg-yellow-500 text-white">{initial}</AvatarFallback>
+                        )}
+                      </Avatar>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-48">
+                    <DropdownMenuLabel className="text-gray-700">
+                      {displayName}
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <Link href="/profile">
+                      <DropdownMenuItem>โปรไฟล์</DropdownMenuItem>
+                    </Link>
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        try {
+                          await logout()
+                        } catch {}
+                      }}
+                      variant="destructive"
+                    >
+                      ออกจากระบบ
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
 
          
@@ -101,12 +151,44 @@ export function Navigation() {
                   </Link>
                 ))}
 
-                <Button
-                  onClick={handleLoginClick}
-                  className="block w-full text-left px-3 py-0 rounded-md text-base font-medium bg-[linear-gradient(180deg,#4eb5ed_0%,#01579b)] text-white"
-                >
-                  สมัครเรียนออนไลน์
-                </Button>
+                {!isAuthenticated ? (
+                  <Button
+                    onClick={handleLoginClick}
+                    className="block w-full text-left px-3 py-0 rounded-md text-base font-medium bg-[linear-gradient(180deg,#4eb5ed_0%,#01579b)] text-white"
+                  >
+                    สมัครเรียนออนไลน์
+                  </Button>
+                ) : (
+                  <div className="pt-2 space-y-2">
+                    <div className="flex items-center gap-3 px-3 py-2">
+                      <Avatar>
+                        {avatarUrl ? (
+                          <AvatarImage src={avatarUrl} alt={displayName} />
+                        ) : (
+                          <AvatarFallback className="bg-yellow-500 text-white">{initial}</AvatarFallback>
+                        )}
+                      </Avatar>
+                      <div className="text-sm font-medium text-gray-800">{displayName}</div>
+                    </div>
+                    <Link
+                      href="/profile"
+                      onClick={() => setIsOpen(false)}
+                      className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-[#004B7D] hover:bg-[#004B7D1A]"
+                    >
+                      โปรไฟล์
+                    </Link>
+                    <Button
+                      onClick={async () => {
+                        try { await logout() } catch {}
+                        setIsOpen(false)
+                      }}
+                      variant="outline"
+                      className="block w-full text-left"
+                    >
+                      ออกจากระบบ
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           )}
