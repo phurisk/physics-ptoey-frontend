@@ -1,13 +1,16 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
 import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { BookOpen, Receipt } from "lucide-react"
+import LoginModal from "@/components/login-modal"
 
 export default function ProfilePage() {
   const { user, isAuthenticated, logout } = useAuth()
+  const [loginOpen, setLoginOpen] = useState(false)
 
   const name = (user as any)?.name || (user as any)?.displayName || "ผู้ใช้"
   const email = (user as any)?.email || ""
@@ -17,7 +20,10 @@ export default function ProfilePage() {
       <div className="space-y-2">
         <h1 className="text-2xl font-bold">โปรไฟล์</h1>
         {!isAuthenticated ? (
-          <p className="text-gray-600">กรุณาเข้าสู่ระบบเพื่อจัดการโปรไฟล์และการสั่งซื้อ</p>
+          <div className="flex items-center justify-between bg-white border rounded-lg p-6">
+            <p className="text-gray-700">กรุณาเข้าสู่ระบบเพื่อจัดการโปรไฟล์และการสั่งซื้อ</p>
+            <Button className="bg-yellow-400 hover:bg-yellow-500 text-white" onClick={() => setLoginOpen(true)}>เข้าสู่ระบบ</Button>
+          </div>
         ) : (
           <div className="bg-white border rounded-lg p-6 space-y-1">
             <div className="text-lg font-medium">{name}</div>
@@ -56,10 +62,12 @@ export default function ProfilePage() {
         </Link>
       </div>
 
-      {isAuthenticated && (
+      {isAuthenticated ? (
         <div className="pt-2">
           <Button onClick={() => logout()} variant="outline">ออกจากระบบ</Button>
         </div>
+      ) : (
+        <LoginModal isOpen={loginOpen} onClose={() => setLoginOpen(false)} />
       )}
     </div>
   )

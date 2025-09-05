@@ -131,6 +131,14 @@ export default function OrderSuccessPage() {
               {order.payment?.ref && <div className="text-sm text-gray-600">เลขอ้างอิง: {order.payment.ref}</div>}
             </div>
 
+            {order.orderType === "EBOOK" && order.ebook?.isPhysical && (
+              <div className="mt-3 rounded-md border p-3 bg-gray-50">
+                <div className="text-sm font-medium text-gray-800 mb-1">สถานะการจัดส่ง</div>
+                <div className="text-sm text-gray-700">วิธีจัดส่ง: {order.shipping?.shippingMethod || "-"}</div>
+                <div className="text-sm text-gray-700">สถานะพัสดุ: {order.shipping?.status || "ยังไม่เริ่มจัดส่ง"}</div>
+              </div>
+            )}
+
             {isPending && (
               <div className="space-y-3">
                 <div className="text-gray-800 font-medium">โอนเงินแล้ว? อัพโหลดหลักฐานการชำระเงิน</div>

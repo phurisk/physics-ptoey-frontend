@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -150,11 +151,16 @@ export default function Orders() {
                       <div className="text-xs text-gray-500">เลขอ้างอิง: {o.payment.ref}</div>
                     )}
                   </div>
-                  {isPending ? (
-                    <Button onClick={() => onOpenUpload(o)} className="bg-yellow-400 hover:bg-yellow-500 text-white">อัพโหลดสลิป</Button>
-                  ) : (
-                    <Badge variant="secondary" className="shrink-0">ชำระเงินแล้ว</Badge>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <Link href={`/order-success/${o.id}`}>
+                      <Button variant="outline">ดูรายละเอียด</Button>
+                    </Link>
+                    {isPending ? (
+                      <Button onClick={() => onOpenUpload(o)} className="bg-yellow-400 hover:bg-yellow-500 text-white">อัพโหลดสลิป</Button>
+                    ) : (
+                      <Badge variant="secondary" className="shrink-0">ชำระเงินแล้ว</Badge>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             )
