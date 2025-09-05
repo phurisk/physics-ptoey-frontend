@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import Image from "next/image"
 
 type Order = {
   id: string
@@ -20,6 +21,7 @@ type Order = {
   course?: { id: string; title: string }
   ebook?: { id: string; title: string; coverImageUrl?: string | null; isPhysical?: boolean }
   payment?: { id: string; status: string; ref?: string; amount?: number; slipUrl?: string }
+    & { notes?: string; uploadedAt?: string }
   shipping?: { shippingMethod?: string; status?: string }
 }
 
@@ -78,6 +80,31 @@ export default function OrderSuccessPage() {
   const isCompleted = (order?.status || "") === "COMPLETED"
   const courseId = order?.orderType === "COURSE" ? order?.course?.id : undefined
 
+  const paymentStatus = order?.payment?.status || order?.status
+  const slipUrl = order?.payment?.slipUrl
+  const slipInfo = useMemo(() => {
+    try {
+      const n = order?.payment?.notes ? JSON.parse(order.payment.notes) : null
+      if (!n || typeof n !== "object") return null
+      const slipOKSuccess = n?.slipOKResult?.success ?? n?.slipOKSuccess ?? null
+      const detectedAmount = n?.slipOKResult?.data?.amount ?? n?.detectedAmount ?? null
+      const detectedDate = n?.slipOKResult?.data?.date ?? n?.detectedDate ?? null
+      const summary = n?.validation?.summary ?? n?.validationSummary ?? null
+      return { slipOKSuccess, detectedAmount, detectedDate, summary }
+    } catch {
+      return null
+    }
+  }, [order?.payment?.notes])
+
+  const statusBadge = (status?: string) => {
+    const s = (status || "").toUpperCase()
+    if (s === "COMPLETED") return <Badge className="bg-green-600 text-white">ชำระเงินแล้ว</Badge>
+    if (s === "PENDING_VERIFICATION") return <Badge className="bg-yellow-500 text-white">รอตรวจสอบสลิป</Badge>
+    if (s === "PENDING") return <Badge variant="secondary">รอการชำระ</Badge>
+    if (s === "REJECTED" || s === "CANCELLED") return <Badge className="bg-red-600 text-white">ปฏิเสธ/ยกเลิก</Badge>
+    return <Badge variant="secondary">{status}</Badge>
+  }
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-12 space-y-6">
       <div className="space-y-2 text-center">
@@ -90,7 +117,10 @@ export default function OrderSuccessPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>คำสั่งซื้อ #{order.id}</CardTitle>
-              <Badge variant="secondary">สถานะ: {order.status}</Badge>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">สถานะคำสั่งซื้อ:</span>
+                {statusBadge(order?.status)}
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -115,6 +145,45 @@ export default function OrderSuccessPage() {
             <div className="pt-2">
               <Button variant="outline" onClick={() => router.push("/profile/orders")}>กลับไปหน้าคำสั่งซื้อ</Button>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!loading && order && (
+        <Card>
+          <CardHeader>
+            <CardTitle>สถานะการตรวจสลิป</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="text-sm text-gray-700">สถานะ:</div>
+              {statusBadge(paymentStatus)}
+            </div>
+            {slipUrl && (
+              <div className="flex items-center gap-4">
+                <div className="relative h-24 w-40 overflow-hidden rounded border">
+                  <Image src={slipUrl} alt="สลิปโอนเงิน" fill className="object-cover" />
+                </div>
+                <a href={slipUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">เปิดสลิปต้นฉบับ</a>
+              </div>
+            )}
+            {slipInfo && (
+              <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                <div>ผลตรวจ SlipOK: <span className="font-medium">{slipInfo.slipOKSuccess ? "สำเร็จ" : "ไม่สำเร็จ"}</span></div>
+                {typeof slipInfo.detectedAmount !== "undefined" && slipInfo.detectedAmount !== null && (
+                  <div>จำนวนเงินที่ตรวจพบ: <span className="font-medium">฿{Number(slipInfo.detectedAmount).toLocaleString()}</span></div>
+                )}
+                {slipInfo.detectedDate && (
+                  <div>วันที่โอนที่ตรวจพบ: <span className="font-medium">{String(slipInfo.detectedDate)}</span></div>
+                )}
+                {slipInfo.summary && (
+                  <div className="sm:col-span-2 text-gray-700">สรุปการตรวจสอบ: ผ่าน {slipInfo.summary.passed || 0} • เตือน {slipInfo.summary.warnings || 0} • ไม่ผ่าน {slipInfo.summary.failed || 0}</div>
+                )}
+              </div>
+            )}
+            {!slipUrl && (
+              <div className="text-sm text-gray-600">ยังไม่มีสลิปกรอกเข้ามา กรุณาอัพโหลดหลักฐานการชำระเงิน</div>
+            )}
           </CardContent>
         </Card>
       )}
