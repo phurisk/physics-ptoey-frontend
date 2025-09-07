@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import { ChevronLeft, ChevronRight, Quote, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { reviews } from "@/lib/dummy-data"
+import { reviews as fallbackReviews } from "@/lib/dummy-data"
 
 
 function ImageModal({
@@ -51,6 +51,7 @@ function ImageModal({
 export default function Reviews() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [visible, setVisible] = useState(3) 
+  const [slides, setSlides] = useState<{ id: string | number; image: string }[]>(fallbackReviews)
 
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [selectedImage, setSelectedImage] = useState<{ src: string; alt: string } | null>(null)
@@ -79,7 +80,57 @@ export default function Reviews() {
     return () => window.removeEventListener("resize", updateVisible)
   }, [])
 
-  const length = reviews.length
+ 
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const params = new URLSearchParams({ postType: "รีวิวจากน้องๆ" })
+        const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
+        if (res.ok) {
+          console.log("[Reviews] Fetch /api/posts: OK", res.status)
+        } else {
+          console.warn("[Reviews] Fetch /api/posts: NOT OK", res.status, res.statusText)
+        }
+        const json: any = await res.json().catch(() => null)
+
+        const items = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
+        if (!items.length) {
+          console.warn(
+            `[Reviews] API ไม่มีข้อมูลโพสต์ ใช้รูป dummy แทน (${fallbackReviews.length} ภาพ)`
+          )
+          return
+        } else {
+          console.log(`[Reviews] Posts loaded: ${items.length}`)
+        }
+
+        const mapped = items
+          .map((p: any, idx: number) => ({
+            id: p?.id ?? idx,
+            image: p?.imageUrl || p?.imageUrlMobileMode || "",
+          }))
+          .filter((s: { id: string | number; image: string }) => !!s.image)
+
+        console.log(`[Reviews] Slides mapped: ${mapped.length}`)
+
+        if (mounted && mapped.length) {
+          setSlides(mapped)
+          console.log(`[Reviews] ใช้รูปจาก API จำนวน ${mapped.length} ภาพ`)
+        } else if (mounted) {
+          console.warn(
+            `[Reviews] API ไม่มีรูป (imageUrl/imageUrlMobileMode) ใช้รูป dummy แทน (${fallbackReviews.length} ภาพ)`
+          )
+        }
+      } catch (err) {
+        console.error("[Reviews] Failed to load posts", err)
+      }
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const length = slides.length
   const maxIndex = Math.max(0, length - visible)
 
 
@@ -128,7 +179,7 @@ export default function Reviews() {
               className="flex transition-transform duration-300 ease-in-out"
               style={{ transform: `translateX(-${currentIndex * (100 / visible)}%)` }}
             >
-              {reviews.map((review) => (
+              {slides.map((review) => (
                 <div key={review.id} className="w-full md:w-1/2 lg:w-1/4 flex-shrink-0 px-3">
                   <Card className="h-full border-none shadow-none">
                     <CardContent className="p-0">

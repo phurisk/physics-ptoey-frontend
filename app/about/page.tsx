@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, Award, Users, BookOpen, Target } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Image from "next/image"
 
 const teachingEnvironmentImages = [
@@ -74,13 +74,67 @@ const currentPositions = ["อาจารย์ฟิสิกส์ สถา�
 
 export default function AboutPage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [images, setImages] = useState(teachingEnvironmentImages)
+
+  // Load images from API (postType: บรรยากาศการเรียน)
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const params = new URLSearchParams({ postType: "บรรยากาศการเรียน" })
+        const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
+        if (res.ok) {
+          console.log("[About] Fetch /api/posts: OK", res.status)
+        } else {
+          console.warn("[About] Fetch /api/posts: NOT OK", res.status, res.statusText)
+        }
+        const json: any = await res.json().catch(() => null)
+
+        const list = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
+        if (!list.length) {
+          console.warn(
+            `[About] API ไม่มีข้อมูลโพสต์ ใช้รูป dummy แทน (${teachingEnvironmentImages.length} ภาพ)`
+          )
+          return
+        } else {
+          console.log(`[About] Posts loaded: ${list.length}`)
+        }
+
+        const mapped = list
+          .map((p: any, idx: number) => ({
+            id: p?.id ?? idx,
+            src: p?.imageUrl || p?.imageUrlMobileMode || "",
+            alt: p?.title || "บรรยากาศการเรียน",
+            title: p?.title || "บรรยากาศการเรียน",
+          }))
+          .filter((s: { id: string | number; src: string }) => !!s.src)
+
+        console.log(`[About] Slides mapped: ${mapped.length}`)
+
+        if (mounted && mapped.length) {
+          setImages(mapped as any)
+          setCurrentImageIndex(0)
+          console.log(`[About] ใช้รูปจาก API จำนวน ${mapped.length} ภาพ`)
+        } else if (mounted) {
+          console.warn(
+            `[About] API ไม่มีรูป (imageUrl/imageUrlMobileMode) ใช้รูป dummy แทน (${teachingEnvironmentImages.length} ภาพ)`
+          )
+        }
+      } catch (err) {
+        console.error("[About] Failed to load posts", err)
+      }
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % teachingEnvironmentImages.length)
+    setCurrentImageIndex((prev) => (prev + 1) % images.length)
   }
 
   const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + teachingEnvironmentImages.length) % teachingEnvironmentImages.length)
+    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length)
   }
 
   return (
@@ -208,8 +262,8 @@ export default function AboutPage() {
                 <CardContent className="p-0 ">
                   <div className="relative h-96 md:h-[500px]">
                     <Image
-                      src={teachingEnvironmentImages[currentImageIndex].src || "/placeholder.svg"}
-                      alt={teachingEnvironmentImages[currentImageIndex].alt}
+                      src={images[currentImageIndex]?.src || "/placeholder.svg"}
+                      alt={images[currentImageIndex]?.alt || ""}
                       fill
                       className="object-cover transition-all duration-500 "
                     />
@@ -236,7 +290,7 @@ export default function AboutPage() {
 
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6">
                       <h3 className="text-white text-xl font-semibold">
-                        {teachingEnvironmentImages[currentImageIndex].title}
+                        {images[currentImageIndex]?.title}
                       </h3>
                     </div>
                   </div>
@@ -245,7 +299,7 @@ export default function AboutPage() {
 
 
               <div className="flex justify-center mt-6 gap-2">
-                {teachingEnvironmentImages.map((_, index) => (
+                {images.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentImageIndex(index)}

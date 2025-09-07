@@ -16,9 +16,13 @@ export default function HeroBanner() {
 
     async function loadBannerPosts() {
       try {
-        
-        const API_BASE = (process.env.NEXT_PUBLIC_ELEARNING_BASE_URL || process.env.API_BASE_URL || "").replace(/\/$/, "")
-        const res = await fetch(`${API_BASE}/api/posts`, { cache: "no-store" })
+      
+        const res = await fetch(`/api/posts`, { cache: "no-store" })
+        if (res.ok) {
+          console.log("[HeroBanner] Fetch /api/posts: OK", res.status)
+        } else {
+          console.warn("[HeroBanner] Fetch /api/posts: NOT OK", res.status, res.statusText)
+        }
         const json: any = await res.json().catch(() => null)
 
         const items = Array.isArray(json)
@@ -26,6 +30,14 @@ export default function HeroBanner() {
           : Array.isArray(json?.data)
           ? json.data
           : []
+
+        if (!items.length) {
+          console.warn(
+            `[HeroBanner] API ไม่มีข้อมูลโพสต์ ใช้รูป dummy แทน (${fallbackSlides.length} ภาพ)`
+          )
+        } else {
+          console.log(`[HeroBanner] Posts loaded: ${items.length}`)
+        }
 
         const targetName = "ป้ายประกาศหลัก"
         const typed = items.filter((p: any) => p?.postType?.name === targetName)
@@ -45,13 +57,19 @@ export default function HeroBanner() {
           }))
           .filter((s: Slide) => !!s.image)
 
+        console.log(`[HeroBanner] Slides mapped: ${mapped.length}`)
+
         if (isMounted && mapped.length) {
           setSlides(mapped)
           setCurrentSlide(0)
+          console.log(`[HeroBanner] ใช้รูปจาก API จำนวน ${mapped.length} ภาพ`)
+        } else if (isMounted) {
+          console.warn(
+            `[HeroBanner] API ไม่มีรูป (imageUrl/imageUrlMobileMode) ใช้รูป dummy แทน (${fallbackSlides.length} ภาพ)`
+          )
         }
       } catch (err) {
-        
-        console.error("Failed to load banner posts", err)
+        console.error("[HeroBanner] Failed to load banner posts", err)
       }
     }
 

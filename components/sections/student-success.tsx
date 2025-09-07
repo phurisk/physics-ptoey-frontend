@@ -5,7 +5,7 @@ import Image from "next/image"
 import { ChevronLeft, ChevronRight, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { studentSuccesses } from "@/lib/dummy-data"
+import { studentSuccesses as fallbackSuccesses } from "@/lib/dummy-data"
 
 
 function ImageModal({
@@ -51,6 +51,7 @@ function ImageModal({
 export default function StudentSuccess() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [visible, setVisible] = useState(3) 
+  const [slides, setSlides] = useState<{ id: string | number; image: string }[]>(fallbackSuccesses)
 
  
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -80,7 +81,57 @@ export default function StudentSuccess() {
     return () => window.removeEventListener("resize", updateVisible)
   }, [])
 
-  const length = studentSuccesses.length
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const params = new URLSearchParams({ postType: "ความสำเร็จลูกศิษย์" })
+        const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
+        if (res.ok) {
+          console.log("[StudentSuccess] Fetch /api/posts: OK", res.status)
+        } else {
+          console.warn("[StudentSuccess] Fetch /api/posts: NOT OK", res.status, res.statusText)
+        }
+        const json: any = await res.json().catch(() => null)
+
+        const items = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
+        if (!items.length) {
+          console.warn(
+            `[StudentSuccess] API ไม่มีข้อมูลโพสต์ ใช้รูป dummy แทน (${fallbackSuccesses.length} ภาพ)`
+          )
+          return
+        } else {
+          console.log(`[StudentSuccess] Posts loaded: ${items.length}`)
+        }
+
+        const mapped = items
+          .map((p: any, idx: number) => ({
+            id: p?.id ?? idx,
+            image: p?.imageUrl || p?.imageUrlMobileMode || "",
+          }))
+          .filter((s: { id: string | number; image: string }) => !!s.image)
+
+        console.log(`[StudentSuccess] Slides mapped: ${mapped.length}`)
+
+        if (mounted && mapped.length) {
+          setSlides(mapped)
+          console.log(`[StudentSuccess] ใช้รูปจาก API จำนวน ${mapped.length} ภาพ`)
+        } else if (mounted) {
+          console.warn(
+            `[StudentSuccess] API ไม่มีรูป (imageUrl/imageUrlMobileMode) ใช้รูป dummy แทน (${fallbackSuccesses.length} ภาพ)`
+          )
+        }
+      } catch (err) {
+        console.error("[StudentSuccess] Failed to load posts", err)
+      }
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const length = slides.length
   const maxIndex = Math.max(0, length - visible)
 
   useEffect(() => {
@@ -132,7 +183,7 @@ export default function StudentSuccess() {
               className="flex transition-transform duration-300 ease-in-out"
               style={{ transform: `translateX(-${currentIndex * (100 / visible)}%)` }}
             >
-              {studentSuccesses.map((success) => (
+              {slides.map((success) => (
                 <div key={success.id} className="w-full md:w-1/2 lg:w-1/3 flex-shrink-0 px-3 ">
                   <Card className="h-full border-none shadow-none">
                     <CardContent className="p-0">

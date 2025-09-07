@@ -1,11 +1,69 @@
+"use client"
+
 import Image from "next/image"
 import Link from "next/link"
+import { useEffect, useState } from "react"
 import { Calendar, Clock, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { articles } from "@/lib/dummy-data"
+import { articles as fallbackArticles } from "@/lib/dummy-data"
 
 export default function Articles() {
+  const [items, setItems] = useState<any[]>(fallbackArticles)
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const params = new URLSearchParams({ postType: "บทความ" })
+        const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
+        if (res.ok) {
+          console.log("[ArticlesSection] Fetch /api/posts: OK", res.status)
+        } else {
+          console.warn("[ArticlesSection] Fetch /api/posts: NOT OK", res.status, res.statusText)
+        }
+        const json: any = await res.json().catch(() => null)
+
+        const list = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
+        if (!list.length) {
+          console.warn(
+            `[ArticlesSection] API ไม่มีข้อมูลโพสต์ ใช้รูป dummy แทน (${fallbackArticles.length} ภาพ)`
+          )
+          return
+        } else {
+          console.log(`[ArticlesSection] Posts loaded: ${list.length}`)
+        }
+
+        const mapped = list
+          .map((p: any, idx: number) => ({
+            id: p?.id ?? idx,
+            slug: p?.slug || "",
+            title: p?.title || "",
+            image: p?.imageUrl || p?.imageUrlMobileMode || "",
+            excerpt: p?.excerpt || "",
+            date: p?.publishedAt ? new Date(p.publishedAt).toISOString() : new Date().toISOString(),
+          }))
+          .filter((a: any) => !!a.image)
+
+        console.log(`[ArticlesSection] Articles mapped: ${mapped.length}`)
+
+        if (mounted && mapped.length) {
+          setItems(mapped)
+          console.log(`[ArticlesSection] ใช้รูปจาก API จำนวน ${mapped.length} ภาพ`)
+        } else if (mounted) {
+          console.warn(
+            `[ArticlesSection] API ไม่มีรูป (imageUrl/imageUrlMobileMode) ใช้รูป dummy แทน (${fallbackArticles.length} ภาพ)`
+          )
+        }
+      } catch (err) {
+        console.error("[ArticlesSection] Failed to load posts", err)
+      }
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
   return (
     <section className="py-16 lg:py-24 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ">
@@ -19,14 +77,14 @@ export default function Articles() {
 
       
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8  ">
-          {articles.map((article) => (
+          {items.map((article) => (
             <Card
               key={article.id}
               className="group hover:shadow-xl transition-all duration-300 overflow-hidden bg-white pt-0"
             >
               <CardContent className="p-0">
              
-                <Link href={`/articles/${article.slug}`}>
+                <Link href={article.slug ? `/articles/${article.slug}` : `#`}>
                   <div className="aspect-[16/7.5] relative overflow-hidden cursor-pointer">
                     <Image
                       src={article.image || "/placeholder.svg"}
@@ -53,7 +111,7 @@ export default function Articles() {
                   </div>
 
               
-                  <Link href={`/articles/${article.slug}`}>
+                  <Link href={article.slug ? `/articles/${article.slug}` : `#`}>
                     <h3 className="text-xl font-semibold text-gray-900 mb-3 text-balance group-hover:text-yellow-600 transition-colors duration-200 cursor-pointer">
                       {article.title}
                     </h3>
@@ -64,7 +122,7 @@ export default function Articles() {
 
                
                   <Button asChild variant="ghost" className="group/btn p-0 h-auto text-yellow-600 hover:text-yellow-700">
-                    <Link href={`/articles/${article.slug}`}>
+                    <Link href={article.slug ? `/articles/${article.slug}` : `#`}>
                       อ่านต่อ
                       <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform duration-200" />
                     </Link>
