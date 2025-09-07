@@ -13,29 +13,6 @@ export async function GET(req: Request) {
     const url = new URL(req.url)
     const search = url.search || ""
     const cookie = req.headers.get("cookie") ?? ""
-<<<<<<< HEAD
-
-    const authorization = req.headers.get("authorization") ?? ""
-
-
-    
-
-
-    const headers: Record<string, string> = { cookie }
-
-
-    if (authorization) {
-
-
-      headers["authorization"] = authorization
-
-
-    }
-
-
-    
-  
-=======
     const authorization = req.headers.get("authorization") ?? ""
     
     const headers: Record<string, string> = { cookie }
@@ -43,7 +20,6 @@ export async function GET(req: Request) {
       headers["authorization"] = authorization
     }
     
->>>>>>> origin/main
     const res = await fetch(`${baseUrl}/api/my-courses${search}`, {
       headers,
       cache: "no-store",
