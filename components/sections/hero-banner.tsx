@@ -41,10 +41,14 @@ export default function HeroBanner() {
 
         const targetName = "ป้ายประกาศหลัก"
         const typed = items.filter((p: any) => p?.postType?.name === targetName)
+        if (!typed.length) {
+          console.warn(
+            `[HeroBanner] ไม่พบโพสต์ประเภท "${targetName}" ใช้รูป dummy แทน (${fallbackSlides.length} ภาพ)`
+          )
+        }
 
-        
         const now = new Date()
-        const activePublished = (typed.length ? typed : items).filter((p: any) => {
+        const activePublished = typed.filter((p: any) => {
           const isActive = p?.isActive !== false
           const publishedAt = p?.publishedAt ? new Date(p.publishedAt) : null
           return isActive && (!publishedAt || publishedAt <= now)
