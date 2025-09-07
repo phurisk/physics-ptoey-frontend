@@ -76,7 +76,7 @@ export default function AboutPage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [images, setImages] = useState(teachingEnvironmentImages)
 
-  // Load images from API (postType: บรรยากาศการเรียน)
+ 
   useEffect(() => {
     let mounted = true
     ;(async () => {
