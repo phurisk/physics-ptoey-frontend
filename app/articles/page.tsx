@@ -14,6 +14,26 @@ export const metadata = {
   description: "รวมบทความ เทคนิคการเรียนฟิสิกส์ และแนะแนวการสอบ",
 }
 
+type ArticleItem = {
+  id: string | number
+  slug: string
+  title: string
+  excerpt: string
+  date: string
+  imageDesktop: string
+  imageMobile: string
+}
+
+function deriveExcerpt(input?: string, max = 160) {
+  if (!input) return ""
+  const text = String(input)
+    .replace(/\r\n|\n|\r/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+  return text.length > max ? text.slice(0, max - 1) + "…" : text
+}
+
 type Props = {
   searchParams?: { page?: string }
 }
@@ -41,20 +61,39 @@ export default async function ArticlesIndexPage({ searchParams }: Props) {
   }
 
   // Map API items to article shape
-  const mapped = items
-    .map((p: any, idx: number) => ({
-      id: p?.id ?? idx,
-      slug: p?.slug || "",
-      title: p?.title || "",
-      image: p?.imageUrl || p?.imageUrlMobileMode || "",
-      excerpt: p?.excerpt || "",
-      date: p?.publishedAt ? new Date(p.publishedAt).toISOString() : new Date().toISOString(),
-    }))
-    .filter((a: any) => !!a.image)
+  const mapped: ArticleItem[] = items
+    .filter((p: any) => p?.postType?.name === "บทความ")
+    .map((p: any, idx: number) => {
+      const desktop = p?.imageUrl || p?.imageUrlMobileMode || ""
+      const mobile = p?.imageUrlMobileMode || p?.imageUrl || ""
+      const excerpt = p?.excerpt || deriveExcerpt(p?.content, 180)
+      return {
+        id: p?.id ?? idx,
+        slug: p?.slug || "",
+        title: p?.title || "",
+        imageDesktop: desktop,
+        imageMobile: mobile,
+        excerpt: excerpt || "",
+        date: p?.publishedAt
+          ? new Date(p.publishedAt).toISOString()
+          : new Date().toISOString(),
+      }
+    })
+    .filter((a) => !!(a.imageDesktop || a.imageMobile))
 
   const usingFallback = mapped.length === 0
   const fallbackReason = !items.length ? "no-posts" : "no-images"
-  const base = usingFallback ? fallbackArticles : mapped
+  const base: ArticleItem[] = usingFallback
+    ? fallbackArticles.map((a) => ({
+        id: (a as any).id,
+        slug: (a as any).slug || "",
+        title: (a as any).title || "",
+        excerpt: (a as any).excerpt || "",
+        date: (a as any).date || new Date().toISOString(),
+        imageDesktop: (a as any).image || "",
+        imageMobile: (a as any).image || "",
+      }))
+    : mapped
 
   const sorted = [...base].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -127,17 +166,29 @@ export default async function ArticlesIndexPage({ searchParams }: Props) {
           {pageItems.map((article) => (
             <Card
               key={`${article.id}-${article.slug ?? ""}`} 
-              className="group hover:shadow-xl transition-all duration-300 overflow-hidden bg-white"
+              className="group hover:shadow-xl transition-all duration-300 overflow-hidden bg-white py-0"
             >
-              <CardContent className="p-0">
+              <CardContent className="p-0 ">
                 <Link href={article.slug ? `/articles/${article.slug}` : `#`}>
-                  <div className="aspect-[16/10] relative overflow-hidden cursor-pointer">
-                    <Image
-                      src={article.image || "/placeholder.svg"}
-                      alt={article.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                  <div className="aspect-[16/7.5] relative overflow-hidden cursor-pointer">
+                    {article.imageDesktop && (
+                      <Image
+                        src={article.imageDesktop}
+                        alt={article.title}
+                        fill
+                        sizes="(min-width: 768px) 100vw, 0px"
+                        className="object-cover hidden md:block group-hover:scale-105 transition-transform duration-300 "
+                      />
+                    )}
+                    {article.imageMobile && (
+                      <Image
+                        src={article.imageMobile}
+                        alt={article.title}
+                        fill
+                        sizes="(max-width: 767px) 100vw, 0px"
+                        className="object-cover md:hidden group-hover:scale-105 transition-transform duration-300"
+                      />
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                   </div>
                 </Link>

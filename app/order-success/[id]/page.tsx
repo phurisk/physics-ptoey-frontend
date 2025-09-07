@@ -19,7 +19,7 @@ type Order = {
   total: number
   createdAt: string
   course?: { id: string; title: string }
-  ebook?: { id: string; title: string; coverImageUrl?: string | null; isPhysical?: boolean }
+  ebook?: { id: string; title: string; coverImageUrl?: string | null; isPhysical?: boolean; fileUrl?: string | null; previewUrl?: string | null }
   payment?: { id: string; status: string; ref?: string; amount?: number; slipUrl?: string }
     & { notes?: string; uploadedAt?: string }
   shipping?: { shippingMethod?: string; status?: string }
@@ -79,6 +79,9 @@ export default function OrderSuccessPage() {
   const isPending = ["PENDING", "PENDING_VERIFICATION"].includes(order?.status || "")
   const isCompleted = (order?.status || "") === "COMPLETED"
   const courseId = order?.orderType === "COURSE" ? order?.course?.id : undefined
+  const ebookFileUrl = order?.orderType === "EBOOK" && order?.ebook && order.ebook.isPhysical !== true
+    ? (order.ebook.fileUrl || order.ebook.previewUrl || null)
+    : null
 
   const paymentStatus = order?.payment?.status || order?.status
   const slipUrl = order?.payment?.slipUrl
@@ -148,6 +151,31 @@ export default function OrderSuccessPage() {
 
             {isCompleted && order.orderType === "COURSE" && courseId && (
               <Button onClick={() => router.push(`/courses/${courseId}`)} className="bg-yellow-400 hover:bg-yellow-500 text-white">เข้าเรียน</Button>
+            )}
+
+            {isCompleted && order.orderType === "EBOOK" && ebookFileUrl && (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  className="bg-yellow-400 hover:bg-yellow-500 text-white"
+                  onClick={() => {
+                    const name = `${order.ebook?.title || "ebook"}.pdf`
+                    const url = `/api/proxy-view?url=${encodeURIComponent(ebookFileUrl)}&filename=${encodeURIComponent(name)}`
+                    window.open(url, "_blank")
+                  }}
+                >
+                  อ่าน eBook
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const name = `${order.ebook?.title || "ebook"}.pdf`
+                    const url = `/api/proxy-download?url=${encodeURIComponent(ebookFileUrl)}&filename=${encodeURIComponent(name)}`
+                    window.open(url, "_blank")
+                  }}
+                >
+                  ดาวน์โหลด eBook
+                </Button>
+              </div>
             )}
 
             <div className="pt-2">

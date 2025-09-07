@@ -8,22 +8,32 @@ import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/sections/footer"
 
 
-const studyPlans = [
+type WorkItem = {
+  id: string | number
+  imageDesktop: string
+  imageMobile: string
+}
+
+const studyPlans: WorkItem[] = [
   {
     id: 1,
-    image: "/student-plan1.jpeg",
+    imageDesktop: "/student-plan1.jpeg",
+    imageMobile: "/student-plan1.jpeg",
   },
   {
     id: 2,
-    image: "/student-plan2.jpeg",
+    imageDesktop: "/student-plan2.jpeg",
+    imageMobile: "/student-plan2.jpeg",
   },
   {
     id: 3,
-    image: "/student-plan3.jpeg",
+    imageDesktop: "/student-plan3.jpeg",
+    imageMobile: "/student-plan3.jpeg",
   },
   {
     id: 4,
-    image: "/student-plan4.jpeg",
+    imageDesktop: "/student-plan4.jpeg",
+    imageMobile: "/student-plan4.jpeg",
   },
 ]
 
@@ -55,12 +65,17 @@ export default function StudentWorksPage() {
           console.log(`[StudyPlans] Posts loaded: ${list.length}`)
         }
 
-        const mapped = list
-          .map((p: any, idx: number) => ({
-            id: p?.id ?? idx,
-            image: p?.imageUrl || p?.imageUrlMobileMode || "",
-          }))
-          .filter((s: { id: string | number; image: string }) => !!s.image)
+        const mapped: WorkItem[] = list
+          .map((p: any, idx: number) => {
+            const desktop = p?.imageUrl || p?.imageUrlMobileMode || ""
+            const mobile = p?.imageUrlMobileMode || p?.imageUrl || ""
+            return {
+              id: p?.id ?? idx,
+              imageDesktop: desktop,
+              imageMobile: mobile,
+            }
+          })
+          .filter((s: WorkItem) => !!(s.imageDesktop || s.imageMobile))
 
         console.log(`[StudyPlans] Slides mapped: ${mapped.length}`)
 
@@ -149,9 +164,9 @@ function ElegantStack({ items }: { items: typeof studyPlans }) {
 
   return (
     <motion.div
-      initial="hidden"
+      initial={false}
       whileInView="show"
-      viewport={{ once: true, amount: 0.2 }}
+      viewport={{ once: true, amount: 0.01 }}
       variants={{
         hidden: { opacity: 1 },
         show: {
@@ -172,7 +187,7 @@ function ElegantTile({
   work,
   index,
 }: {
-  work: { id: number; image: string }
+  work: WorkItem
   index: number
 }) {
   const variants = useMemo(
@@ -192,14 +207,28 @@ function ElegantTile({
   return (
     <motion.figure variants={variants}>
       <TileFrame>
-        <Image
-          src={work.image}
-          alt=""
-          fill
-          sizes="100vw"
-          className="object-cover"
-          fetchPriority={index < 1 ? "high" : undefined}
-        />
+        {/** Desktop (md+) ใช้ imageUrl */}
+        {work.imageDesktop && (
+          <Image
+            src={work.imageDesktop}
+            alt=""
+            fill
+            sizes="(min-width: 768px) 100vw, 0px"
+            className="object-cover hidden md:block"
+            fetchPriority={index < 1 ? "high" : undefined}
+          />
+        )}
+        {/** Mobile (< md) ใช้ imageUrlMobileMode */}
+        {work.imageMobile && (
+          <Image
+            src={work.imageMobile}
+            alt=""
+            fill
+            sizes="(max-width: 767px) 100vw, 0px"
+            className="object-cover md:hidden"
+            fetchPriority={index < 1 ? "high" : undefined}
+          />
+        )}
       </TileFrame>
     </motion.figure>
   )

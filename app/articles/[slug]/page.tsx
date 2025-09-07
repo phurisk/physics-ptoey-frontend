@@ -1,51 +1,111 @@
-import { notFound } from "next/navigation"
 import Image from "next/image"
-import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { articles } from "@/lib/dummy-data"
+import { notFound } from "next/navigation"
 
-type Props = { params: { slug: string } }
+type Params = { params: { slug: string } }
 
-export function generateStaticParams() {
- 
-  return articles.map((a) => ({ slug: a.slug }))
+type ArticleItem = {
+  id: string | number
+  slug: string
+  title: string
+  excerpt: string
+  content: string
+  date: string
+  imageDesktop: string
+  imageMobile: string
 }
 
-export default function ArticleDetail({ params }: Props) {
-  const article = articles.find((a) => a.slug === params.slug)
+function deriveExcerpt(input?: string, max = 160) {
+  if (!input) return ""
+  const text = String(input)
+    .replace(/\r\n|\n|\r/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+  return text.length > max ? text.slice(0, max - 1) + "…" : text
+}
+
+async function fetchArticle(slug: string): Promise<ArticleItem | null> {
+  const params = new URLSearchParams({ postType: "บทความ", slug })
+  const apiUrl = `${(process.env.API_BASE_URL || "").replace(/\/$/, "")}/api/posts?${params.toString()}`
+  try {
+    const res = await fetch(apiUrl, { cache: "no-store" })
+    if (!res.ok) return null
+    const json: any = await res.json().catch(() => null)
+    const list: any[] = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
+    const found = list.find((p) => p?.slug === slug && p?.postType?.name === "บทความ") || null
+    if (!found) return null
+    const desktop = found?.imageUrl || found?.imageUrlMobileMode || ""
+    const mobile = found?.imageUrlMobileMode || found?.imageUrl || ""
+    const excerpt = found?.excerpt || deriveExcerpt(found?.content, 180)
+    const item: ArticleItem = {
+      id: found?.id ?? slug,
+      slug: found?.slug || slug,
+      title: found?.title || "",
+      excerpt: excerpt || "",
+      content: found?.content || "",
+      date: found?.publishedAt ? new Date(found.publishedAt).toISOString() : new Date().toISOString(),
+      imageDesktop: desktop,
+      imageMobile: mobile,
+    }
+    return item
+  } catch (e) {
+    return null
+  }
+}
+
+export default async function ArticleDetailPage({ params }: Params) {
+  const { slug } = params
+  const article = await fetchArticle(slug)
   if (!article) return notFound()
 
   return (
-    <article className="max-w-3xl mx-auto py-12 px-4">
-      <div className="mb-6">
-        <Button asChild variant="outline" className="gap-2">
-          <Link href="/articles" aria-label="กลับไปหน้าบทความทั้งหมด">
-            <ArrowLeft className="w-4 h-4" />
-            กลับไปหน้าบทความ
-          </Link>
-        </Button>
-      </div>
+    <section className="py-10 lg:py-16 bg-gray-50">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative aspect-[16/8] overflow-hidden rounded-xl bg-white shadow-sm">
+          {article.imageDesktop && (
+            <Image
+              src={article.imageDesktop}
+              alt={article.title}
+              fill
+              sizes="(min-width: 768px) 100vw, 0px"
+              className="object-cover hidden md:block"
+              priority
+            />
+          )}
+          {article.imageMobile && (
+            <Image
+              src={article.imageMobile}
+              alt={article.title}
+              fill
+              sizes="(max-width: 767px) 100vw, 0px"
+              className="object-cover md:hidden"
+              priority
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+        </div>
 
-      <h1 className="text-3xl font-bold mb-4">{article.title}</h1>
-      <p className="text-gray-500 mb-6">
-        เผยแพร่: {new Date(article.date).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })}
-      </p>
+        <div className="mt-8">
+          <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 text-balance">
+            {article.title}
+          </h1>
+          {article.excerpt ? (
+            <p className="mt-4 text-lg text-gray-600 text-pretty">{article.excerpt}</p>
+          ) : null}
+          <div className="mt-2 text-sm text-gray-500">
+            {new Date(article.date).toLocaleDateString("th-TH", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </div>
+        </div>
 
-      <div className="relative w-full h-64 mb-6">
-        <Image
-          src={article.image || "/placeholder.svg"}
-          alt={article.title}
-          fill
-          className="object-cover rounded-lg"
-        />
+        <article className="mt-8 bg-white rounded-xl shadow-sm p-6 leading-relaxed text-gray-800 whitespace-pre-line">
+          {article.content || article.excerpt}
+        </article>
       </div>
-
-      
-      <div className="prose max-w-none">
-        <p>{article.excerpt}</p>
-       
-      </div>
-    </article>
+    </section>
   )
 }
+
