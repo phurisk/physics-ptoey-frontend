@@ -9,6 +9,7 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url)
     const search = url.search || ""
+    const returnUrlParam = url.searchParams.get("returnUrl") || ""
 
     const backendUrl = `${baseUrl}/api/auth/callback/line${search}`
     const res = await fetch(backendUrl, {
@@ -17,7 +18,21 @@ export async function GET(req: Request) {
     })
 
     const setCookie = res.headers.get("set-cookie")
-    const redirectTo = "/"
+    // Determine safe redirect target
+    let redirectTo = "/"
+    try {
+      if (returnUrlParam) {
+        if (returnUrlParam.startsWith("/")) {
+          redirectTo = returnUrlParam
+        } else {
+          const target = new URL(returnUrlParam)
+          const origin = `${url.protocol}//${url.host}`
+          if (`${target.protocol}//${target.host}` === origin) {
+            redirectTo = `${target.pathname}${target.search}${target.hash}` || "/"
+          }
+        }
+      }
+    } catch {}
     const response = NextResponse.redirect(redirectTo)
     if (setCookie) response.headers.set("set-cookie", setCookie)
     return response

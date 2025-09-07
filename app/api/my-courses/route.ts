@@ -13,8 +13,29 @@ export async function GET(req: Request) {
     const url = new URL(req.url)
     const search = url.search || ""
     const cookie = req.headers.get("cookie") ?? ""
+
+    const authorization = req.headers.get("authorization") ?? ""
+
+
+    
+
+
+    const headers: Record<string, string> = { cookie }
+
+
+    if (authorization) {
+
+
+      headers["authorization"] = authorization
+
+
+    }
+
+
+    
+  
     const res = await fetch(`${baseUrl}/api/my-courses${search}`, {
-      headers: { cookie },
+      headers,
       cache: "no-store",
     })
     const data = await res.json().catch(() => ({}))

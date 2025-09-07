@@ -64,7 +64,7 @@ export default function OrderSuccessPage() {
       setUploadMsg(null)
       const form = new FormData()
       form.append("orderId", order.id)
-      form.append("slip", file)
+      form.append("file", file)
       const res = await fetch(`/api/payments/upload-slip`, { method: "POST", body: form })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) throw new Error(json?.error || "อัพโหลดไม่สำเร็จ")

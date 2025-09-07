@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react"
+import { exchangeToken } from "@/lib/api-utils"
 
 type User = any
 
@@ -25,11 +26,126 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let active = true
     const init = async () => {
       try {
+        // check login success callback 
+        const urlParams = new URLSearchParams(window.location.search)
+        const loginSuccess = urlParams.get('login_success')
+        const userId = urlParams.get('user_id')
+        const userName = urlParams.get('user_name')
+        const userEmail = urlParams.get('user_email')
+        const lineId = urlParams.get('line_id')
+        
+        if (loginSuccess === 'true' && userId && userName) {
+          // create user object from URL parameters
+          const userData = {
+            id: userId,
+            name: decodeURIComponent(userName),
+            email: decodeURIComponent(userEmail || ''),
+            lineId: lineId,
+            role: 'STUDENT' 
+          }
+
+          // transform temporary data into JWT token 
+          try {
+            const tokenResult = await exchangeToken(userId, lineId || undefined)
+            if (tokenResult.success && tokenResult.data) {
+              setUser(tokenResult.data.user)
+              localStorage.setItem('user', JSON.stringify(tokenResult.data.user))
+              localStorage.setItem('token', tokenResult.data.token)
+              localStorage.removeItem('temp_token') // clear temp token
+
+              console.log('✅ LINE login success with JWT token:', tokenResult.data.user)
+            } else {
+              // when exchange failed, use temp data
+              setUser(userData)
+              localStorage.setItem('user', JSON.stringify(userData))
+              localStorage.setItem('temp_token', `temp_${userId}_${Date.now()}`)
+              console.log('⚠️ Using temporary token, exchange failed:', tokenResult.message)
+            }
+          } catch (error) {
+            // when exchange error, use temp data
+            setUser(userData)
+            localStorage.setItem('user', JSON.stringify(userData))
+            localStorage.setItem('temp_token', `temp_${userId}_${Date.now()}`)
+            console.log('⚠️ Using temporary token, exchange error:', error)
+          }
+
+          // remove parameters from URL
+          window.history.replaceState({}, document.title, window.location.pathname)
+          if (active) setLoading(false)
+          return
+        }
+
+        // check LINE callback code 
+        const code = urlParams.get('code')
+        
+        if (code) {
+          //  LINE callback code -  login
+          try {
+            const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000/'
+            const response = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/api/external/auth/line`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                code: code, 
+                redirectUri: window.location.origin 
+              })
+            })
+            
+            const result = await response.json()
+            if (result.success && result.data) {
+              const userData = result.data.user
+              setUser(userData)
+              localStorage.setItem('user', JSON.stringify(userData))
+              localStorage.setItem('token', result.data.token)
+
+              // remove code from URL
+              window.history.replaceState({}, document.title, window.location.pathname)
+              if (active) setLoading(false)
+              return
+            }
+          } catch (error) {
+            console.error('LINE login error:', error)
+            // remove code from URL error
+            window.history.replaceState({}, document.title, window.location.pathname)
+          }
+        }
+
+        // check token 
+        const savedToken = localStorage.getItem('token')
+        if (savedToken) {
+          try {
+            const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000/'
+            const response = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/api/external/auth/validate`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token: savedToken })
+            })
+            
+            const result = await response.json()
+            if (result.valid && result.user) {
+              if (active) setUser(result.user)
+              localStorage.setItem('user', JSON.stringify(result.user))
+              if (active) setLoading(false)
+              return
+            } else {
+              // Token expired - remove
+              localStorage.removeItem('token')
+              localStorage.removeItem('user')
+            }
+          } catch (error) {
+            console.error('Token validation error:', error)
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
+          }
+        }
+
+        // check user  (fallback)
         const savedUser = localStorage.getItem("user")
         if (savedUser) {
           if (active) setUser(JSON.parse(savedUser))
           return
         }
+
         // Try to recover session from server cookie (e.g., LINE login)
         const res = await fetch("/api/auth/me", { cache: "no-store" })
         const data = await res.json().catch(() => ({} as any))
@@ -39,7 +155,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (e) {
         console.error("Failed to initialize auth", e)
-        try { localStorage.removeItem("user") } catch {}
+        try { 
+          localStorage.removeItem("user")
+          localStorage.removeItem("token")
+        } catch {}
       } finally {
         if (active) setLoading(false)
       }
@@ -110,12 +229,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
     try {
       localStorage.removeItem("user")
+      localStorage.removeItem("token")
     } catch {}
   }
 
   const loginWithLine = () => {
+    const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000/'
+    const redirectUri = `${API_BASE_URL.replace(/\/$/, '')}/api/auth/callback/line`
     
-    window.location.href = "/api/auth/line"
+    const lineURL = 'https://access.line.me/oauth2/v2.1/authorize?' +
+      'response_type=code' +
+      `&client_id=${process.env.NEXT_PUBLIC_LINE_CHANNEL_ID}` +
+      '&redirect_uri=' + encodeURIComponent(redirectUri) +
+      '&scope=profile%20openid' +
+      '&state=' + encodeURIComponent(window.location.origin) // sent origin to state for redirect back
+
+    window.location.href = lineURL
   }
 
   const updateUser = (u: User) => {

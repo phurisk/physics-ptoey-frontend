@@ -151,7 +151,7 @@ export default function Books() {
       setUploadMsg(null)
       const form = new FormData()
       form.append("orderId", orderInfo.orderId)
-      form.append("slip", slip)
+      form.append("file", slip)
       const res = await fetch(`/api/payments/upload-slip`, { method: "POST", body: form })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) throw new Error(json?.error || "อัพโหลดไม่สำเร็จ")

@@ -17,6 +17,11 @@ export async function POST(req: Request) {
       form.append(key, value as any)
     }
 
+    if (!incoming.has("file") && incoming.has("slip")) {
+      const slip = incoming.get("slip") as any
+      if (slip) form.append("file", slip)
+    }
+
     const res = await fetch(`${baseUrl}/api/payments/upload-slip`, {
       method: "POST",
       headers: { cookie },

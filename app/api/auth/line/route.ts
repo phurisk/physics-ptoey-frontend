@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 
+// Redirect via backend's LINE sign-in (avoids redirect_uri mismatch)
 export async function GET(req: Request) {
   const baseUrl = process.env.API_BASE_URL
   if (!baseUrl) {
@@ -9,13 +10,15 @@ export async function GET(req: Request) {
     )
   }
 
-
   const url = new URL(req.url)
   const origin = `${url.protocol}//${url.host}`
-  const callbackUrl = encodeURIComponent(`${origin}/api/auth/line/callback`)
 
+  const returnUrl = url.searchParams.get("returnUrl") || ""
+  let callbackRaw = `${origin}/api/auth/line/callback`
+  if (returnUrl) {
+    callbackRaw += `?returnUrl=${encodeURIComponent(returnUrl)}`
+  }
+  const callbackUrl = encodeURIComponent(callbackRaw)
 
-  return NextResponse.redirect(
-    `${baseUrl}/api/auth/signin/line?callbackUrl=${callbackUrl}`
-  )
+  return NextResponse.redirect(`${baseUrl}/api/auth/signin/line?callbackUrl=${callbackUrl}`)
 }
