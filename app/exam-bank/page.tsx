@@ -13,6 +13,9 @@ import { examCategories } from "@/lib/dummy-data"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/sections/footer"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import LoginModal from "@/components/login-modal"
+import { useAuth } from "@/components/auth-provider"
 
 type ApiExam = {
   id: string
@@ -45,6 +48,9 @@ type UiExam = {
 const EXAMS_API = "/api/exams"
 
 export default function ExamBankPage() {
+  const router = useRouter()
+  const { isAuthenticated } = useAuth()
+  const [loginOpen, setLoginOpen] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [selectedYear, setSelectedYear] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
@@ -52,6 +58,9 @@ export default function ExamBankPage() {
   const [data, setData] = useState<ApiExam[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [filesLoading, setFilesLoading] = useState(false)
+  const [filesError, setFilesError] = useState<string | null>(null)
+  const [files, setFiles] = useState<{ id?: string; name?: string; url: string; mime?: string }[]>([])
 
   useEffect(() => {
     let active = true
@@ -73,6 +82,68 @@ export default function ExamBankPage() {
       active = false
     }
   }, [])
+
+  // Load files for the selected exam when dialog opens
+  useEffect(() => {
+    let cancelled = false
+    async function loadFiles(examId: string) {
+      try {
+        setFilesLoading(true)
+        setFilesError(null)
+        setFiles([])
+        // Try fetching exam detail with files included (backend may honor include=files)
+        const res = await fetch(`${EXAMS_API}/${encodeURIComponent(examId)}?include=files`, { cache: "no-store" })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const json = await res.json().catch(() => ({}))
+        const detail = json?.data || json
+        // Normalize possible file shapes
+        const rawFiles = (detail?.files || detail?.data?.files || []) as any[]
+        let normalized = (Array.isArray(rawFiles) ? rawFiles : []).map((f: any) => {
+          const url: string = f?.url || f?.fileUrl || f?.downloadUrl || f?.cloudinaryUrl || f?.filePath || ""
+          const name: string = f?.name || f?.title || f?.filename || f?.originalName || f?.publicId || f?.fileName || "ไฟล์ PDF"
+          const mime: string | undefined = f?.mime || f?.mimeType || f?.contentType || f?.fileType || undefined
+          return url ? { id: f?.id, name, url, mime } : null
+        }).filter(Boolean) as { id?: string; name?: string; url: string; mime?: string }[]
+        // Prefer PDFs if available
+        const pdfs = normalized.filter((f) => /pdf/i.test(f.mime || "") || /\.pdf(\?|$)/i.test(f.url))
+        normalized = pdfs.length > 0 ? pdfs : normalized
+        if (!cancelled) setFiles(normalized)
+
+        // Fallback: try a dedicated files endpoint if none returned
+        if (!cancelled && normalized.length === 0) {
+          try {
+            const res2 = await fetch(`${EXAMS_API}/${encodeURIComponent(examId)}/files`, { cache: "no-store" })
+            if (res2.ok) {
+              const json2 = await res2.json().catch(() => ({}))
+              const list = (json2?.data || json2 || []) as any[]
+              let norm2 = (Array.isArray(list) ? list : []).map((f: any) => {
+                const url: string = f?.url || f?.fileUrl || f?.downloadUrl || f?.cloudinaryUrl || f?.filePath || ""
+                const name: string = f?.name || f?.title || f?.filename || f?.originalName || f?.publicId || f?.fileName || "ไฟล์ PDF"
+                const mime: string | undefined = f?.mime || f?.mimeType || f?.contentType || f?.fileType || undefined
+                return url ? { id: f?.id, name, url, mime } : null
+              }).filter(Boolean) as { id?: string; name?: string; url: string; mime?: string }[]
+              const pdfs2 = norm2.filter((f) => /pdf/i.test(f.mime || "") || /\.pdf(\?|$)/i.test(f.url))
+              norm2 = pdfs2.length > 0 ? pdfs2 : norm2
+              if (!cancelled) setFiles(norm2)
+            }
+          } catch {}
+        }
+      } catch (e: any) {
+        if (!cancelled) setFilesError(e?.message ?? "โหลดไฟล์ไม่สำเร็จ")
+      } finally {
+        if (!cancelled) setFilesLoading(false)
+      }
+    }
+
+    if (selectedExam?.id) {
+      loadFiles(selectedExam.id)
+    } else {
+      setFiles([])
+      setFilesError(null)
+      setFilesLoading(false)
+    }
+    return () => { cancelled = true }
+  }, [selectedExam])
 
   const getCategoryColor = (name?: string) => {
     if (!name) return "rgb(250 202 21)"
@@ -123,16 +194,16 @@ export default function ExamBankPage() {
     })
   }, [uiExams, selectedCategory, selectedYear, searchTerm])
 
-  const handleViewPDF = (pdfUrl: string, title: string) => {
-    console.log(` Opening PDF: ${title} at ${pdfUrl}`)
-    alert(`เปิดดู PDF: ${title}`)
-    setSelectedExam(null)
+  const handleViewPDF = (examId: string) => {
+    if (!examId) return
+    router.push(`/exam-bank/view/${encodeURIComponent(examId)}`)
   }
 
-  const handleDownload = (downloadUrl: string, title: string) => {
-    console.log(` Downloading: ${title} from ${downloadUrl}`)
-    alert(`ดาวน์โหลด: ${title}`)
-    setSelectedExam(null)
+  const handleDownload = (downloadUrl: string, filename?: string) => {
+    if (!downloadUrl) return
+    if (!isAuthenticated) { setLoginOpen(true); return }
+    const url = `/api/proxy-download?url=${encodeURIComponent(downloadUrl)}${filename ? `&filename=${encodeURIComponent(filename)}` : ""}`
+    try { window.open(url, "_blank", "noopener,noreferrer") } catch {}
   }
 
   return (
@@ -308,30 +379,49 @@ export default function ExamBankPage() {
                     <p className="font-semibold">{selectedExam?.year}</p>
                   </div>
                 </div>
-
-                <div className="flex gap-3 pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleViewPDF(selectedExam?.pdfUrl || "", selectedExam?.title || "")}
-                    className="flex-1 hover:bg-blue-50 hover:border-blue-300"
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    ดู PDF
-                  </Button>
-                  <Button
-                    onClick={() => handleDownload(selectedExam?.downloadUrl || "", selectedExam?.title || "")}
-                    className="flex-1"
-                    style={{
-                      backgroundColor: getCategoryColor(selectedExam?.categoryName),
-                    }}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download
-                  </Button>
+                {/* Files section */}
+                <div className="pt-2">
+                  {filesLoading && (
+                    <p className="text-center text-gray-500 py-2">กำลังโหลดไฟล์…</p>
+                  )}
+                  {!filesLoading && filesError && (
+                    <p className="text-center text-red-600 py-2">{filesError}</p>
+                  )}
+                  {!filesLoading && !filesError && files.length === 0 && (
+                    <p className="text-center text-gray-500 py-2">ไม่พบไฟล์สำหรับข้อสอบนี้</p>
+                  )}
+                  {!filesLoading && !filesError && files.length > 0 && (
+                    <div className="space-y-2">
+                      {files.map((f, idx) => (
+                        <div key={f.id || idx} className="flex items-center justify-between rounded-md border p-2">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <FileText className="h-5 w-5 text-gray-600 shrink-0" />
+                            <div className="truncate">
+                              <p className="text-sm font-medium text-gray-900 truncate">{f.name || "ไฟล์ PDF"}</p>
+                              <p className="text-xs text-gray-500 truncate">
+                                {(() => { try { return new URL(f.url).hostname } catch { return f.url } })()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => handleViewPDF(selectedExam?.id || "")} className="hover:bg-blue-50 hover:border-blue-300">
+                              <Eye className="h-4 w-4" />ดูข้อสอบ
+                            </Button>
+                            <Button size="sm" onClick={() => handleDownload(f.url, f.name || `${selectedExam?.title || "exam"}.pdf`)} style={{ backgroundColor: getCategoryColor(selectedExam?.categoryName) }}>
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Login modal for gated download */}
+          <LoginModal isOpen={loginOpen} onClose={() => setLoginOpen(false)} />
 
 
           {!loading && !error && filteredExams.length === 0 && (

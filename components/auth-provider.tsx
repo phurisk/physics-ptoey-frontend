@@ -180,11 +180,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: (data as any)?.error || (data as any)?.message || "อีเมลหรือรหัสผ่านไม่ถูกต้อง" }
       }
 
-      const userData = data?.data ?? null
+      const userData = (data?.data && (data?.data.user || data?.data)) || null
+      const token = (data?.data && data?.data.token) || data?.token || null
       if (userData) {
         setUser(userData)
         try {
           localStorage.setItem("user", JSON.stringify(userData))
+          if (token) localStorage.setItem("token", token)
         } catch {}
       }
       return { success: true, user: userData }
@@ -207,11 +209,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: (data as any)?.error || (data as any)?.message || "ลงทะเบียนไม่สำเร็จ" }
       }
 
-      const newUser = data?.data ?? null
+      const newUser = (data?.data && (data?.data.user || data?.data)) || null
+      const token = (data?.data && data?.data.token) || data?.token || null
       if (newUser) {
         setUser(newUser)
         try {
           localStorage.setItem("user", JSON.stringify(newUser))
+          if (token) localStorage.setItem("token", token)
         } catch {}
       }
       return { success: true, user: newUser }

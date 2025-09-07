@@ -24,8 +24,34 @@ export async function POST(req: Request) {
     const response = NextResponse.json(data, { status: res.status })
     const setCookie = res.headers.get("set-cookie")
     if (setCookie) {
+      // Pass through original Set-Cookie for compatibility
       response.headers.set("set-cookie", setCookie)
+      // Also persist backend cookie string into our own cookie so subsequent API calls can forward it
+      try {
+        const encoded = encodeURIComponent(setCookie)
+        // Store for 7 days by default
+        const maxAge = 60 * 60 * 24 * 7
+        response.cookies.set("backend_cookie", encoded, {
+          httpOnly: true,
+          sameSite: "lax",
+          path: "/",
+          maxAge,
+        })
+      } catch {}
     }
+    // If backend also returns a JWT, store it as httpOnly cookie for download flow
+    try {
+      const token = (data?.data && (data?.data.token || data?.token)) || data?.token
+      if (typeof token === "string" && token.length > 0) {
+        response.cookies.set("jwt", token, {
+          httpOnly: true,
+          sameSite: "lax",
+          path: "/",
+          // 7 days
+          maxAge: 60 * 60 * 24 * 7,
+        })
+      }
+    } catch {}
     return response
   } catch (err) {
     return NextResponse.json(
