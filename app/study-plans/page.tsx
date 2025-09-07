@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { MotionConfig, motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
@@ -29,6 +29,57 @@ const studyPlans = [
 
 
 export default function StudentWorksPage() {
+  const [items, setItems] = useState<typeof studyPlans>(studyPlans)
+
+ 
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const params = new URLSearchParams({ postType: "แผนการเรียน" })
+        const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
+        if (res.ok) {
+          console.log("[StudyPlans] Fetch /api/posts: OK", res.status)
+        } else {
+          console.warn("[StudyPlans] Fetch /api/posts: NOT OK", res.status, res.statusText)
+        }
+        const json: any = await res.json().catch(() => null)
+
+        const list = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
+        if (!list.length) {
+          console.warn(
+            `[StudyPlans] API ไม่มีข้อมูลโพสต์ ใช้รูป dummy แทน (${studyPlans.length} ภาพ)`
+          )
+          return
+        } else {
+          console.log(`[StudyPlans] Posts loaded: ${list.length}`)
+        }
+
+        const mapped = list
+          .map((p: any, idx: number) => ({
+            id: p?.id ?? idx,
+            image: p?.imageUrl || p?.imageUrlMobileMode || "",
+          }))
+          .filter((s: { id: string | number; image: string }) => !!s.image)
+
+        console.log(`[StudyPlans] Slides mapped: ${mapped.length}`)
+
+        if (mounted && mapped.length) {
+          setItems(mapped as any)
+          console.log(`[StudyPlans] ใช้รูปจาก API จำนวน ${mapped.length} ภาพ`)
+        } else if (mounted) {
+          console.warn(
+            `[StudyPlans] API ไม่มีรูป (imageUrl/imageUrlMobileMode) ใช้รูป dummy แทน (${studyPlans.length} ภาพ)`
+          )
+        }
+      } catch (err) {
+        console.error("[StudyPlans] Failed to load posts", err)
+      }
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [])
   return (
     <MotionConfig transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}>
       <Navigation />
@@ -61,7 +112,7 @@ export default function StudentWorksPage() {
 
 
           <div className="relative mx-auto max-w-7xl px-4 py-12 sm:py-16">
-            <ElegantStack items={studyPlans} />
+            <ElegantStack items={items} />
           </div>
         </section>
 

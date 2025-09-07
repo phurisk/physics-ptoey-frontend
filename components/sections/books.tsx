@@ -39,7 +39,7 @@ export default function Books() {
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState<string | null>(null)
 
-  // Purchase modal state
+ 
   const [purchaseOpen, setPurchaseOpen] = useState(false)
   const [selectedBook, setSelectedBook] = useState<Ebook | null>(null)
   const [couponCode, setCouponCode] = useState("")
@@ -59,7 +59,7 @@ export default function Books() {
     let cancelled = false
     async function run() {
       try {
-        // Use same-origin proxy route to avoid CORS
+        
         const res = await fetch(`/api/ebooks`, { cache: "no-store" })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const json = await res.json()

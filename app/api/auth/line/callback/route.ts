@@ -18,7 +18,7 @@ export async function GET(req: Request) {
     })
 
     const setCookie = res.headers.get("set-cookie")
-    // Determine safe redirect target
+    
     let redirectTo = "/"
     try {
       if (returnUrlParam) {

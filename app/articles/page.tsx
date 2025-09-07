@@ -4,7 +4,8 @@ import { redirect } from "next/navigation"
 import { Calendar, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { articles } from "@/lib/dummy-data"
+import Script from "next/script"
+import { articles as fallbackArticles } from "@/lib/dummy-data"
 
 const PAGE_SIZE = 9
 
@@ -17,13 +18,45 @@ type Props = {
   searchParams?: { page?: string }
 }
 
-export default function ArticlesIndexPage({ searchParams }: Props) {
+export default async function ArticlesIndexPage({ searchParams }: Props) {
 
   const raw = searchParams?.page ?? "1"
   const page = Math.max(1, Number.isNaN(Number(raw)) ? 1 : Number(raw))
 
- 
-  const sorted = [...articles].sort(
+  const params = new URLSearchParams({ postType: "บทความ" })
+  const apiUrl = `${(process.env.API_BASE_URL || "").replace(/\/$/, "")}/api/posts?${params.toString()}`
+  let ok = false
+  let status = 0
+  let items: any[] = []
+  try {
+    const res = await fetch(apiUrl, { cache: "no-store" })
+    ok = res.ok
+    status = res.status
+    const json: any = await res.json().catch(() => null)
+    items = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
+  } catch (e) {
+    ok = false
+    status = 0
+    items = []
+  }
+
+  // Map API items to article shape
+  const mapped = items
+    .map((p: any, idx: number) => ({
+      id: p?.id ?? idx,
+      slug: p?.slug || "",
+      title: p?.title || "",
+      image: p?.imageUrl || p?.imageUrlMobileMode || "",
+      excerpt: p?.excerpt || "",
+      date: p?.publishedAt ? new Date(p.publishedAt).toISOString() : new Date().toISOString(),
+    }))
+    .filter((a: any) => !!a.image)
+
+  const usingFallback = mapped.length === 0
+  const fallbackReason = !items.length ? "no-posts" : "no-images"
+  const base = usingFallback ? fallbackArticles : mapped
+
+  const sorted = [...base].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   )
 
@@ -41,6 +74,44 @@ export default function ArticlesIndexPage({ searchParams }: Props) {
   return (
     <section className="py-16 lg:py-24 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <Script id="articles-logs" strategy="afterInteractive">
+          {`
+            (() => {
+              const scope = '[Articles]';
+              const d = ${JSON.stringify({
+                ok,
+                status,
+                postsCount: undefined, // computed below at runtime via inlined number
+                mappedCount: undefined,
+                usingFallback,
+                fallbackReason,
+                fallbackCount: fallbackArticles.length,
+              })};
+              d.postsCount = ${Number.isFinite((items as any[]).length) ? (items as any[]).length : 0};
+              d.mappedCount = ${Number.isFinite((mapped as any[]).length) ? (mapped as any[]).length : 0};
+              if (typeof d.ok !== 'undefined') {
+                if (d.ok) console.log(scope + ' Fetch /api/posts: OK ' + d.status);
+                else console.warn(scope + ' Fetch /api/posts: NOT OK ' + d.status);
+              }
+              if (typeof d.postsCount !== 'undefined') {
+                if (!d.postsCount) {
+                  console.warn(scope + ' API ไม่มีข้อมูลโพสต์ ใช้รูป dummy แทน (' + d.fallbackCount + ' ภาพ)');
+                } else {
+                  console.log(scope + ' Posts loaded: ' + d.postsCount);
+                }
+              }
+              console.log(scope + ' Articles mapped: ' + d.mappedCount);
+              if (d.usingFallback) {
+                if (d.fallbackReason === 'no-images') {
+                  console.warn(scope + ' API ไม่มีรูป (imageUrl/imageUrlMobileMode) ใช้รูป dummy แทน (' + d.fallbackCount + ' ภาพ)');
+                }
+              } else {
+                console.log(scope + ' ใช้รูปจาก API จำนวน ' + d.mappedCount + ' ภาพ');
+              }
+            })();
+          `}
+        </Script>
 
         <div className="text-center mb-12">
           <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 text-balance">
@@ -59,7 +130,7 @@ export default function ArticlesIndexPage({ searchParams }: Props) {
               className="group hover:shadow-xl transition-all duration-300 overflow-hidden bg-white"
             >
               <CardContent className="p-0">
-                <Link href={`/articles/${article.slug}`}>
+                <Link href={article.slug ? `/articles/${article.slug}` : `#`}>
                   <div className="aspect-[16/10] relative overflow-hidden cursor-pointer">
                     <Image
                       src={article.image || "/placeholder.svg"}
@@ -83,7 +154,7 @@ export default function ArticlesIndexPage({ searchParams }: Props) {
                     </div>
                   </div>
 
-                  <Link href={`/articles/${article.slug}`}>
+                  <Link href={article.slug ? `/articles/${article.slug}` : `#`}>
                     <h3 className="text-xl font-semibold text-gray-900 mb-3 text-balance group-hover:text-yellow-600 transition-colors duration-200">
                       {article.title}
                     </h3>

@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // check token with backend
+
     const res = await fetch(`${baseUrl}/api/external/auth/validate`, {
       method: "POST",
       headers: {

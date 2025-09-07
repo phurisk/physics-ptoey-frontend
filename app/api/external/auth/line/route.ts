@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // sent code transfer token from backend
+ 
     const res = await fetch(`${baseUrl}/api/external/auth/line`, {
       method: "POST",
       headers: {

@@ -10,7 +10,27 @@ export async function GET(req: Request) {
   }
 
   try {
-    const cookie = req.headers.get("cookie") ?? ""
+    const rawCookie = req.headers.get("cookie") ?? ""
+   
+    const backendCookie = (() => {
+      try {
+        const match = rawCookie.split(/;\s*/).find((p) => p.startsWith("backend_cookie="))
+        if (!match) return null
+        const val = decodeURIComponent(match.split("=").slice(1).join("="))
+        return val
+      } catch { return null }
+    })()
+   
+    const toCookieHeader = (setCookie: string) => {
+      try {
+        const items = setCookie.split(/,\s*(?=[^=;,\s]+=)/g)
+        const pairs = items.map((c) => c.split(";")[0].trim()).filter(Boolean)
+        return pairs.join("; ")
+      } catch {
+        return ""
+      }
+    }
+    const cookie = backendCookie ? toCookieHeader(backendCookie) : rawCookie
     const res = await fetch(`${baseUrl}/api/auth/me`, {
       headers: { cookie },
       cache: "no-store",
@@ -24,4 +44,3 @@ export async function GET(req: Request) {
     )
   }
 }
-

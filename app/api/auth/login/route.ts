@@ -16,7 +16,7 @@ export async function POST(req: Request) {
       method: "POST",
       headers: { "content-type": "application/json", cookie },
       body: JSON.stringify(body),
-      // do not cache auth
+     
       cache: "no-store",
     })
 
@@ -24,8 +24,34 @@ export async function POST(req: Request) {
     const response = NextResponse.json(data, { status: res.status })
     const setCookie = res.headers.get("set-cookie")
     if (setCookie) {
+   
       response.headers.set("set-cookie", setCookie)
+    
+      try {
+        const encoded = encodeURIComponent(setCookie)
+    
+        const maxAge = 60 * 60 * 24 * 7
+        response.cookies.set("backend_cookie", encoded, {
+          httpOnly: true,
+          sameSite: "lax",
+          path: "/",
+          maxAge,
+        })
+      } catch {}
     }
+   
+    try {
+      const token = (data?.data && (data?.data.token || data?.token)) || data?.token
+      if (typeof token === "string" && token.length > 0) {
+        response.cookies.set("jwt", token, {
+          httpOnly: true,
+          sameSite: "lax",
+          path: "/",
+         
+          maxAge: 60 * 60 * 24 * 7,
+        })
+      }
+    } catch {}
     return response
   } catch (err) {
     return NextResponse.json(
