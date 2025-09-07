@@ -128,4 +128,8 @@ export function MyCourses() {
       )}
     </div>
   )
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/main

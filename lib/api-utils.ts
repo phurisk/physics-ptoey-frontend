@@ -89,4 +89,8 @@ export async function exchangeToken(userId: string, lineId?: string) {
     console.error("Token exchange error:", error);
     return { success: false, message: "เกิดข้อผิดพลาดในการแลก token" };
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/main

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -15,10 +16,27 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const { token } = body;
+=======
+import { NextResponse } from "next/server"
+
+export async function POST(req: Request) {
+  const baseUrl = process.env.API_BASE_URL
+  if (!baseUrl) {
+    return NextResponse.json(
+      { success: false, message: "API_BASE_URL is not configured" },
+      { status: 500 }
+    )
+  }
+
+  try {
+    const body = await req.json()
+    const { token } = body
+>>>>>>> origin/main
 
     if (!token) {
       return NextResponse.json(
         { success: false, message: "Missing token" },
+<<<<<<< HEAD
 
         { status: 400 }
       );
@@ -47,5 +65,29 @@ export async function POST(req: Request) {
 
       { status: 500 }
     );
+=======
+        { status: 400 }
+      )
+    }
+
+    // รีเฟรช token กับ backend
+    const res = await fetch(`${baseUrl}/api/external/auth/refresh`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ token }),
+    })
+
+    const data = await res.json()
+
+    return NextResponse.json(data, { status: res.status })
+  } catch (error) {
+    console.error("Token refresh error:", error)
+    return NextResponse.json(
+      { success: false, message: "Internal server error" },
+      { status: 500 }
+    )
+>>>>>>> origin/main
   }
 }
