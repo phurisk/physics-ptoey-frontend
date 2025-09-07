@@ -21,10 +21,19 @@ export async function GET(
   }
 
   try {
+    const url = new URL(req.url)
+    const search = url.search || ""
     const cookie = req.headers.get("cookie") ?? ""
-    const res = await fetch(`${baseUrl}/api/courses/${encodeURIComponent(id)}`, {
-      next: { revalidate: 60 },
-      headers: { cookie },
+    const authorization = req.headers.get("authorization") ?? ""
+    
+    const headers: Record<string, string> = { cookie }
+    if (authorization) {
+      headers["authorization"] = authorization
+    }
+    
+    const res = await fetch(`${baseUrl}/api/courses/${encodeURIComponent(id)}${search}`, {
+      headers,
+      cache: "no-store",
     })
     const data = await res.json()
     return NextResponse.json(data, { status: res.status })

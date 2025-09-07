@@ -111,7 +111,7 @@ export default function MyCourses() {
                     )}
                   </div>
                   <div>
-                    <Link href={`/courses/${c.id}`}>
+                    <Link href={`/profile/my-courses/course/${c.id}`}>
                       <Button className="bg-yellow-400 hover:bg-yellow-500 text-white">เข้าเรียน</Button>
                     </Link>
                   </div>

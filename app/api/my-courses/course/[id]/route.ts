@@ -1,28 +1,21 @@
-import { NextResponse, NextRequest } from "next/server"
+import { NextResponse } from "next/server"
 
 export async function GET(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
+  req: Request,
+  { params }: { params: { id: string } }
 ) {
   const baseUrl = process.env.API_BASE_URL
   if (!baseUrl) {
     return NextResponse.json(
-      { success: false, message: "API_BASE_URL is not configured", data: [] },
+      { success: false, message: "API_BASE_URL is not configured", course: null },
       { status: 500 }
-    )
-  }
-
-  const { id } = await context.params
-  if (!id) {
-    return NextResponse.json(
-      { success: false, message: "Missing course id", data: [] },
-      { status: 400 }
     )
   }
 
   try {
     const url = new URL(req.url)
     const search = url.search || ""
+    const courseId = params.id
     const cookie = req.headers.get("cookie") ?? ""
     const authorization = req.headers.get("authorization") ?? ""
     
@@ -31,15 +24,16 @@ export async function GET(
       headers["authorization"] = authorization
     }
     
-    const res = await fetch(`${baseUrl}/api/courses/${encodeURIComponent(id)}/chapters${search}`, {
+    const res = await fetch(`${baseUrl}/api/my-courses/course/${courseId}${search}`, {
       headers,
       cache: "no-store",
     })
-    const data = await res.json()
+    
+    const data = await res.json().catch(() => ({}))
     return NextResponse.json(data, { status: res.status })
   } catch (err) {
     return NextResponse.json(
-      { success: false, message: "Failed to fetch chapters", data: [] },
+      { success: false, message: "Failed to fetch course details", course: null },
       { status: 502 }
     )
   }
