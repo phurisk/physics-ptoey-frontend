@@ -22,7 +22,7 @@ export async function GET(
 
   try {
     const cookie = req.headers.get("cookie") ?? ""
-    // Pass through query (e.g. include=files) if provided
+    
     const url = new URL(req.url)
     const search = url.search || ""
     const res = await fetch(`${baseUrl}/api/exams/${encodeURIComponent(id)}${search}`, {

@@ -90,13 +90,13 @@ export default function CourseDetailPage() {
       if (!id) return
       try {
         setLoading(true)
-        // Fetch course detail first
+      
         const res = await fetch(COURSE_API(id), { cache: "no-store" })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const json: ApiResponse = await res.json()
         if (active) setCourse(json.data || null)
 
-        // If API includes chapters inline, use them; otherwise try chapters endpoint
+      
         const inlineChapters = (json.data as any)?.chapters as ApiChapter[] | undefined
         if (inlineChapters && Array.isArray(inlineChapters)) {
           if (active) setChapters(inlineChapters)
@@ -139,7 +139,7 @@ export default function CourseDetailPage() {
     return () => { active = false }
   }, [isAuthenticated, user?.id, id])
 
-  // Load existing progress (enrollment) for this course
+
   useEffect(() => {
     let active = true
     const loadEnrollment = async () => {

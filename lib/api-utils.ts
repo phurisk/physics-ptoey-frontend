@@ -1,7 +1,11 @@
 // Utility functions สำหรับการเรียก API ที่ต้องใช้ authentication
 // เชื่อมต่อกับ e-learning backend
 
-const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:3000/";
+// Note: On the client, only NEXT_PUBLIC_* envs are exposed. Use a sensible fallback chain.
+const API_BASE_URL =
+  (process.env.NEXT_PUBLIC_ELEARNING_BASE_URL as string | undefined) ||
+  (process.env.API_BASE_URL as string | undefined) ||
+  "http://localhost:3000/";
 
 export async function apiCall(endpoint: string, options: RequestInit = {}) {
   const token = localStorage.getItem("token");

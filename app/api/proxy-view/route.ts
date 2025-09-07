@@ -12,7 +12,7 @@ export async function GET(req: Request) {
       )
     }
 
-    // Support byte-range requests for better PDF viewing
+  
     const range = req.headers.get("range") || undefined
     const upstream = await fetch(target, {
       headers: range ? { range } : undefined,
@@ -26,7 +26,6 @@ export async function GET(req: Request) {
       )
     }
 
-    // Determine content-type: force application/pdf when URL/filename looks like PDF
     const upstreamType = upstream.headers.get("content-type") || ""
     const looksPdf = /\.pdf(\?|$)/i.test(target) || /\.pdf(\?|$)/i.test(filename)
     const contentType = /application\/pdf/i.test(upstreamType)
@@ -35,7 +34,6 @@ export async function GET(req: Request) {
         ? "application/pdf"
         : (upstreamType || "application/pdf")
 
-    // Prepare headers, keeping only what’s useful for the browser viewer
     const headers: Record<string, string> = {
       "content-type": contentType,
       "content-disposition": `inline; filename*=UTF-8''${encodeURIComponent(filename)}`,
@@ -55,7 +53,7 @@ export async function GET(req: Request) {
       if (v) headers[h] = v
     }
 
-    // Stream the response body to the client; support 206 when provided
+
     const status = upstream.status === 206 ? 206 : 200
     const body = upstream.body ?? (await upstream.arrayBuffer())
 

@@ -42,7 +42,7 @@ export default function ExamViewer({ params }: { params: Promise<{ id: string }>
         if (!detail) throw new Error("ไม่พบข้อมูลข้อสอบ")
         if (!cancelled) setExam(detail)
 
-        // choose best file (prefer pdf)
+
         const files = (detail.files || []).map((f) => ({
           id: f.id,
           name: f.fileName || "ไฟล์ข้อสอบ",

@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // รีเฟรช token กับ backend
+   
     const res = await fetch(`${baseUrl}/api/external/auth/refresh`, {
       method: "POST",
       headers: {

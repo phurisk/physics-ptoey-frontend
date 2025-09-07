@@ -83,7 +83,7 @@ export default function ExamBankPage() {
     }
   }, [])
 
-  // Load files for the selected exam when dialog opens
+  
   useEffect(() => {
     let cancelled = false
     async function loadFiles(examId: string) {
@@ -91,12 +91,12 @@ export default function ExamBankPage() {
         setFilesLoading(true)
         setFilesError(null)
         setFiles([])
-        // Try fetching exam detail with files included (backend may honor include=files)
+      
         const res = await fetch(`${EXAMS_API}/${encodeURIComponent(examId)}?include=files`, { cache: "no-store" })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const json = await res.json().catch(() => ({}))
         const detail = json?.data || json
-        // Normalize possible file shapes
+      
         const rawFiles = (detail?.files || detail?.data?.files || []) as any[]
         let normalized = (Array.isArray(rawFiles) ? rawFiles : []).map((f: any) => {
           const url: string = f?.url || f?.fileUrl || f?.downloadUrl || f?.cloudinaryUrl || f?.filePath || ""
@@ -104,12 +104,12 @@ export default function ExamBankPage() {
           const mime: string | undefined = f?.mime || f?.mimeType || f?.contentType || f?.fileType || undefined
           return url ? { id: f?.id, name, url, mime } : null
         }).filter(Boolean) as { id?: string; name?: string; url: string; mime?: string }[]
-        // Prefer PDFs if available
+    
         const pdfs = normalized.filter((f) => /pdf/i.test(f.mime || "") || /\.pdf(\?|$)/i.test(f.url))
         normalized = pdfs.length > 0 ? pdfs : normalized
         if (!cancelled) setFiles(normalized)
 
-        // Fallback: try a dedicated files endpoint if none returned
+        
         if (!cancelled && normalized.length === 0) {
           try {
             const res2 = await fetch(`${EXAMS_API}/${encodeURIComponent(examId)}/files`, { cache: "no-store" })

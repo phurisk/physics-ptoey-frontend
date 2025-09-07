@@ -13,7 +13,7 @@ export async function GET(req: Request) {
       )
     }
 
-    // Range support for large files
+  
     const range = req.headers.get("range") || undefined
     const upstream = await fetch(target, {
       headers: range ? { range } : undefined,

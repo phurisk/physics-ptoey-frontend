@@ -11,7 +11,7 @@ export async function GET(req: Request) {
 
   try {
     const rawCookie = req.headers.get("cookie") ?? ""
-    // If we stored the backend cookie string in our cookie, prefer forwarding that
+   
     const backendCookie = (() => {
       try {
         const match = rawCookie.split(/;\s*/).find((p) => p.startsWith("backend_cookie="))
@@ -20,7 +20,7 @@ export async function GET(req: Request) {
         return val
       } catch { return null }
     })()
-    // Convert Set-Cookie header(s) into a Cookie header value
+   
     const toCookieHeader = (setCookie: string) => {
       try {
         const items = setCookie.split(/,\s*(?=[^=;,\s]+=)/g)

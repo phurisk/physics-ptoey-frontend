@@ -33,7 +33,7 @@ export default function Orders() {
   const [error, setError] = useState<string | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
 
-  // Upload slip modal
+
   const [openUpload, setOpenUpload] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
@@ -94,7 +94,7 @@ export default function Orders() {
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) throw new Error(json?.error || "อัพโหลดไม่สำเร็จ")
       setUploadSuccess("อัพโหลดสลิปสำเร็จ กำลังรอตรวจสอบ")
-      // Refresh orders after upload
+   
       try {
         const r = await fetch(`/api/orders?userId=${encodeURIComponent(user!.id)}`, { cache: "no-store" })
         const j: OrdersResponse = await r.json().catch(() => ({ success: false, data: [] }))
