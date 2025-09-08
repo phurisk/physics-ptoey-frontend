@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 
-// Public download proxy (no auth): streams upstream file and forces attachment
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url)

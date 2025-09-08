@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Play, Clock, BookOpen, ChevronRight } from "lucide-react"
 
-// Mock data for Physics course
 const courseData = {
     title: "Physics Fundamentals",
     description: "เรียนรู้หลักการฟิสิกส์พื้นฐานผ่านวิดีโอที่เข้าใจง่าย",
@@ -190,7 +189,7 @@ export default function PhysicsCoursePage() {
                                             className="w-full h-full object-cover"
                                         />
                                         <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                                            <Button size="lg" className="text-white hover:opacity-90" style={{ backgroundColor: "#004b7d" }}>
+                                            <Button size="lg" className="text-white hover:opacity-90 bg-yellow-400 hover:bg-yellow-500">
                                                 <Play className="h-6 w-6 mr-2" />
                                                 เล่นวิดีโอ
                                             </Button>
@@ -201,7 +200,7 @@ export default function PhysicsCoursePage() {
                                             <div>
                                                 <h3 className="text-xl font-semibold text-gray-800 text-balance">{selectedVideo.title}</h3>
                                                 <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                                                    <Badge variant="secondary" className="bg-yellow-100 text-gray-800 border border-yellow-300">
+                                                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border border-yellow-300">
                                                         Chapter {selectedChapter}: {currentChapter?.title}
                                                     </Badge>
                                                     <div className="flex items-center gap-1">

@@ -4,15 +4,15 @@ import Link from "next/link"
 import { ArrowRight, Atom, FlaskConical, Beaker } from "lucide-react"
 
 type Stripe = {
-  title: string // leading text, e.g. "แผนการเรียน"
-  highlight?: string // emphasized part, e.g. "ม.ต้น"
+  title: string 
+  highlight?: string 
   subtitle: string
   href: string
-  // Tailwind bg utilities for soft gradient fill
+
   bg: string
-  // CTA color to match site brand
+
   ctaClass: string
-  // Accent ring or dot color
+
   accent: string
 }
 

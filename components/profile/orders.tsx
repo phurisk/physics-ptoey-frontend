@@ -139,26 +139,29 @@ export default function Orders() {
             const isPending = ["PENDING", "PENDING_VERIFICATION"].includes(o.status)
             return (
               <Card key={o.id}>
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="relative h-16 w-24 overflow-hidden rounded">
+                <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="relative h-20 w-full sm:w-32 overflow-hidden rounded border">
                     <Image src={thumb} alt={title} fill className="object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-gray-900 truncate">{title}</div>
-                    <div className="text-sm text-gray-600">ยอดรวม ฿{o.total.toLocaleString()} • สถานะคำสั่งซื้อ: <span className="font-medium">{statusLabel}</span></div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="font-medium text-gray-900 truncate mr-2">{title}</div>
+                      <Badge variant="secondary" className="whitespace-nowrap">{statusLabel}</Badge>
+                    </div>
+                    <div className="text-sm text-gray-600 mt-1">ยอดรวม ฿{o.total.toLocaleString()}</div>
                     <div className="text-xs text-gray-500 mt-0.5">สถานะตรวจสลิป: {payStatus === 'COMPLETED' ? 'ชำระแล้ว' : payStatus === 'PENDING_VERIFICATION' ? 'รอตรวจสอบ' : payStatus === 'REJECTED' ? 'ปฏิเสธ' : 'ยังไม่ได้อัพโหลด/รอชำระ'}</div>
                     {o.payment?.ref && (
                       <div className="text-xs text-gray-500">เลขอ้างอิง: {o.payment.ref}</div>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:justify-end">
                     <Link href={`/order-success/${o.id}`}>
                       <Button variant="outline">ดูรายละเอียด</Button>
                     </Link>
                     {isPending ? (
                       <Button onClick={() => onOpenUpload(o)} className="bg-yellow-400 hover:bg-yellow-500 text-white">อัพโหลดสลิป</Button>
                     ) : (
-                      <Badge variant="secondary" className="shrink-0">ชำระเงินแล้ว</Badge>
+                      <Badge className="bg-green-600 text-white shrink-0">ชำระเงินแล้ว</Badge>
                     )}
                   </div>
                 </CardContent>

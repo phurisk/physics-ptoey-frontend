@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import { ChevronLeft, ChevronRight, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { X } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { reviews as fallbackReviews } from "@/lib/dummy-data"
 
@@ -132,6 +131,10 @@ export default function Reviews() {
 
   const length = slides.length
   const maxIndex = Math.max(0, length - visible)
+  const [isInteracting, setIsInteracting] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStartX, setDragStartX] = useState(0)
+  const [dragOffset, setDragOffset] = useState(0)
 
 
   useEffect(() => {
@@ -140,6 +143,42 @@ export default function Reviews() {
 
   const nextSlide = () => setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1))
   const prevSlide = () => setCurrentIndex((prev) => (prev <= 0 ? maxIndex : prev - 1))
+
+
+  useEffect(() => {
+    if (length <= visible || isInteracting) return
+    const id = setInterval(() => {
+      nextSlide()
+    }, 3500)
+    return () => clearInterval(id)
+  }, [length, visible, maxIndex, isInteracting])
+
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (length <= visible) return
+    setIsInteracting(true)
+    setIsDragging(true)
+    setDragStartX(e.clientX)
+    setDragOffset(0)
+    ;(e.currentTarget as HTMLDivElement).setPointerCapture?.(e.pointerId)
+  }
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return
+    const deltaX = e.clientX - dragStartX
+    setDragOffset(deltaX)
+  }
+  const endDrag = () => {
+    if (!isDragging) return setIsInteracting(false)
+    const threshold = 50
+    if (Math.abs(dragOffset) > threshold) {
+      if (dragOffset < 0) nextSlide()
+      else prevSlide()
+    }
+    setIsDragging(false)
+    setDragOffset(0)
+   
+    setTimeout(() => setIsInteracting(false), 100)
+  }
 
   return (
     <section className="py-16 lg:py-24 bg-gray-50">
@@ -155,32 +194,22 @@ export default function Reviews() {
 
 
         <div className="relative">
-          <Button
-            variant="outline"
-            size="sm"
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg hover:bg-gray-50 p-2"
-            onClick={prevSlide}
-            disabled={length <= visible}
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg hover:bg-gray-50 p-2"
-            onClick={nextSlide}
-            disabled={length <= visible}
-          >
-            <ChevronRight className="h-5 w-5" />
-          </Button>
-
-          <div className="overflow-hidden mx-8">
+          <div className="overflow-hidden mx-4 sm:mx-8">
             <div
-              className="flex transition-transform duration-300 ease-in-out"
-              style={{ transform: `translateX(-${currentIndex * (100 / visible)}%)` }}
+              className={`flex ${isDragging ? "" : "transition-transform duration-300 ease-in-out"}`}
+              style={{
+                transform: `translateX(calc(-${currentIndex * (100 / visible)}% + ${dragOffset}px))`,
+                touchAction: "pan-y",
+                cursor: isDragging ? "grabbing" : "grab",
+              }}
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={endDrag}
+              onPointerCancel={endDrag}
+              onPointerLeave={endDrag}
             >
               {slides.map((review) => (
-                <div key={review.id} className="w-full md:w-1/2 lg:w-1/4 flex-shrink-0 px-3">
+                <div key={review.id} className="w-full md:w-1/2 lg:w-1/4 flex-shrink-0 px-2 sm:px-3">
                   <Card className="h-full border-none shadow-none">
                     <CardContent className="p-0">
                 

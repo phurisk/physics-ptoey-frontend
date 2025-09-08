@@ -69,7 +69,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     }
   }
 
-  // Removed Google login; only LINE and email are supported
+ 
 
   const handleEmailRegister = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -357,4 +357,4 @@ function LineIcon(props: React.SVGProps<SVGSVGElement>) {
   )
 }
 
-// GoogleIcon removed
+

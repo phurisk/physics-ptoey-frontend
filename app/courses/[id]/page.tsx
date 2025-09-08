@@ -80,6 +80,7 @@ export default function CourseDetailPage() {
   const [creating, setCreating] = useState(false)
   const [orderInfo, setOrderInfo] = useState<{ orderId: string; total: number } | null>(null)
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [enrolledOpen, setEnrolledOpen] = useState(false)
   const [slip, setSlip] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState<string | null>(null)
@@ -251,7 +252,12 @@ export default function CourseDetailPage() {
         setUploadOpen(true)
       }
     } catch (e: any) {
-      alert(e?.message ?? "สร้างคำสั่งซื้อไม่สำเร็จ")
+      const msg = e?.message || "สร้างคำสั่งซื้อไม่สำเร็จ"
+      if (msg.includes("ซื้อแล้ว") || msg.includes("ได้ซื้อ") || msg.includes("มีสินค้") || msg.includes("ซื้อคอร์สนี้แล้ว")) {
+        setEnrolledOpen(true)
+      } else {
+        setCouponError(msg)
+      }
     } finally {
       setCreating(false)
     }
@@ -275,6 +281,11 @@ export default function CourseDetailPage() {
       setUploading(false)
     }
   }
+
+  // Show enrolled popup when detected
+  useEffect(() => {
+    if (isEnrolled) setEnrolledOpen(true)
+  }, [isEnrolled])
 
   return (
     <>
@@ -525,12 +536,13 @@ export default function CourseDetailPage() {
                     )}
                   </div>
 
+                  {/* Removed inline banner. Replaced with modal below. */}
 
                   <div className="space-y-3">
                     {isEnrolled ? (
-                      <a href="#chapters">
+                      <Link href={`/courses/${id}/learn`}>
                         <Button className="w-full bg-yellow-400 hover:bg-yellow-500 text-white text-lg py-3">เข้าเรียนทันที</Button>
-                      </a>
+                      </Link>
                     ) : (
                       <Button onClick={createOrder} disabled={creating} className="w-full bg-yellow-400 hover:bg-yellow-500 text-white text-lg py-3">
                         {creating ? "กำลังสร้างคำสั่งซื้อ..." : "สมัครเรียนเลย"}
@@ -557,6 +569,23 @@ export default function CourseDetailPage() {
       </div>
     </div>
     <LoginModal isOpen={loginOpen} onClose={() => setLoginOpen(false)} />
+    {/* Enrolled Modal */}
+    <Dialog open={enrolledOpen} onOpenChange={setEnrolledOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>คุณได้ซื้อคอร์สนี้แล้ว</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="text-gray-700">เริ่มเรียนต่อได้ทันทีที่หน้าเรียน</div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setEnrolledOpen(false)}>ปิด</Button>
+            <Link href={`/courses/${id}/learn`}>
+              <Button className="bg-yellow-400 hover:bg-yellow-500 text-white">เข้าเรียน</Button>
+            </Link>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
     <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
       <DialogContent>
         <DialogHeader>

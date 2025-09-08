@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 
-// Redirect via backend's LINE sign-in (avoids redirect_uri mismatch)
 export async function GET(req: Request) {
   const baseUrl = process.env.API_BASE_URL
   if (!baseUrl) {

@@ -80,7 +80,6 @@ export default function CoursesPage() {
     }
   }, [])
 
-  // If URL has ?category=xxx and it exists in dataset, preselect it
   useEffect(() => {
     const spCategory = searchParams?.get("category")
     if (!spCategory) return

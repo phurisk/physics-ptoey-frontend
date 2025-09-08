@@ -60,7 +60,6 @@ export default async function ArticlesIndexPage({ searchParams }: Props) {
     items = []
   }
 
-  // Map API items to article shape
   const mapped: ArticleItem[] = items
     .filter((p: any) => p?.postType?.name === "บทความ")
     .map((p: any, idx: number) => {
@@ -121,7 +120,7 @@ export default async function ArticlesIndexPage({ searchParams }: Props) {
               const d = ${JSON.stringify({
                 ok,
                 status,
-                postsCount: undefined, // computed below at runtime via inlined number
+                postsCount: undefined, 
                 mappedCount: undefined,
                 usingFallback,
                 fallbackReason,

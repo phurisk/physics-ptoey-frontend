@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 
-// Proxy GET /api/posts -> {API_BASE_URL}/api/posts (keeps query string, forwards cookies/auth)
 export async function GET(req: Request) {
   const baseUrl = process.env.API_BASE_URL
   if (!baseUrl) {

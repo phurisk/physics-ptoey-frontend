@@ -64,7 +64,7 @@ export default function Articles() {
           ? json.data
           : []
 
-        // Filter only featured articles for this section
+       
         const filtered = list.filter(
           (p) => p?.postType?.name === "บทความ" && p?.isFeatured === true
         )

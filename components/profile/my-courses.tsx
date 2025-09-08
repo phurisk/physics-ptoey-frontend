@@ -63,7 +63,7 @@ export default function MyCourses() {
   return (
     <div>
       {loading && (
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={`sk-${i}`} className="overflow-hidden">
               <CardContent className="p-0">
@@ -83,15 +83,12 @@ export default function MyCourses() {
       {!loading && error && (
         <div className="text-red-600">เกิดข้อผิดพลาด: {error}</div>
       )}
-      {!loading && !error && courses.length === 0 && (
-        <div className="text-gray-600">ยังไม่มีคอร์สที่ซื้อ</div>
-      )}
       {!loading && !error && courses.length > 0 && (
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {courses.map((c) => (
             <Card key={c.id} className="overflow-hidden group">
               <CardContent className="p-0">
-                <div className="aspect-video relative overflow-hidden">
+                <div className="aspect-video relative overflow-hidden border-b">
                   <Image 
                     src={c.coverImageUrl || "/placeholder.svg?height=200&width=350"}
                     alt={c.title}
@@ -110,7 +107,7 @@ export default function MyCourses() {
                       <div className="inline-flex items-center gap-1"><Clock className="h-4 w-4" />{new Date(c.purchaseDate).toLocaleDateString("th-TH")}</div>
                     )}
                   </div>
-                  <div>
+                  <div className="pt-1">
                     <Link href={`/profile/my-courses/course/${c.id}`}>
                       <Button className="bg-yellow-400 hover:bg-yellow-500 text-white">เข้าเรียน</Button>
                     </Link>
@@ -119,6 +116,16 @@ export default function MyCourses() {
               </CardContent>
             </Card>
           ))}
+        </div>
+      )}
+      {!loading && !error && courses.length === 0 && (
+        <div className="text-center py-12">
+          <div className="text-5xl mb-3">📚</div>
+          <div className="text-lg font-medium text-gray-700 mb-2">ยังไม่มีคอร์สที่ซื้อ</div>
+          <div className="text-gray-600 mb-4">เริ่มเรียนรู้ได้เลย เลือกคอร์สที่สนใจ</div>
+          <Link href="/courses">
+            <Button className="bg-yellow-400 hover:bg-yellow-500 text-white">ดูคอร์สทั้งหมด</Button>
+          </Link>
         </div>
       )}
     </div>

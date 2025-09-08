@@ -38,6 +38,8 @@ export default function Books() {
   const [slip, setSlip] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState<string | null>(null)
+  const [ownedOpen, setOwnedOpen] = useState(false)
+  const [purchaseError, setPurchaseError] = useState<string | null>(null)
 
  
   const [purchaseOpen, setPurchaseOpen] = useState(false)
@@ -120,6 +122,7 @@ export default function Books() {
     if (!selectedBook) return
     try {
       setCreating(true)
+      setPurchaseError(null)
       const payload: any = { userId: user?.id, itemType: "ebook", itemId: selectedBook.id }
       if (couponCode) payload.couponCode = couponCode
       if (selectedBook.isPhysical) payload.shippingAddress = shipping
@@ -138,7 +141,13 @@ export default function Books() {
         setUploadOpen(true)
       }
     } catch (e: any) {
-      alert(e?.message ?? "สั่งซื้อไม่สำเร็จ")
+      const msg = e?.message || "สั่งซื้อไม่สำเร็จ"
+      if (msg.includes("ซื้อแล้ว") || msg.includes("ได้ซื้อ") || msg.includes("สินค้านี้แล้ว")) {
+        setPurchaseOpen(false)
+        setOwnedOpen(true)
+      } else {
+        setPurchaseError(msg)
+      }
     } finally {
       setCreating(false)
     }
@@ -344,6 +353,9 @@ export default function Books() {
           <DialogTitle>ยืนยันการสั่งซื้อหนังสือ</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
+          {purchaseError && (
+            <div className="text-sm text-red-600">{purchaseError}</div>
+          )}
           <div className="text-sm text-gray-700">
             สินค้า: <span className="font-medium">{selectedBook?.title}</span>
           </div>
@@ -393,6 +405,20 @@ export default function Books() {
             <Button disabled={creating} onClick={confirmPurchase} className="bg-yellow-400 hover:bg-yellow-500 text-white">
               {creating ? "กำลังดำเนินการ..." : "ยืนยันการสั่งซื้อ"}
             </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+    <Dialog open={ownedOpen} onOpenChange={setOwnedOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>คุณได้ซื้อสินค้านี้แล้ว</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="text-gray-700">ตรวจสอบคำสั่งซื้อและสถานะการชำระเงินในหน้าคำสั่งซื้อของฉัน</div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setOwnedOpen(false)}>ปิด</Button>
+            <Button className="bg-yellow-400 hover:bg-yellow-500 text-white" onClick={() => { setOwnedOpen(false); router.push('/profile/orders') }}>ไปหน้าคำสั่งซื้อ</Button>
           </div>
         </div>
       </DialogContent>

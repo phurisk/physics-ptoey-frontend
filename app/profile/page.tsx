@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { BookOpen, Receipt } from "lucide-react"
 import LoginModal from "@/components/login-modal"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export default function ProfilePage() {
   const { user, isAuthenticated, logout } = useAuth()
@@ -14,20 +15,31 @@ export default function ProfilePage() {
 
   const name = (user as any)?.name || (user as any)?.displayName || "ผู้ใช้"
   const email = (user as any)?.email || ""
+  const avatarUrl = (user as any)?.image || (user as any)?.avatarUrl || (user as any)?.picture || (user as any)?.profileImageUrl || null
+  const initial = String(name || "").trim().charAt(0).toUpperCase() || "U"
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12 space-y-8">
       <div className="space-y-2">
         <h1 className="text-2xl font-bold">โปรไฟล์</h1>
         {!isAuthenticated ? (
-          <div className="flex items-center justify-between bg-white border rounded-lg p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white border rounded-lg p-6">
             <p className="text-gray-700">กรุณาเข้าสู่ระบบเพื่อจัดการโปรไฟล์และการสั่งซื้อ</p>
             <Button className="bg-yellow-400 hover:bg-yellow-500 text-white" onClick={() => setLoginOpen(true)}>เข้าสู่ระบบ</Button>
           </div>
         ) : (
-          <div className="bg-white border rounded-lg p-6 space-y-1">
-            <div className="text-lg font-medium">{name}</div>
-            {email && <div className="text-gray-600">{email}</div>}
+          <div className="bg-white border rounded-lg p-6 flex items-center gap-4">
+            <Avatar>
+              {avatarUrl ? (
+                <AvatarImage src={avatarUrl} alt={name} />
+              ) : (
+                <AvatarFallback className="bg-yellow-500 text-white">{initial}</AvatarFallback>
+              )}
+            </Avatar>
+            <div>
+              <div className="text-lg font-medium">{name}</div>
+              {email && <div className="text-gray-600">{email}</div>}
+            </div>
           </div>
         )}
       </div>
