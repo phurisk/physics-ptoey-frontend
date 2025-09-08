@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { motion } from "framer-motion"
 import Image from "next/image"
 import { useParams } from "next/navigation"
-import { Users, BookOpen, Clock, Play, ArrowLeft, Lock } from "lucide-react"
+import { Users, BookOpen, Clock, Play, ArrowLeft, Lock, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -496,21 +496,30 @@ export default function CourseDetailPage() {
                       <div className="space-y-2 pt-2">
                         <div className="text-sm font-medium">คูปองส่วนลด</div>
                         <div className="flex gap-2">
-                          <Input placeholder="กรอกรหัสคูปอง"
+                          <Input placeholder="กรอกรหัสคูปอง (ถ้ามี)"
                                  value={couponCode}
                                  onChange={(e) => setCouponCode(e.target.value)} />
-                          <Button variant="outline" disabled={validatingCoupon} onClick={applyCoupon}>ใช้คูปอง</Button>
+                          <Button variant="outline" disabled={validatingCoupon} onClick={applyCoupon}>
+                            {validatingCoupon ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                กำลังตรวจสอบ...
+                              </>
+                            ) : (
+                              "ใช้คูปอง"
+                            )}
+                          </Button>
                         </div>
                         {couponError && <div className="text-xs text-red-600">{couponError}</div>}
                         {discount > 0 && (
                           <div className="flex justify-between text-sm text-green-700">
                             <span>ส่วนลดคูปอง</span>
-                            <span>-฿{discount.toLocaleString()}</span>
+                            <span>-฿{discount.toLocaleString()} บาท</span>
                           </div>
                         )}
                         <div className="flex justify-between text-base font-semibold">
                           <span>ยอดสุทธิ</span>
-                          <span>฿{finalTotal.toLocaleString()}</span>
+                          <span>฿{finalTotal.toLocaleString()} บาท</span>
                         </div>
                       </div>
                     )}

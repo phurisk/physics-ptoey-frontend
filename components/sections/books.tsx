@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { ShoppingCart, Star } from "lucide-react"
+import { ShoppingCart, Star, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -350,10 +350,22 @@ export default function Books() {
           <div className="space-y-2">
             <div className="text-sm font-medium">คูปองส่วนลด</div>
             <div className="flex gap-2">
-              <Input placeholder="กรอกรหัสคูปอง" value={couponCode} onChange={(e) => setCouponCode(e.target.value)} />
-              <Button variant="outline" disabled={validatingCoupon} onClick={applyCoupon}>ใช้คูปอง</Button>
+              <Input placeholder="กรอกรหัสคูปอง (ถ้ามี)" value={couponCode} onChange={(e) => setCouponCode(e.target.value)} />
+              <Button variant="outline" disabled={validatingCoupon} onClick={applyCoupon}>
+                {validatingCoupon ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    กำลังตรวจสอบ...
+                  </>
+                ) : (
+                  "ใช้คูปอง"
+                )}
+              </Button>
             </div>
             {couponError && <div className="text-xs text-red-600">{couponError}</div>}
+            {!couponError && discount > 0 && !validatingCoupon && (
+              <div className="text-xs text-green-600">ใช้คูปองสำเร็จ ได้รับส่วนลดจำนวน ฿{discount.toLocaleString()} บาท</div>
+            )}
           </div>
           {selectedBook?.isPhysical && (
             <div className="space-y-2">
