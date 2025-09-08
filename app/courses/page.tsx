@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/sections/footer"
+import { useSearchParams } from "next/navigation"
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -56,6 +57,7 @@ export default function CoursesPage() {
   const [data, setData] = useState<ApiCourse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     let active = true
@@ -77,6 +79,22 @@ export default function CoursesPage() {
       active = false
     }
   }, [])
+
+  // If URL has ?category=xxx and it exists in dataset, preselect it
+  useEffect(() => {
+    const spCategory = searchParams?.get("category")
+    if (!spCategory) return
+    const names = Array.from(
+      new Set(
+        (data || [])
+          .map((c) => c.category?.name)
+          .filter((v): v is string => typeof v === "string" && v.length > 0)
+      )
+    )
+    if (spCategory === "all" || names.includes(spCategory)) {
+      setSelectedCategory(spCategory)
+    }
+  }, [data, searchParams])
 
   const categories = useMemo(() => {
     const names = Array.from(

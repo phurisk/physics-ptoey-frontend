@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, Award, Users, BookOpen, Target } from "lucide-react"
 import { useEffect, useState } from "react"
 import Image from "next/image"
+import AcademicTeam from "@/components/sections/academic-team"
 
 const teachingEnvironmentImages = [
   {
@@ -313,6 +314,10 @@ export default function AboutPage() {
         </motion.section>
 
 
+        {/* Academic Team */}
+        <AcademicTeam />
+
+        
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import HeroBanner from "@/components/sections/hero-banner"
 import AboutTeacher from "@/components/sections/about-teacher"
 import StudentSuccess from "@/components/sections/student-success"
+import CourseStripes from "@/components/sections/course-stripes"
 import Reviews from "@/components/sections/reviews"
 import Books from "@/components/sections/books"
 import Articles from "@/components/sections/articles"
@@ -35,6 +36,10 @@ export default function HomePage() {
 
       <motion.div variants={fadeInUp}>
         <StudentSuccess />
+      </motion.div>
+
+      <motion.div variants={fadeInUp}>
+        <CourseStripes />
       </motion.div>
 
       <motion.div variants={fadeInUp}>
