@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { AnimatePresence, motion } from "framer-motion"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Menu, X } from "lucide-react"
@@ -32,6 +33,15 @@ export function Navigation() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
+  // Prevent background scroll when mobile menu is open
+  useEffect(() => {
+    if (isOpen) {
+      const original = document.body.style.overflow
+      document.body.style.overflow = "hidden"
+      return () => { document.body.style.overflow = original }
+    }
+  }, [isOpen])
+
   const handleLoginClick = () => {
     setIsLoginModalOpen(true)
     setIsOpen(false)
@@ -59,10 +69,10 @@ export function Navigation() {
         }`}
       >
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16 lg:h-20">
+          <div className="flex justify-between items-center h-20 lg:h-20">
       
             <Link href="/" className="flex items-center pl-2">
-              <img src="/new-logo.png" alt="Logo" className="h-16 lg:h-20" />
+              <img src="/new-logo.png" alt="Logo" className="h-20 lg:h-20" />
             </Link>
 
       
@@ -126,74 +136,98 @@ export function Navigation() {
             </div>
 
          
-            <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setIsOpen(!isOpen)}>
-              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            <Button variant="ghost" size="sm" className="lg:hidden h-14 w-14 p-0" onClick={() => setIsOpen(!isOpen)}>
+              {isOpen ? <X className="h-8 w-8" /> : <Menu className="h-8 w-8" />}
             </Button>
           </div>
 
         
-          {isOpen && (
-            <div className="lg:hidden">
-              <div className="px-2 pt-2 pb-3 space-y-3 bg-white border-t border-gray-200">
-                {menuItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setIsOpen(false)}
-                    className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200
-                      ${
-                        pathname === item.href
-                          ? "text-[#004B7D] border-l-4 border-[#004B7D] bg-[#004B7D1A]"
-                          : "text-gray-700 hover:text-[#004B7D] hover:bg-[#004B7D1A]"
-                      }`}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-
-                {!isAuthenticated ? (
-                  <Button
-                    onClick={handleLoginClick}
-                    className="block w-full text-left px-3 py-0 rounded-md text-base font-medium bg-[linear-gradient(180deg,#4eb5ed_0%,#01579b)] text-white"
-                  >
-                    สมัครเรียนออนไลน์
-                  </Button>
-                ) : (
-                  <div className="pt-2 space-y-2">
-                    <div className="flex items-center gap-3 px-3 py-2">
-                      <Avatar>
-                        {avatarUrl ? (
-                          <AvatarImage src={avatarUrl} alt={displayName} />
-                        ) : (
-                          <AvatarFallback className="bg-yellow-500 text-white">{initial}</AvatarFallback>
-                        )}
-                      </Avatar>
-                      <div className="text-sm font-medium text-gray-800">{displayName}</div>
-                    </div>
+          <AnimatePresence initial={false}>
+            {isOpen && (
+              <motion.div
+                key="mobile-menu"
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                className="lg:hidden"
+              >
+                <div className="px-2 pt-2 pb-3 space-y-3 bg-white border-t border-gray-200 shadow-sm">
+                  {menuItems.map((item) => (
                     <Link
-                      href="/profile"
+                      key={item.href}
+                      href={item.href}
                       onClick={() => setIsOpen(false)}
-                      className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-[#004B7D] hover:bg-[#004B7D1A]"
+                      className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200
+                        ${
+                          pathname === item.href
+                            ? "text-[#004B7D] border-l-4 border-[#004B7D] bg-[#004B7D1A]"
+                            : "text-gray-700 hover:text-[#004B7D] hover:bg-[#004B7D1A]"
+                        }`}
                     >
-                      โปรไฟล์
+                      {item.label}
                     </Link>
+                  ))}
+
+                  {!isAuthenticated ? (
                     <Button
-                      onClick={async () => {
-                        try { await logout() } catch {}
-                        setIsOpen(false)
-                      }}
-                      variant="outline"
-                      className="block w-full text-left"
+                      onClick={handleLoginClick}
+                      className="block w-full text-left px-3 py-0 rounded-md text-base font-medium bg-[linear-gradient(180deg,#4eb5ed_0%,#01579b)] text-white"
                     >
-                      ออกจากระบบ
+                      สมัครเรียนออนไลน์
                     </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+                  ) : (
+                    <div className="pt-2 space-y-2">
+                      <div className="flex items-center gap-3 px-3 py-2">
+                        <Avatar>
+                          {avatarUrl ? (
+                            <AvatarImage src={avatarUrl} alt={displayName} />
+                          ) : (
+                            <AvatarFallback className="bg-yellow-500 text-white">{initial}</AvatarFallback>
+                          )}
+                        </Avatar>
+                        <div className="text-sm font-medium text-gray-800">{displayName}</div>
+                      </div>
+                      <Link
+                        href="/profile"
+                        onClick={() => setIsOpen(false)}
+                        className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-[#004B7D] hover:bg-[#004B7D1A]"
+                      >
+                        โปรไฟล์
+                      </Link>
+                      <Button
+                        onClick={async () => {
+                          try { await logout() } catch {}
+                          setIsOpen(false)
+                        }}
+                        variant="outline"
+                        className="block w-full text-left"
+                      >
+                        ออกจากระบบ
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </nav>
+
+      {/* Backdrop for mobile menu */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.button
+            aria-label="ปิดเมนู"
+            onClick={() => setIsOpen(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.3 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-40 bg-black/70 lg:hidden"
+          />
+        )}
+      </AnimatePresence>
 
       <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} />
     </>
