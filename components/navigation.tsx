@@ -92,7 +92,7 @@ export function Navigation() {
               ) : (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="ml-4 inline-flex items-center gap-2 focus:outline-none">
+                    <button className="ml-4 inline-flex items-center gap-2 focus:outline-none ">
                       <Avatar>
                         {avatarUrl ? (
                           <AvatarImage src={avatarUrl} alt={displayName} />

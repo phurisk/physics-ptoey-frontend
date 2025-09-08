@@ -39,13 +39,14 @@ const studyPlans: WorkItem[] = [
 
 
 export default function StudentWorksPage() {
-  const [items, setItems] = useState<typeof studyPlans>(studyPlans)
+  const [items, setItems] = useState<typeof studyPlans>([])
+  const [loading, setLoading] = useState(true)
 
- 
   useEffect(() => {
     let mounted = true
     ;(async () => {
       try {
+        setLoading(true)
         const params = new URLSearchParams({ postType: "แผนการเรียน" })
         const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
         if (res.ok) {
@@ -58,9 +59,8 @@ export default function StudentWorksPage() {
         const list = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
         if (!list.length) {
           console.warn(
-            `[StudyPlans] API ไม่มีข้อมูลโพสต์ ใช้รูป dummy แทน (${studyPlans.length} ภาพ)`
+            `[StudyPlans] API ไม่มีข้อมูลโพสต์ เตรียมใช้รูป dummy แทน (${studyPlans.length} ภาพ)`
           )
-          return
         } else {
           console.log(`[StudyPlans] Posts loaded: ${list.length}`)
         }
@@ -79,16 +79,22 @@ export default function StudentWorksPage() {
 
         console.log(`[StudyPlans] Slides mapped: ${mapped.length}`)
 
-        if (mounted && mapped.length) {
+        if (!mounted) return
+
+        if (mapped.length) {
           setItems(mapped as any)
           console.log(`[StudyPlans] ใช้รูปจาก API จำนวน ${mapped.length} ภาพ`)
-        } else if (mounted) {
+        } else {
+          setItems(studyPlans)
           console.warn(
             `[StudyPlans] API ไม่มีรูป (imageUrl/imageUrlMobileMode) ใช้รูป dummy แทน (${studyPlans.length} ภาพ)`
           )
         }
       } catch (err) {
         console.error("[StudyPlans] Failed to load posts", err)
+        if (mounted) setItems(studyPlans)
+      } finally {
+        if (mounted) setLoading(false)
       }
     })()
     return () => {
@@ -98,7 +104,7 @@ export default function StudentWorksPage() {
   return (
     <MotionConfig transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}>
       <Navigation />
-      <main className="min-h-screen bg-white">
+      <main className="min-h-screen bg-white flex flex-col">
 
 
         <section className="relative">
@@ -127,7 +133,13 @@ export default function StudentWorksPage() {
 
 
           <div className="relative mx-auto max-w-7xl px-4 py-12 sm:py-16">
-            <ElegantStack items={items} />
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-yellow-400 border-t-transparent" />
+              </div>
+            ) : (
+              <ElegantStack items={items} />
+            )}
           </div>
         </section>
 
@@ -135,7 +147,7 @@ export default function StudentWorksPage() {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className="py-16 bg-yellow-400"
+          className="py-16 bg-yellow-400 mt-auto"
         >
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">

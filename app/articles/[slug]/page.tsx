@@ -61,7 +61,7 @@ export default async function ArticleDetailPage({ params }: Params) {
   return (
     <section className="py-10 lg:py-16 bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative aspect-[16/8] overflow-hidden rounded-xl bg-white shadow-sm">
+        <div className="relative aspect-[16/7.5] overflow-hidden rounded-xl bg-white shadow-sm">
           {article.imageDesktop && (
             <Image
               src={article.imageDesktop}
