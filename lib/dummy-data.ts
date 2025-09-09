@@ -1,20 +1,20 @@
 export const bannerSlides = [
-  // {
-  //   id: 1,
-  //   image: "/banner1.png",
-  // },
-  // {
-  //   id: 2,
-  //   image: "/banner2.png",
-  // },
-  // {
-  //   id: 3,
-  //   image: "/banner3.png",
-  // },
-  // {
-  //   id: 4,
-  //   image: "/banner4.png",
-  // },
+  {
+    id: 1,
+    image: "/banner1.png",
+  },
+  {
+    id: 2,
+    image: "/banner2.png",
+  },
+  {
+    id: 3,
+    image: "/banner3.png",
+  },
+  {
+    id: 4,
+    image: "/banner4.png",
+  },
 ]
 
 export const studentSuccesses = [
