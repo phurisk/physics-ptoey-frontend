@@ -1,17 +1,36 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
-import Image from "next/image"
-import Link from "next/link"
-import { ArrowLeft, BookOpen, Play, Clock, Users, CheckCircle, Lock, RotateCcw } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import { useAuth } from "@/components/auth-provider"
-import LoginModal from "@/components/login-modal"
-import { useProgress } from "@/lib/progress-utils"
+import { useState, useEffect, useMemo } from 'react'
+import { useParams } from 'next/navigation'
+import Image from 'next/image'
+import Link from 'next/link'
+import {
+  ArrowLeft,
+  BookOpen,
+  Play,
+  CheckCircle,
+  X,
+  Menu,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog"
+import LoginModal from '@/components/login-modal'
+import { useAuth } from '@/components/auth-provider'
+
+// ===== Types =====
 
 type Content = {
   id: string
@@ -78,44 +97,109 @@ type CourseResponse = {
   message?: string
 }
 
+// ===== Brand =====
+const BRAND = { primary: '#01BDCC', primaryDark: '#0E7490' }
+
+// ===== Helpers aligned with API behavior =====
+
+// API progress = round(((index+1)/total)*100)
+function indexToProgress(index: number, total: number) {
+  if (total <= 0) return 0
+  return Math.round(((index + 1) / total) * 100)
+}
+
+function progressToIndex(progress: number, total: number) {
+  if (total <= 0) return -1
+  let best = -1
+  for (let i = 0; i < total; i++) {
+    const p = indexToProgress(i, total)
+    if (p <= progress) best = i
+    else break
+  }
+  return best
+}
+
+type FlatItem = { index: number; content: Content; chapter: Chapter }
+
+// ===== Component =====
+
 export default function CourseDetailPage() {
   const params = useParams()
-  const router = useRouter()
   const { isAuthenticated, user } = useAuth()
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [course, setCourse] = useState<CourseDetail | null>(null)
   const [loginOpen, setLoginOpen] = useState(false)
+
+  // แทน completedContents ด้วย highestCompletedIndex
+  const [highestCompletedIndex, setHighestCompletedIndex] = useState<number>(-1)
+  const [progressLoading, setProgressLoading] = useState(false)
+
+  // Content selection
   const [selectedContent, setSelectedContent] = useState<Content | null>(null)
-  const [completedContents, setCompletedContents] = useState<string[]>([])
+
+  // Responsive navigation
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   const courseId = params?.id as string
 
+  // --- All hooks must stay before any early returns ---
 
+  // Flatten chapters + contents ตามลำดับ order
+  const flat: FlatItem[] = useMemo(() => {
+    if (!course) return []
+    const chaptersSorted = [...course.chapters].sort((a, b) => a.order - b.order)
+    let idx = 0
+    const items: FlatItem[] = []
+    for (const ch of chaptersSorted) {
+      const contentsSorted = [...ch.contents].sort((a, b) => a.order - b.order)
+      for (const c of contentsSorted) {
+        items.push({ index: idx++, content: c, chapter: ch })
+      }
+    }
+    return items
+  }, [course])
+
+  const totalContents = flat.length
+
+  const contentIndexMap = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const item of flat) m.set(item.content.id, item.index)
+    return m
+  }, [flat])
+
+  // ⬇️ ย้าย useMemo นี้มาที่นี่ (ก่อน guard returns) เพื่อคง order ของ Hooks
+  const selectedItem = useMemo(
+    () => flat.find((f) => f.content.id === selectedContent?.id),
+    [flat, selectedContent?.id]
+  )
+  const currentChapter = selectedItem?.chapter
+  const completedCount = Math.max(0, highestCompletedIndex + 1)
+
+  // derive progress / texts
   const currentProgress = course?.enrollment?.progress || 0
-  const enrollmentStatus = course?.enrollment?.status || 'ACTIVE'
-  const [progressLoading, setProgressLoading] = useState(false)
+  const progressText =
+    currentProgress === 0
+      ? 'ยังไม่ได้เริ่มเรียน'
+      : currentProgress < 25
+        ? 'เริ่มต้น'
+        : currentProgress < 50
+          ? 'กำลังเรียน'
+          : currentProgress < 75
+            ? 'เรียนแล้วครึ่งหนึ่ง'
+            : currentProgress < 100
+              ? 'เกือบจบแล้ว'
+              : 'เรียนจบแล้ว'
 
-  // Calculate progress text and color based on current progress
-  const progressText = currentProgress === 0 
-    ? 'ยังไม่ได้เริ่มเรียน'
-    : currentProgress < 25 
-    ? 'เริ่มต้น'
-    : currentProgress < 50 
-    ? 'กำลังเรียน'
-    : currentProgress < 75 
-    ? 'เรียนแล้วครึ่งหนึ่ง'
-    : currentProgress < 100 
-    ? 'เกือบจบแล้ว'
-    : 'เรียนจบแล้ว'
-
-  const progressColor = currentProgress === 0 
-    ? 'text-gray-500'
-    : currentProgress < 50 
-    ? 'text-yellow-600'
-    : currentProgress < 100 
-    ? 'text-blue-600'
-    : 'text-green-600'
+  const progressColor =
+    currentProgress === 0
+      ? 'text-gray-500'
+      : currentProgress < 50
+        ? 'text-yellow-600'
+        : currentProgress < 100
+          ? 'text-blue-600'
+          : 'text-green-600'
 
   useEffect(() => {
     let active = true
@@ -124,39 +208,40 @@ export default function CourseDetailPage() {
         setLoading(false)
         return
       }
-      
+
       try {
         setLoading(true)
-        const res = await fetch(`/api/my-courses/course/${courseId}?userId=${encodeURIComponent(user.id)}`, { 
-          cache: "no-store" 
-        })
-        const json: CourseResponse = await res.json().catch(() => ({ success: false, course: null }))
-        
+        const res = await fetch(
+          `/api/my-courses/course/${courseId}?userId=${encodeURIComponent(user.id)}`,
+          { cache: 'no-store' }
+        )
+        const json: CourseResponse = await res
+          .json()
+          .catch(() => ({ success: false, course: null } as unknown as CourseResponse))
+
         if (!res.ok || json.success === false) {
-          throw new Error((json as any)?.error || "โหลดคอร์สไม่สำเร็จ")
+          throw new Error((json as any)?.error || 'โหลดคอร์สไม่สำเร็จ')
         }
-        
+
         if (active) {
           setCourse(json.course)
-         
-          const firstChapter = json.course.chapters.find(ch => ch.contents.length > 0)
-          if (firstChapter && firstChapter.contents.length > 0) {
-            setSelectedContent(firstChapter.contents[0])
+
+          // เลือก content แรก
+          const firstChapter = [...json.course.chapters]
+            .sort((a, b) => a.order - b.order)
+            .find((ch) => ch.contents.length > 0)
+          if (firstChapter) {
+            const firstContent = [...firstChapter.contents].sort((a, b) => a.order - b.order)[0]
+            setSelectedContent(firstContent)
           }
-          
-        
-          try {
-            const progressRes = await fetch(`/api/progress?userId=${encodeURIComponent(user.id)}&courseId=${courseId}`)
-            const progressData = await progressRes.json()
-            if (progressData.success && progressData.data) {
-              setCompletedContents(progressData.data.completedContents || [])
-            }
-          } catch (progressError) {
-            console.warn('Failed to load progress:', progressError)
-          }
+
+          // ตั้งค่า highestCompletedIndex จาก progress ปัจจุบัน
+          const total = json.course.stats?.totalContents ?? 0
+          const hi = progressToIndex(json.course.enrollment?.progress ?? 0, total)
+          setHighestCompletedIndex(hi)
         }
       } catch (e: any) {
-        if (active) setError(e?.message ?? "โหลดคอร์สไม่สำเร็จ")
+        if (active) setError(e?.message ?? 'โหลดคอร์สไม่สำเร็จ')
       } finally {
         if (active) setLoading(false)
       }
@@ -168,104 +253,127 @@ export default function CourseDetailPage() {
     }
   }, [courseId, user?.id])
 
-  // อัพเดทฟังก์ชันเลือกเนื้อหา
-  const handleContentSelect = async (content: Content) => {
-    // ถ้าเป็นการเลือกเนื้อหาใหม่ (ไม่ใช่การอัพเดท progress)
-    if (selectedContent?.id !== content.id) {
-      setSelectedContent(content)
-      return
-    }
-    
-    // ถ้าเป็นการกดปุ่มอัพเดท progress
-    if (user?.id && courseId && !completedContents.includes(content.id)) {
-      setProgressLoading(true)
-      try {
-        const response = await fetch('/api/update-progress', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+  const getYouTubeEmbedUrl = (url: string) => {
+    const idMatch = url.match(
+      /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\n?#]+)/
+    )?.[1]
+    return idMatch ? `https://www.youtube.com/embed/${idMatch}` : null
+  }
+
+  const handleMarkCompleted = async (content: Content) => {
+    if (!user?.id || !courseId) return
+    if (!course) return
+
+    const idx = contentIndexMap.get(content.id)
+    if (idx === undefined) return
+    if (idx <= highestCompletedIndex) return
+
+    const prevIndex = highestCompletedIndex
+    const total = totalContents
+
+    // optimistic
+    const optimisticIndex = Math.max(prevIndex, idx)
+    setHighestCompletedIndex(optimisticIndex)
+    setCourse((prev) => {
+      if (!prev) return prev
+      const newProgress = indexToProgress(optimisticIndex, total)
+      return {
+        ...prev,
+        enrollment: {
+          ...prev.enrollment,
+          progress: newProgress,
+          status: newProgress >= 100 ? 'COMPLETED' : prev.enrollment.status,
+        },
+      }
+    })
+
+    setProgressLoading(true)
+    try {
+      const response = await fetch('/api/update-progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, courseId, contentId: content.id }),
+      })
+      const result = await response.json()
+
+      if (!response.ok || !result?.success) {
+        // rollback
+        setHighestCompletedIndex(prevIndex)
+        setCourse((prev) => {
+          if (!prev) return prev
+          const rollbackProgress = indexToProgress(prevIndex, total)
+          return {
+            ...prev,
+            enrollment: {
+              ...prev.enrollment,
+              progress: rollbackProgress,
+              status: rollbackProgress >= 100 ? 'COMPLETED' : prev.enrollment.status,
+            },
+          }
+        })
+        return
+      }
+
+      // sync จาก API
+      setCourse((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          enrollment: {
+            ...prev.enrollment,
+            progress: result.progress ?? prev.enrollment.progress,
+            status: result.status ?? prev.enrollment.status,
           },
-          body: JSON.stringify({
-            userId: user.id,
-            courseId,
-            contentId: content.id,
-          }),
-        })
-
-        const result = await response.json()
-        if (result.success) {
-          // รีโหลดข้อมูลคอร์สเพื่อรับ progress ใหม่
-          const courseRes = await fetch(`/api/my-courses/course/${courseId}?userId=${encodeURIComponent(user.id)}`, { 
-            cache: "no-store" 
-          })
-          const courseJson = await courseRes.json()
-          if (courseJson.success) {
-            setCourse(courseJson.course)
-          }
-          
-          if (result.data?.completedContents) {
-            setCompletedContents(result.data.completedContents)
-          }
         }
-      } catch (error) {
-        console.error('Failed to update progress:', error)
-      } finally {
-        setProgressLoading(false)
-      }
+      })
+
+      const apiIndex = progressToIndex(result.progress ?? 0, total)
+      setHighestCompletedIndex((cur) => Math.max(cur, apiIndex))
+    } catch {
+      // rollback
+      setHighestCompletedIndex(prevIndex)
+      setCourse((prev) => {
+        if (!prev) return prev
+        const rollbackProgress = indexToProgress(prevIndex, total)
+        return {
+          ...prev,
+          enrollment: {
+            ...prev.enrollment,
+            progress: rollbackProgress,
+            status: rollbackProgress >= 100 ? 'COMPLETED' : prev.enrollment.status,
+          },
+        }
+      })
+    } finally {
+      setProgressLoading(false)
     }
   }
 
-
-  const handleContentClick = (content: Content) => {
+  const handleSelectContent = (content: Content) => {
     setSelectedContent(content)
+    setIsSidebarOpen(false)
   }
 
-  // reset progress
-  const handleProgressReset = async () => {
-    if (user?.id && courseId) {
-      setProgressLoading(true)
-      try {
-        const response = await fetch(`/api/progress?userId=${user.id}&courseId=${courseId}`, {
-          method: 'DELETE',
-        })
-        
-        const result = await response.json()
-        if (result.success) {
-          // รีโหลดข้อมูลคอร์สเพื่อรับ progress ใหม่
-          const courseRes = await fetch(`/api/my-courses/course/${courseId}?userId=${encodeURIComponent(user.id)}`, { 
-            cache: "no-store" 
-          })
-          const courseJson = await courseRes.json()
-          if (courseJson.success) {
-            setCourse(courseJson.course)
-          }
-          setCompletedContents([])
-        }
-      } catch (error) {
-        console.error('Failed to reset progress:', error)
-      } finally {
-        setProgressLoading(false)
-      }
-    }
-  }
-
-  // ฟังก์ชันสำหรับแสดง progress bar
   const ProgressBar = ({ progress }: { progress: number }) => (
     <div className="w-full bg-gray-200 rounded-full h-2">
-      <div 
+      <div
         className="bg-gradient-to-r from-yellow-400 to-yellow-500 h-2 rounded-full transition-all duration-500"
         style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
       />
     </div>
   )
 
+  // ===== Guards (no more hooks below this line) =====
   if (!isAuthenticated) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-12">
         <div className="bg-white border rounded-lg p-6">
           <div className="flex items-center justify-between gap-4">
             <div className="text-gray-700">กรุณาเข้าสู่ระบบเพื่อดูคอร์สของคุณ</div>
-            <Button className="bg-yellow-400 hover:bg-yellow-500 text-white" onClick={() => setLoginOpen(true)}>
+            <Button
+              className="bg-yellow-400 hover:bg-yellow-500 text-white"
+              onClick={() => setLoginOpen(true)}
+            >
               เข้าสู่ระบบ
             </Button>
           </div>
@@ -278,30 +386,16 @@ export default function CourseDetailPage() {
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-6">
-     
         <div className="flex items-center gap-4 mb-6">
           <Skeleton className="h-10 w-10 rounded" />
           <Skeleton className="h-8 w-64" />
         </div>
-        
-        <div className="grid lg:grid-cols-3 gap-6">
-      
-          <div className="lg:col-span-2">
-            <Skeleton className="aspect-video w-full rounded-lg" />
-            <div className="mt-4 space-y-2">
-              <Skeleton className="h-6 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
-            </div>
-          </div>
-          
-        
-          <div className="space-y-4">
-            <Skeleton className="h-32 w-full rounded-lg" />
-            <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full rounded" />
-              ))}
-            </div>
+        <div className="grid lg:grid-cols-4 gap-6">
+          <div className="hidden lg:block"><Skeleton className="h-[60vh] w-full rounded" /></div>
+          <div className="lg:col-span-3 space-y-4">
+            <Skeleton className="aspect-video w-full rounded" />
+            <Skeleton className="h-6 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
           </div>
         </div>
       </div>
@@ -310,244 +404,316 @@ export default function CourseDetailPage() {
 
   if (error || !course) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-12">
-        <div className="text-center">
-          <div className="text-red-600 mb-4">เกิดข้อผิดพลาด: {error || "ไม่พบคอร์ส"}</div>
-          <Link href="/profile/my-courses">
-            <Button variant="outline">กลับไปหน้าคอร์สของฉัน</Button>
-          </Link>
-        </div>
+      <div className="max-w-5xl mx-auto px-4 py-12 text-center">
+        <div className="text-red-600 mb-4">เกิดข้อผิดพลาด: {error || 'ไม่พบคอร์ส'}</div>
+        <Link href="/profile/my-courses">
+          <Button variant="outline">กลับไปหน้าคอร์สของฉัน</Button>
+        </Link>
       </div>
     )
   }
 
-  const getYouTubeEmbedUrl = (url: string) => {
-    const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/)?.[1]
-    return videoId ? `https://www.youtube.com/embed/${videoId}` : null
-  }
-
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
-      
-      <div className="flex items-center gap-4 mb-6">
-        <Link href="/profile/my-courses">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            กลับ
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="max-w-7xl mx-auto px-4 py-4 sticky top-0 z-30 ">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Link href="/profile/my-courses">
+              <Button variant="ghost" size="sm" className="shrink-0">
+                <ArrowLeft className="h-4 w-4 mr-2" /> กลับ
+              </Button>
+            </Link>
+            <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-gray-900 line-clamp-1">
+              {course.title}
+            </h1>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="lg:hidden"
+            onClick={() => setIsSidebarOpen(true)}
+          >
+            <Menu className="h-4 w-4 mr-2" /> สารบัญคอร์ส
           </Button>
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900">{course.title}</h1>
+        </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-       
-        <div className="lg:col-span-2">
-        
-          {selectedContent && (
-            <div className="bg-black rounded-lg overflow-hidden mb-4">
-              {selectedContent.contentType === 'VIDEO' && getYouTubeEmbedUrl(selectedContent.contentUrl) ? (
-                <iframe
-                  src={getYouTubeEmbedUrl(selectedContent.contentUrl) || ''}
-                  className="w-full aspect-video"
-                  allowFullScreen
-                  title={selectedContent.title}
-                />
-              ) : (
-                <div className="aspect-video flex items-center justify-center text-white">
-                  <div className="text-center">
-                    <Play className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                    <p>ไม่สามารถเล่นวิดีโอได้</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          
-   
-          {selectedContent && (
-            <div className="bg-white rounded-lg p-6 border">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h2 className="text-xl font-semibold mb-2">{selectedContent.title}</h2>
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <span className="flex items-center gap-1">
-                      <Play className="h-4 w-4" />
-                      วิดีโอ
-                    </span>
-                    <span>{new Date(selectedContent.createdAt).toLocaleDateString('th-TH')}</span>
-                  </div>
-                </div>
-                
-               
-                <div className="flex items-center gap-2">
-                  {completedContents.includes(selectedContent.id) ? (
-                    <div className="flex items-center gap-2 text-green-600">
-                      <CheckCircle className="h-5 w-5" />
-                      <span className="text-sm font-medium">เรียนแล้ว</span>
-                    </div>
-                  ) : (
-                    <Button
-                      onClick={() => handleContentSelect(selectedContent)}
-                      disabled={progressLoading}
-                      className="bg-yellow-400 hover:bg-yellow-500 text-white"
-                      size="sm"
-                    >
-                      {progressLoading ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          กำลังอัพเดท...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          ทำเครื่องหมายเรียนแล้ว
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+      {/* Main layout */}
+      <div className="max-w-7xl mx-auto px-4 pb-10">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Sidebar */}
+          <aside className={`${isSidebarOpen ? 'fixed inset-0 z-40 lg:static lg:z-auto' : 'hidden lg:block'}`}>
+            {isSidebarOpen && (
+              <div
+                className="absolute inset-0 bg-black/40 lg:hidden"
+                onClick={() => setIsSidebarOpen(false)}
+              />
+            )}
 
-        <div>
-         
-          <Card className="mb-6">
-            <CardContent className="p-4">
-              <div className="aspect-video relative mb-4 rounded overflow-hidden">
-                <Image
-                  src={course.coverImageUrl || "/placeholder.svg"}
-                  alt={course.title}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              
-              <h3 className="font-semibold mb-2">{course.title}</h3>
-              <p className="text-sm text-gray-600 mb-4 line-clamp-3">{course.description}</p>
-              
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">อาจารย์:</span>
-                  <span className="font-medium">{course.instructor.name}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">หมวดหมู่:</span>
-                  <Badge variant="secondary">{course.category.name}</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">บทเรียน:</span>
-                  <span className="flex items-center gap-1">
-                    <BookOpen className="h-4 w-4" />
-                    {course.stats.totalChapters}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">เนื้อหา:</span>
-                  <span className="flex items-center gap-1">
-                    <Play className="h-4 w-4" />
-                    {course.stats.totalContents}
-                  </span>
-                </div>
-                
-                
-                <div className="border-t pt-4 mt-4">
+            <div className="absolute lg:static inset-y-0 left-0 w-11/12 sm:w-2/3 max-w-[380px] lg:w-auto bg-white border border-gray-200 rounded-none lg:rounded-md shadow-lg lg:shadow-none lg:sticky lg:top-24 h-full lg:h-[calc(100vh-8rem)] overflow-hidden">
+              <Card className="h-full border-0">
+                <CardContent className="p-4 h-full overflow-y-auto">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-gray-600">ความคืบหน้า:</span>
-                    <div className="flex items-center gap-2">
-                      <span className={`flex items-center gap-1 font-medium ${progressColor}`}>
-                        <CheckCircle className="h-4 w-4" />
-                        {currentProgress}%
-                      </span>
-                      {/* <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleProgressReset}
-                        disabled={progressLoading || currentProgress === 0}
-                        className="h-6 w-6 p-0 hover:bg-red-50"
-                        title="รีเซ็ตความคืบหน้า"
-                      >
-                        <RotateCcw className="h-3 w-3 text-red-500" />
-                      </Button> */}
-                    </div>
+                    <h2 className="font-semibold text-gray-800 flex items-center gap-2">
+                      <BookOpen className="h-5 w-5" /> เนื้อหาคอร์ส
+                    </h2>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="lg:hidden"
+                      onClick={() => setIsSidebarOpen(false)}
+                    >
+                      <X className="h-5 w-5" />
+                    </Button>
                   </div>
-                  
-                  <ProgressBar progress={currentProgress} />
-                  
-                  <div className="flex justify-between items-center mt-2 text-xs">
-                    <span className={progressColor}>{progressText}</span>
-                    {progressLoading && (
-                      <span className="text-gray-500">กำลังอัพเดท...</span>
-                    )}
-                  </div>
-                  
-                  <div className="mt-2 text-xs text-gray-500">
-                    เรียนแล้ว {completedContents.length} จาก {course.stats.totalContents} เนื้อหา
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Course Content */}
-          <Card>
-            <CardContent className="p-0">
-              <div className="p-4 border-b">
-                <h3 className="font-semibold">เนื้อหาคอร์ส</h3>
-              </div>
-              
-              <div className="max-h-96 overflow-y-auto">
-                {course.chapters.map((chapter) => (
-                  <div key={chapter.id} className="border-b last:border-b-0">
-                    <div className="p-4 bg-gray-50">
-                      <h4 className="font-medium text-sm">
-                        {chapter.order}. {chapter.title}
-                      </h4>
-                      <div className="text-xs text-gray-600 mt-1">
-                        {chapter.contents.length} เนื้อหา
+                  <div className="space-y-2">
+                    {course.chapters
+                      .slice()
+                      .sort((a, b) => a.order - b.order)
+                      .map((chapter) => {
+                        const isOpen = currentChapter?.id === chapter.id
+                        const contentsSorted = [...chapter.contents].sort((a, b) => a.order - b.order)
+                        return (
+                          <div key={chapter.id} className="space-y-2">
+                            <Button
+                              variant={isOpen ? 'default' : 'ghost'}
+                              className={`w-full justify-start text-left h-auto p-3 ${isOpen ? 'text-white bg-yellow-500 hover:opacity-90' : 'text-gray-700 hover:bg-gray-100'
+                                }`}
+                              onClick={() => {
+                                const first = contentsSorted[0]
+                                if (first) setSelectedContent(first)
+                              }}
+                            >
+                              <div>
+                                <div className="font-medium text-balance">
+                                  Chapter {chapter.order}: {chapter.title}
+                                </div>
+                                <div className="text-xs opacity-80 text-pretty">
+                                  {chapter.contents.length} เนื้อหา
+                                </div>
+                              </div>
+                            </Button>
+
+                            {isOpen && (
+                              <div className="ml-4 space-y-1">
+                                {contentsSorted.map((c) => {
+                                  const isCurrent = selectedContent?.id === c.id
+                                  const idx = contentIndexMap.get(c.id) ?? -1
+                                  const isCompleted = idx <= highestCompletedIndex && idx !== -1
+                                  return (
+                                    <Button
+                                      key={c.id}
+                                      variant="ghost"
+                                      size="sm"
+                                      className={`w-full justify-start text-left h-auto p-2 ${isCurrent
+                                          ? ' text-gray-800 border-l-2 border-l-yellow-300'
+                                          : 'text-gray-600 hover:bg-gray-50'
+                                        }`}
+                                      onClick={() => handleSelectContent(c)}
+                                    >
+                                      <div className="flex items-center gap-2 w-full">
+                                        {isCompleted ? (
+                                          <CheckCircle className="h-3 w-3 text-green-600 shrink-0" />
+                                        ) : (
+                                          <Play className="h-3 w-3 shrink-0" />
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                          <div className="text-xs font-medium truncate text-balance">
+                                            {c.title}
+                                          </div>
+                                        </div>
+
+                                        {isCurrent && (
+                                          <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse ml-2" />
+                                        )}
+                                      </div>
+                                    </Button>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </aside>
+
+          {/* Content area */}
+          <section className="lg:col-span-3 space-y-6">
+            {/* Video player */}
+            <Card className="bg-white border-gray-200 pt-0">
+              <CardContent className="p-0">
+                <div className="aspect-video bg-black rounded-t-lg overflow-hidden relative">
+                  {selectedContent &&
+                    selectedContent.contentType === 'VIDEO' &&
+                    getYouTubeEmbedUrl(selectedContent.contentUrl) ? (
+                    <iframe
+                      src={getYouTubeEmbedUrl(selectedContent.contentUrl) || ''}
+                      className="w-full h-full"
+                      allowFullScreen
+                      title={selectedContent.title}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-white">
+                      <div className="text-center">
+                        <Play className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                        <p>ไม่สามารถเล่นวิดีโอได้</p>
                       </div>
                     </div>
-                    
-                    {chapter.contents.map((content) => {
-                      const isCompleted = completedContents.includes(content.id)
-                      const isCurrentContent = selectedContent?.id === content.id
-                      
-                      return (
-                        <button
-                          key={content.id}
-                          onClick={() => handleContentClick(content)}
-                          disabled={progressLoading}
-                          className={`w-full p-3 text-left text-sm hover:bg-gray-50 flex items-center justify-between group transition-colors ${
-                            isCurrentContent 
-                              ? 'bg-yellow-50 border-r-2 border-yellow-400' 
-                              : ''
-                          } ${progressLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          <div className="flex items-center gap-3">
-                            {isCompleted ? (
-                              <CheckCircle className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <Play className="h-4 w-4 text-gray-400 group-hover:text-yellow-500" />
-                            )}
-                            <span className={`line-clamp-1 ${isCompleted ? 'text-green-700' : ''}`}>
-                              {content.title}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            {isCurrentContent && (
-                              <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-                            )}
-                          </div>
-                        </button>
-                      )
-                    })}
+                  )}
+                </div>
+
+                {/* Meta + complete button */}
+                {selectedContent && (
+                  <div className="p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-3">
+                      <div>
+                        <h2 className="text-lg sm:text-xl font-semibold mb-1">
+                          {selectedContent.title}
+                        </h2>
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                          <Badge
+                            variant="secondary"
+                            className="bg-yellow-100 text-yellow-800 border border-yellow-300"
+                          >
+                            Chapter {currentChapter?.order}: {currentChapter?.title}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const idx = contentIndexMap.get(selectedContent.id) ?? -1
+                          const already = idx !== -1 && idx <= highestCompletedIndex
+                          if (already) {
+                            return (
+                              <div className="flex items-center gap-2 text-green-600">
+                                <CheckCircle className="h-5 w-5" />
+                                <span className="text-sm font-medium">เรียนแล้ว</span>
+                              </div>
+                            )
+                          }
+                          return (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  disabled={progressLoading}
+                                  className="bg-yellow-400 hover:bg-yellow-500 text-white"
+                                  size="sm"
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-2" /> ทำเครื่องหมายเรียนแล้ว
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>ยืนยันการทำเครื่องหมายเรียนแล้ว</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    คุณต้องการทำเครื่องหมายว่าได้เรียน "{selectedContent?.title}" แล้วใช่หรือไม่?
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleMarkCompleted(selectedContent)}>
+                                    ยืนยัน
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Course summary strip */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Image
+                          src={course.coverImageUrl || '/placeholder.svg'}
+                          alt={course.title}
+                          width={40}
+                          height={28}
+                          className="rounded object-cover border"
+                        />
+                        <span className="truncate" title={course.title}>{course.title}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="h-4 w-4" /> {course.stats.totalChapters} บทเรียน
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Play className="h-4 w-4" /> {course.stats.totalContents} เนื้อหา
+                      </div>
+                      <div className="hidden sm:flex items-center gap-2">
+                        <span className="truncate">อาจารย์ {course.instructor.name}</span>
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Progress */}
+            <Card className="bg-white border-gray-200">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-gray-700">ความคืบหน้า</div>
+                  <div className={`flex items-center gap-2 font-medium ${progressColor}`}>
+                    <CheckCircle className="h-4 w-4" /> {currentProgress}%
+                  </div>
+                </div>
+                <ProgressBar progress={currentProgress} />
+                <div className="flex justify-between items-center mt-2 text-xs">
+                  <span className={progressColor}>{progressText}</span>
+                  {progressLoading && <span className="text-gray-500">กำลังอัพเดท...</span>}
+                </div>
+                <div className="mt-2 text-xs text-gray-500">
+                  เรียนแล้ว {completedCount} จาก {totalContents} เนื้อหา
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Related items in current chapter */}
+            {currentChapter && (
+              <Card className="bg-white border-gray-200">
+                <CardContent className="p-4 sm:p-6">
+                  <h3 className="font-semibold text-gray-800 mb-4">
+                    วิดีโออื่นๆ ใน Chapter {currentChapter.order}
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[...currentChapter.contents]
+                      .sort((a, b) => a.order - b.order)
+                      .filter((c) => c.id !== selectedContent?.id)
+                      .slice(0, 6)
+                      .map((c) => (
+                        <Card
+                          key={c.id}
+                          className="cursor-pointer hover:shadow-md transition-shadow bg-gray-50 border-gray-200 hover:border-yellow-300"
+                          onClick={() => handleSelectContent(c)}
+                        >
+                          <CardContent className="p-3">
+                            <div className="aspect-video bg-gray-200 rounded mb-3 relative overflow-hidden">
+                              <Image
+                                src={'/placeholder.svg'}
+                                alt={c.title}
+                                fill
+                                className="object-cover"
+                              />
+                            </div>
+                            <h5 className="font-medium text-sm text-gray-800 text-balance line-clamp-2">
+                              {c.title}
+                            </h5>
+                          </CardContent>
+                        </Card>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </section>
         </div>
       </div>
     </div>
