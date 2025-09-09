@@ -494,7 +494,7 @@ export default function CourseDetailPage() {
 
   return (
 <>
-  <div className="min-h-screen bg-gray-50 pt-20">
+  <div className="min-h-screen bg-gray-50 pt-0 md:pt-20">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       {/* Back */}
       <div className="mb-6">
@@ -511,156 +511,158 @@ export default function CourseDetailPage() {
 
       {/* States */}
       {loading && (
-  <div className="grid lg:grid-cols-3 gap-12 py-4" aria-busy="true" aria-live="polite">
-    {/* LEFT 2 cols */}
-    <div className="lg:col-span-2 space-y-8">
-      {/* Hero */}
-      <div className="aspect-video rounded-2xl ring-1 ring-black/5 shadow-lg overflow-hidden">
-        <Skeleton className="h-full w-full rounded-none" />
-      </div>
-
-      {/* Meta badges */}
-      <div className="flex items-center gap-2">
-        <Skeleton className="h-7 w-24 rounded-full" />
-        <Skeleton className="h-7 w-32 rounded-full" />
-      </div>
-
-      {/* Title & description */}
-      <Skeleton className="h-8 w-3/4" />
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-5/6" />
-        <Skeleton className="h-4 w-2/3" />
-      </div>
-
-      {/* Stats row */}
-      <div className="flex flex-wrap items-center gap-6">
-        <Skeleton className="h-6 w-28" />
-        <Skeleton className="h-6 w-24" />
-        <Skeleton className="h-6 w-24" />
-      </div>
-
-      {/* Course Overview card */}
-      <Card className="rounded-2xl border-gray-200 shadow-sm">
-        <CardHeader className="pb-2">
-          <div className="flex items-end justify-between gap-4">
-            <Skeleton className="h-6 w-40" />
-            <div className="flex items-center gap-4">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-4 w-24" />
+        <div className="grid lg:grid-cols-3 gap-12 py-4" aria-busy="true" aria-live="polite">
+          {/* LEFT (Hero/Overview skeleton) */}
+          <section className="lg:col-span-2 space-y-8 order-1 lg:order-1">
+            {/* Hero */}
+            <div className="aspect-video rounded-2xl ring-1 ring-black/5 shadow-lg overflow-hidden">
+              <Skeleton className="h-full w-full rounded-none" />
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-2">
-          {/* progress */}
-          <div className="mb-5">
-            <div className="flex items-center justify-between mb-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-16" />
+
+            {/* Meta badges */}
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-7 w-24 rounded-full" />
+              <Skeleton className="h-7 w-32 rounded-full" />
             </div>
-            <Skeleton className="h-2 w-full rounded-full" />
-          </div>
 
-          {/* chapters skeleton list */}
-          <div className="space-y-3">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="p-4 rounded-xl border bg-white/90 backdrop-blur border-gray-200 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 min-w-0">
-                    <Skeleton className="h-9 w-9 rounded-full" />
-                    <div className="space-y-2 w-48">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-3 w-20" />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-8 w-24 rounded-lg" />
-                  </div>
-                </div>
-
-                <div className="mt-3 space-y-2 border-l-2 border-yellow-100 pl-3">
-                  <Skeleton className="h-4 w-56" />
-                  <Skeleton className="h-4 w-40" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Reviews card */}
-      <Card className="rounded-2xl border-gray-200 shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex items-end justify-between gap-4">
-            <Skeleton className="h-6 w-40" />
-            <div className="flex gap-2">
-              <Skeleton className="h-9 w-24 rounded-xl" />
-              <Skeleton className="h-9 w-28 rounded-xl" />
+            {/* Title & description */}
+            <Skeleton className="h-8 w-3/4" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-4 w-2/3" />
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="rounded-xl border border-gray-200 p-4 bg-white/90 shadow-sm">
-                <div className="flex items-start gap-3">
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-32" />
+
+            {/* Stats row */}
+            <div className="flex flex-wrap items-center gap-6">
+              <Skeleton className="h-6 w-28" />
+              <Skeleton className="h-6 w-24" />
+              <Skeleton className="h-6 w-24" />
+            </div>
+
+            {/* Course Overview card */}
+            <Card className="rounded-2xl border-gray-200 shadow-sm">
+              <CardHeader className="pb-2">
+                <div className="flex items-end justify-between gap-4">
+                  <Skeleton className="h-6 w-40" />
+                  <div className="flex items-center gap-4">
                     <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-4 w-5/6" />
-                    <Skeleton className="h-4 w-2/3" />
+                    <Skeleton className="h-4 w-24" />
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+              </CardHeader>
+              <CardContent className="pt-2">
+                {/* progress */}
+                <div className="mb-5">
+                  <div className="flex items-center justify-between mb-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                  <Skeleton className="h-2 w-full rounded-full" />
+                </div>
 
-    {/* RIGHT sidebar */}
-    <div className="lg:col-span-1">
-      <Card className="rounded-2xl shadow-lg ring-1 ring-black/5">
-        <CardContent className="p-6 space-y-6">
-          <div className="text-center">
-            <Skeleton className="h-8 w-40 mx-auto" />
-            <Skeleton className="h-3 w-32 mx-auto mt-2" />
-          </div>
+                {/* chapters skeleton list */}
+                <div className="space-y-3">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="p-4 rounded-xl border bg-white/90 backdrop-blur border-gray-200 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4 min-w-0">
+                          <Skeleton className="h-9 w-9 rounded-full" />
+                          <div className="space-y-2 w-48">
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-3 w-20" />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="h-4 w-16" />
+                          <Skeleton className="h-8 w-24 rounded-lg" />
+                        </div>
+                      </div>
 
-          <Separator />
+                      <div className="mt-3 space-y-2 border-l-2 border-yellow-100 pl-3">
+                        <Skeleton className="h-4 w-56" />
+                        <Skeleton className="h-4 w-40" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </section>
 
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-4 w-16" />
-            </div>
-            <div className="flex justify-between">
-              <Skeleton className="h-4 w-16" />
-              <Skeleton className="h-4 w-14" />
-            </div>
-            <div className="flex justify-between">
-              <Skeleton className="h-4 w-16" />
-              <Skeleton className="h-4 w-12" />
-            </div>
-          </div>
+          {/* RIGHT sidebar skeleton */}
+          <aside className="lg:col-span-1 order-2 lg:order-2">
+            <Card className="rounded-2xl shadow-lg ring-1 ring-black/5">
+              <CardContent className="p-6 space-y-6">
+                <div className="text-center">
+                  <Skeleton className="h-8 w-40 mx-auto" />
+                  <Skeleton className="h-3 w-32 mx-auto mt-2" />
+                </div>
 
-          <div className="space-y-2">
-            <Skeleton className="h-10 w-full rounded-xl" />
-            <Skeleton className="h-10 w-full rounded-xl" />
-          </div>
+                <Separator />
 
-          <Separator />
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                  <div className="flex justify-between">
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-4 w-14" />
+                  </div>
+                  <div className="flex justify-between">
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-4 w-12" />
+                  </div>
+                </div>
 
-          <div className="text-center space-y-1">
-            <Skeleton className="h-3 w-40 mx-auto" />
-            <Skeleton className="h-3 w-28 mx-auto" />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  </div>
-)}
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-full rounded-xl" />
+                  <Skeleton className="h-10 w-full rounded-xl" />
+                </div>
+
+                <Separator />
+
+                <div className="text-center space-y-1">
+                  <Skeleton className="h-3 w-40 mx-auto" />
+                  <Skeleton className="h-3 w-28 mx-auto" />
+                </div>
+              </CardContent>
+            </Card>
+          </aside>
+
+          {/* Reviews skeleton (แยกเป็น item ล่างสุดของมือถือ) */}
+          <section className="lg:col-span-2 order-3 lg:order-3">
+            <Card className="rounded-2xl border-gray-200 shadow-sm">
+              <CardHeader className="pb-3">
+                <div className="flex items-end justify-between gap-4">
+                  <Skeleton className="h-6 w-40" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-9 w-24 rounded-xl" />
+                    <Skeleton className="h-9 w-28 rounded-xl" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="rounded-xl border border-gray-200 p-4 bg-white/90 shadow-sm">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 space-y-2">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-4 w-20" />
+                          <Skeleton className="h-4 w-5/6" />
+                          <Skeleton className="h-4 w-2/3" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+        </div>
+      )}
 
       {!loading && error && (
         <div className="text-center text-red-600 py-10">
@@ -673,10 +675,9 @@ export default function CourseDetailPage() {
 
       {!loading && !error && course && (
         <div className="grid lg:grid-cols-3 gap-12">
-    
-          <div className="lg:col-span-2 space-y-8">
+          {/* ซ้าย: Hero + Overview */}
+          <section className="lg:col-span-2 space-y-8 order-1 lg:order-1">
             <motion.div variants={fadeInUp} initial="initial" animate="animate">
-             
               <div className="group relative aspect-video overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-lg mb-6">
                 <Image
                   src={course.coverImageUrl || "/placeholder.svg?height=400&width=700"}
@@ -696,7 +697,6 @@ export default function CourseDetailPage() {
                 </div>
               </div>
 
-             
               <div className="flex flex-wrap items-center gap-2 mb-4">
                 <Badge className="rounded-full bg-yellow-400 text-white px-3 py-1 h-7">
                   {course.category?.name ?? "คอร์ส"}
@@ -708,7 +708,6 @@ export default function CourseDetailPage() {
                 )}
               </div>
 
-           
               <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3 leading-tight text-balance">
                 {course.title}
               </h1>
@@ -716,7 +715,6 @@ export default function CourseDetailPage() {
                 {course.description}
               </p>
 
-           
               <div className="flex flex-wrap items-center gap-6 text-gray-700">
                 <div className="inline-flex items-center gap-2">
                   <Users className="h-5 w-5 text-[#004B7D]" />
@@ -737,7 +735,6 @@ export default function CourseDetailPage() {
               </div>
             </motion.div>
 
-           
             <motion.div
               variants={fadeInUp}
               initial="initial"
@@ -893,8 +890,133 @@ export default function CourseDetailPage() {
                 </CardContent>
               </Card>
             </motion.div>
+          </section>
 
-            {/* -------- Reviews -------- */}
+          {/* ขวา: Sticky Sidebar */}
+          <aside className="lg:col-span-1 order-2 lg:order-2">
+            <motion.div
+              className="lg:sticky lg:top-24"
+              variants={fadeInUp}
+              initial="initial"
+              animate="animate"
+              transition={{ delay: 0.1 }}
+            >
+              <Card className="rounded-2xl shadow-lg ring-1 ring-black/5">
+                <CardContent className="p-6">
+                  <div className="text-center mb-6">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      {price === 0 ? (
+                        <span className="text-3xl font-extrabold text-green-600 tracking-tight">
+                          ฟรี
+                        </span>
+                      ) : (
+                        <span className="text-3xl font-extrabold text-yellow-600 tracking-tight">
+                          ฿{(price || 0).toLocaleString()} บาท
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      ราคานี้รวมภาษีมูลค่าเพิ่ม
+                    </p>
+                  </div>
+
+                  <Separator className="mb-6" />
+
+                  <div className="space-y-3 mb-6 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">ระยะเวลา</span>
+                      <span className="font-medium">{course.duration ?? "-"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">บทเรียน</span>
+                      <span className="font-medium">
+                        {course._count?.chapters ?? 0} บทเรียน
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">นักเรียน</span>
+                      <span className="font-medium">
+                        {course._count?.enrollments ?? 0} คน
+                      </span>
+                    </div>
+
+                    {price > 0 && (
+                      <div className="space-y-2 pt-2">
+                        <div className="text-sm font-medium">คูปองส่วนลด</div>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="กรอกรหัสคูปอง (ถ้ามี)"
+                            value={couponCode}
+                            onChange={(e) => setCouponCode(e.target.value)}
+                            className="h-10 rounded-lg"
+                          />
+                          <Button
+                            variant="outline"
+                            disabled={validatingCoupon}
+                            onClick={applyCoupon}
+                            className="rounded-lg"
+                          >
+                            {validatingCoupon ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                กำลังตรวจสอบ...
+                              </>
+                            ) : (
+                              "ใช้คูปอง"
+                            )}
+                          </Button>
+                        </div>
+                        {couponError && (
+                          <div className="text-xs text-red-600">{couponError}</div>
+                        )}
+                        {discount > 0 && (
+                          <div className="flex justify-between text-sm text-green-700">
+                            <span>ส่วนลดคูปอง</span>
+                            <span>-฿{discount.toLocaleString()} บาท</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-base font-semibold">
+                          <span>ยอดสุทธิ</span>
+                          <span>฿{finalTotal.toLocaleString()} บาท</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    {isEnrolled ? (
+                      <Link href={`/courses/${id}/learn`}>
+                        <Button className="w-full bg-yellow-400 hover:bg-yellow-500 text-white text-lg py-3 rounded-xl shadow hover:shadow-md transition">
+                          เข้าเรียนทันที
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button
+                        onClick={createOrder}
+                        disabled={creating}
+                        className="w-full bg-yellow-400 hover:bg-yellow-500 text-white text-lg py-3 rounded-xl shadow hover:shadow-md transition"
+                      >
+                        {creating ? "กำลังสร้างคำสั่งซื้อ..." : "สมัครเรียนเลย"}
+                      </Button>
+                    )}
+                    <Button variant="outline" className="w-full rounded-xl">
+                      เพิ่มในรายการโปรด
+                    </Button>
+                  </div>
+
+                  <Separator className="my-6" />
+
+                  <div className="text-center text-sm text-gray-600">
+                    <p>รับประกันความพึงพอใจ 30 วัน</p>
+                    <p>หรือคืนเงิน 100%</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </aside>
+
+          {/* Reviews: แยกเป็น item ของตัวเอง (อยู่ล่างสุดบนมือถือ) */}
+          <section id="reviewsSection" className="lg:col-span-2 order-3 lg:order-3">
             <motion.div
               variants={fadeInUp}
               initial="initial"
@@ -920,7 +1042,10 @@ export default function CourseDetailPage() {
                       >
                         รีเฟรช
                       </Button>
-                      <Button className="bg-yellow-400 hover:bg-yellow-500 text-white rounded-xl">
+                      <Button
+                        className="bg-yellow-400 hover:bg-yellow-500 text-white rounded-xl"
+                        onClick={openReviewDialog}  // สำคัญ: เปิด Dialog เขียนรีวิว
+                      >
                         เขียนรีวิว
                       </Button>
                     </div>
@@ -996,140 +1121,13 @@ export default function CourseDetailPage() {
                 </CardContent>
               </Card>
             </motion.div>
-          </div>
-
-          {/* -------- Right: Sticky Sidebar -------- */}
-          <div className="lg:col-span-1">
-            <motion.div
-              className="sticky top-24"
-              variants={fadeInUp}
-              initial="initial"
-              animate="animate"
-              transition={{ delay: 0.1 }}
-            >
-              <Card className="rounded-2xl shadow-lg ring-1 ring-black/5">
-                <CardContent className="p-6">
-                
-                  <div className="text-center mb-6">
-                    <div className="flex items-center justify-center gap-2 mb-1">
-                      {price === 0 ? (
-                        <span className="text-3xl font-extrabold text-green-600 tracking-tight">
-                          ฟรี
-                        </span>
-                      ) : (
-                        <span className="text-3xl font-extrabold text-yellow-600 tracking-tight">
-                          ฿{(price || 0).toLocaleString()} บาท
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      ราคานี้รวมภาษีมูลค่าเพิ่ม
-                    </p>
-                  </div>
-
-                  <Separator className="mb-6" />
-
-                 
-                  <div className="space-y-3 mb-6 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">ระยะเวลา</span>
-                      <span className="font-medium">{course.duration ?? "-"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">บทเรียน</span>
-                      <span className="font-medium">
-                        {course._count?.chapters ?? 0} บทเรียน
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">นักเรียน</span>
-                      <span className="font-medium">
-                        {course._count?.enrollments ?? 0} คน
-                      </span>
-                    </div>
-
-                    {price > 0 && (
-                      <div className="space-y-2 pt-2">
-                        <div className="text-sm font-medium">คูปองส่วนลด</div>
-                        <div className="flex gap-2">
-                          <Input
-                            placeholder="กรอกรหัสคูปอง (ถ้ามี)"
-                            value={couponCode}
-                            onChange={(e) => setCouponCode(e.target.value)}
-                            className="h-10 rounded-lg"
-                          />
-                          <Button
-                            variant="outline"
-                            disabled={validatingCoupon}
-                            onClick={applyCoupon}
-                            className="rounded-lg"
-                          >
-                            {validatingCoupon ? (
-                              <>
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                กำลังตรวจสอบ...
-                              </>
-                            ) : (
-                              "ใช้คูปอง"
-                            )}
-                          </Button>
-                        </div>
-                        {couponError && (
-                          <div className="text-xs text-red-600">{couponError}</div>
-                        )}
-                        {discount > 0 && (
-                          <div className="flex justify-between text-sm text-green-700">
-                            <span>ส่วนลดคูปอง</span>
-                            <span>-฿{discount.toLocaleString()} บาท</span>
-                          </div>
-                        )}
-                        <div className="flex justify-between text-base font-semibold">
-                          <span>ยอดสุทธิ</span>
-                          <span>฿{finalTotal.toLocaleString()} บาท</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-             
-                  <div className="space-y-3">
-                    {isEnrolled ? (
-                      <Link href={`/courses/${id}/learn`}>
-                        <Button className="w-full bg-yellow-400 hover:bg-yellow-500 text-white text-lg py-3 rounded-xl shadow hover:shadow-md transition">
-                          เข้าเรียนทันที
-                        </Button>
-                      </Link>
-                    ) : (
-                      <Button
-                        onClick={createOrder}
-                        disabled={creating}
-                        className="w-full bg-yellow-400 hover:bg-yellow-500 text-white text-lg py-3 rounded-xl shadow hover:shadow-md transition"
-                      >
-                        {creating ? "กำลังสร้างคำสั่งซื้อ..." : "สมัครเรียนเลย"}
-                      </Button>
-                    )}
-                    <Button variant="outline" className="w-full rounded-xl">
-                      เพิ่มในรายการโปรด
-                    </Button>
-                  </div>
-
-                  <Separator className="my-6" />
-
-                  <div className="text-center text-sm text-gray-600">
-                    <p>รับประกันความพึงพอใจ 30 วัน</p>
-                    <p>หรือคืนเงิน 100%</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </div>
+          </section>
         </div>
       )}
     </div>
   </div>
 
   <LoginModal isOpen={loginOpen} onClose={() => setLoginOpen(false)} />
-
 
   <Dialog open={enrolledOpen} onOpenChange={setEnrolledOpen}>
     <DialogContent>
@@ -1169,11 +1167,7 @@ export default function CourseDetailPage() {
           className="h-10"
         />
         {uploadMsg && (
-          <div
-            className={
-              uploadMsg.includes("สำเร็จ") ? "text-green-600" : "text-red-600"
-            }
-          >
+          <div className={uploadMsg.includes("สำเร็จ") ? "text-green-600" : "text-red-600"}>
             {uploadMsg}
           </div>
         )}
@@ -1197,7 +1191,6 @@ export default function CourseDetailPage() {
       </div>
     </DialogContent>
   </Dialog>
-
 
   <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
     <DialogContent>
@@ -1260,18 +1253,19 @@ export default function CourseDetailPage() {
       </div>
     </DialogContent>
   </Dialog>
-  <style jsx>{`
-  .shimmer {
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
-    animation: shimmer 1.8s infinite;
-  }
-  @keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-  }
-`}</style>
 
+  <style jsx>{`
+    .shimmer {
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+      animation: shimmer 1.8s infinite;
+    }
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+  `}</style>
 </>
+
 
   )
   
