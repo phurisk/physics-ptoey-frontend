@@ -6,6 +6,7 @@ export default function GlobalError({ error, reset }: { error: Error; reset: () 
       <body>
         <div className="min-h-[60vh] flex items-center justify-center px-4">
           <div className="text-center space-y-4">
+          <img src="/new-logo.png" alt="logo" className="w-32 h-32 mx-auto" />
             <h1 className="text-2xl font-bold">เกิดข้อผิดพลาดภายในระบบ</h1>
             <p className="text-gray-600 break-all max-w-xl mx-auto">{error?.message || "ไม่ทราบสาเหตุ"}</p>
             <button

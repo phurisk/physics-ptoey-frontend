@@ -154,20 +154,6 @@ export default function AboutTeacher() {
               </div>
             </div>
 
-            <Card className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-200 lg:hidden">
-              <CardContent className="p-6">
-                <div className="text-center space-y-4">
-                  <h5 className="text-lg font-semibold text-gray-900">พร้อมเรียนกับครูพี่เต้ยแล้วหรือยัง?</h5>
-                  <p className="text-gray-600 text-pretty">
-                    เรียนรู้เทคนิคการแก้โจทย์ฟิสิกส์ เพื่อให้เข้าใจและได้คะแนนสูง
-                  </p>
-                  <button className="bg-yellow-400 hover:bg-yellow-500 text-white px-6 py-3 rounded-xl font-semibold text-2xl shadow-md hover:shadow-lg transition-colors duration-300 cursor-pointer">
-                    สมัครเรียนเลย
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-
            
             <div className="mt-6 flex flex-row gap-3 justify-center flex-nowrap md:hidden">
               <Link
@@ -226,20 +212,6 @@ export default function AboutTeacher() {
           </div>
         </div>
       </div>
-
-      <Card className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-200 hidden md:flex max-w-3xl mx-auto mt-10">
-              <CardContent className="p-6">
-                <div className="text-center space-y-4">
-                  <h5 className="text-lg font-semibold text-gray-900">พร้อมเรียนกับครูพี่เต้ยแล้วหรือยัง?</h5>
-                  <p className="text-gray-600 text-pretty">
-                    เรียนรู้เทคนิคการแก้โจทย์ฟิสิกส์ เพื่อให้เข้าใจและได้คะแนนสูง
-                  </p>
-                  <button className="bg-yellow-400 hover:bg-yellow-500 text-white px-6 py-3 rounded-xl font-semibold text-2xl shadow-md hover:shadow-lg transition-colors duration-300 cursor-pointer">
-                    สมัครเรียนเลย
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
     </section>
   )
 }

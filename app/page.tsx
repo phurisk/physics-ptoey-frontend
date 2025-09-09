@@ -10,6 +10,7 @@ import Books from "@/components/sections/books"
 import Articles from "@/components/sections/articles"
 import TeachingVideos from "@/components/sections/teaching-videos"
 import { Footer } from "@/components/sections/footer"
+import PopupPromotion from "@/components/sections/popup-promotion"
 
 const fadeInUp = {
   initial: { opacity: 0, y: 60 },
@@ -28,6 +29,9 @@ const staggerContainer = {
 export default function HomePage() {
   return (
     <motion.div className="min-h-screen bg-white" initial="initial" animate="animate" variants={staggerContainer}>
+      
+      <PopupPromotion />
+
       <HeroBanner />
 
       <motion.div variants={fadeInUp}>

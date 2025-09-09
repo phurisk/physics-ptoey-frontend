@@ -189,10 +189,10 @@ export default function Books() {
      
         <div
           className="
-            grid grid-cols-1        /* MOBILE: 1 คอลัมน์ (แสดงทีละเล่ม) */
-            md:grid-cols-2          /* tablet เหมือนเดิม */
-            lg:grid-cols-4          /* desktop เหมือนเดิม */
-            gap-4 md:gap-8          /* MOBILE: ลดช่องไฟ */
+            grid grid-cols-2        
+            md:grid-cols-2          
+            lg:grid-cols-4          
+            gap-3 md:gap-8          
           "
         >
           {loading && (
@@ -203,34 +203,34 @@ export default function Books() {
                   className="overflow-hidden"
                 >
                   <CardContent className="p-0">
-                    {/* Cover skeleton */}
+                  
                     <div className="relative">
                       <div className="aspect-[640/906] w-full overflow-hidden">
                         <Skeleton className="h-full w-full" />
                       </div>
-                      {/* Discount badge skeleton */}
+                      
                       <Skeleton className="absolute top-2 right-2 lg:top-4 lg:right-4 h-5 w-12 rounded-full" />
                     </div>
 
-                    {/* Content skeleton */}
+                    
                     <div className="p-3 md:p-6 space-y-3 md:space-y-4">
-                      {/* Title lines */}
+                   
                       <Skeleton className="h-4 md:h-5 w-4/5" />
                       <Skeleton className="hidden md:block h-4 w-3/5" />
 
-                      {/* Rating row */}
+                 
                       <div className="flex items-center gap-2">
                         <Skeleton className="h-4 w-24" />
                         <Skeleton className="h-3 w-10" />
                       </div>
 
-                      {/* Price row */}
+                     
                       <div className="flex items-center gap-3">
                         <Skeleton className="h-6 md:h-7 w-24" />
                         <Skeleton className="h-4 w-16" />
                       </div>
 
-                      {/* CTA button */}
+           
                       <Skeleton className="h-9 md:h-11 w-full rounded-md" />
                     </div>
                   </CardContent>
