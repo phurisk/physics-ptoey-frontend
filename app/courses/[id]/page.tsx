@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import LoginModal from "@/components/login-modal"
 import { useAuth } from "@/components/auth-provider"
-// ถ้ามี Textarea ของ shadcn ให้ใช้ด้านล่างนี้; ถ้าไม่มี ใช้ <textarea> ธรรมดาได้
+
 import { Textarea } from "@/components/ui/textarea"
 
 const fadeInUp = {
@@ -22,6 +22,15 @@ const fadeInUp = {
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.6 },
 }
+
+function Skeleton({ className = "" }: { className?: string }) {
+  return (
+    <div className={`relative overflow-hidden rounded-md bg-gray-200 ${className}`}>
+      <div className="absolute inset-0 -translate-x-full shimmer" />
+    </div>
+  )
+}
+
 
 type ApiCourse = {
   id: string
@@ -266,7 +275,7 @@ export default function CourseDetailPage() {
         if (!res.ok || json.success === false) throw new Error("โหลดรีวิวไม่สำเร็จ")
         if (active) {
           setReviews((prev) => [...prev, ...(json.data || [])])
-          // ถ้ามี count ใช้คำนวณต่อได้; ถ้าไม่มี count ให้ใช้ความยาวของ page แทน
+           
           const pageHasMore = (json.data?.length || 0) >= REVIEWS_LIMIT
           setHasMoreReviews(pageHasMore)
         }
@@ -278,7 +287,8 @@ export default function CourseDetailPage() {
     }
     loadReviews()
     return () => { active = false }
-  }, [id, reviewsPage]) // eslint-disable-line
+  }, [id, reviewsPage]) 
+
   // -----------------------------------
 
   const totalContents = useMemo(() => {
@@ -407,7 +417,7 @@ export default function CourseDetailPage() {
     }
   }
 
-  // Show enrolled popup when detected
+  
   useEffect(() => {
     if (isEnrolled) setEnrolledOpen(true)
   }, [isEnrolled])
@@ -452,11 +462,11 @@ export default function CourseDetailPage() {
       const json: PostReviewResponse = await res.json().catch(() => ({ success: false }))
       if (!res.ok || json.success === false) throw new Error(json?.error || "ส่งรีวิวไม่สำเร็จ")
 
-      // Optimistic add to top
+     
       if (json.data) {
         setReviews((prev) => [json.data!, ...prev])
       } else {
-        // ถ้า API ไม่คืนรีวิวกลับมา ให้สร้าง object ชั่วคราว
+        
         const temp: ApiReview = {
           id: `temp_${Date.now()}`,
           userId: user.id,
@@ -475,7 +485,7 @@ export default function CourseDetailPage() {
       setReviewComment("")
       setReviewRating(5)
     } catch (e) {
-      // แสดง error แบบเบา ๆ ด้วยการตั้ง state (หรือจะใส่ toast ก็ได้ถ้ามี)
+    
     } finally {
       setPostingReview(false)
     }
@@ -483,75 +493,260 @@ export default function CourseDetailPage() {
   // -------------------------------------
 
   return (
-    <>
-    <div className="min-h-screen bg-gray-50 pt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-6">
-          <Link href="/courses">
-            <Button variant="outline" className="gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              กลับไปหน้าคอร์สเรียนทั้งหมด
-            </Button>
-          </Link>
+<>
+  <div className="min-h-screen bg-gray-50 pt-20">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* Back */}
+      <div className="mb-6">
+        <Link href="/courses">
+          <Button
+            variant="outline"
+            className="gap-2 rounded-xl border-gray-200 shadow-sm hover:shadow transition-all hover:-translate-y-0.5"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            กลับไปหน้าคอร์สเรียนทั้งหมด
+          </Button>
+        </Link>
+      </div>
+
+      {/* States */}
+      {loading && (
+  <div className="grid lg:grid-cols-3 gap-12 py-4" aria-busy="true" aria-live="polite">
+    {/* LEFT 2 cols */}
+    <div className="lg:col-span-2 space-y-8">
+      {/* Hero */}
+      <div className="aspect-video rounded-2xl ring-1 ring-black/5 shadow-lg overflow-hidden">
+        <Skeleton className="h-full w-full rounded-none" />
+      </div>
+
+      {/* Meta badges */}
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-7 w-24 rounded-full" />
+        <Skeleton className="h-7 w-32 rounded-full" />
+      </div>
+
+      {/* Title & description */}
+      <Skeleton className="h-8 w-3/4" />
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-5/6" />
+        <Skeleton className="h-4 w-2/3" />
+      </div>
+
+      {/* Stats row */}
+      <div className="flex flex-wrap items-center gap-6">
+        <Skeleton className="h-6 w-28" />
+        <Skeleton className="h-6 w-24" />
+        <Skeleton className="h-6 w-24" />
+      </div>
+
+      {/* Course Overview card */}
+      <Card className="rounded-2xl border-gray-200 shadow-sm">
+        <CardHeader className="pb-2">
+          <div className="flex items-end justify-between gap-4">
+            <Skeleton className="h-6 w-40" />
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-2">
+          {/* progress */}
+          <div className="mb-5">
+            <div className="flex items-center justify-between mb-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+            <Skeleton className="h-2 w-full rounded-full" />
+          </div>
+
+          {/* chapters skeleton list */}
+          <div className="space-y-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="p-4 rounded-xl border bg-white/90 backdrop-blur border-gray-200 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <Skeleton className="h-9 w-9 rounded-full" />
+                    <div className="space-y-2 w-48">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-8 w-24 rounded-lg" />
+                  </div>
+                </div>
+
+                <div className="mt-3 space-y-2 border-l-2 border-yellow-100 pl-3">
+                  <Skeleton className="h-4 w-56" />
+                  <Skeleton className="h-4 w-40" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Reviews card */}
+      <Card className="rounded-2xl border-gray-200 shadow-sm">
+        <CardHeader className="pb-3">
+          <div className="flex items-end justify-between gap-4">
+            <Skeleton className="h-6 w-40" />
+            <div className="flex gap-2">
+              <Skeleton className="h-9 w-24 rounded-xl" />
+              <Skeleton className="h-9 w-28 rounded-xl" />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="rounded-xl border border-gray-200 p-4 bg-white/90 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-4 w-5/6" />
+                    <Skeleton className="h-4 w-2/3" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+
+    {/* RIGHT sidebar */}
+    <div className="lg:col-span-1">
+      <Card className="rounded-2xl shadow-lg ring-1 ring-black/5">
+        <CardContent className="p-6 space-y-6">
+          <div className="text-center">
+            <Skeleton className="h-8 w-40 mx-auto" />
+            <Skeleton className="h-3 w-32 mx-auto mt-2" />
+          </div>
+
+          <Separator />
+
+          <div className="space-y-3">
+            <div className="flex justify-between">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+            <div className="flex justify-between">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-14" />
+            </div>
+            <div className="flex justify-between">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-12" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-full rounded-xl" />
+            <Skeleton className="h-10 w-full rounded-xl" />
+          </div>
+
+          <Separator />
+
+          <div className="text-center space-y-1">
+            <Skeleton className="h-3 w-40 mx-auto" />
+            <Skeleton className="h-3 w-28 mx-auto" />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  </div>
+)}
+
+      {!loading && error && (
+        <div className="text-center text-red-600 py-10">
+          เกิดข้อผิดพลาด: {error}
         </div>
-        {loading && (
-          <div className="text-center text-gray-600">กำลังโหลดรายละเอียดคอร์ส...</div>
-        )}
-        {!loading && error && (
-          <div className="text-center text-red-600">เกิดข้อผิดพลาด: {error}</div>
-        )}
-        {!loading && !error && !course && (
-          <div className="text-center text-gray-600">ไม่พบคอร์สนี้</div>
-        )}
-        {!loading && !error && course && (
+      )}
+      {!loading && !error && !course && (
+        <div className="text-center text-gray-600 py-10">ไม่พบคอร์สนี้</div>
+      )}
+
+      {!loading && !error && course && (
         <div className="grid lg:grid-cols-3 gap-12">
+    
           <div className="lg:col-span-2 space-y-8">
             <motion.div variants={fadeInUp} initial="initial" animate="animate">
-              <div className="aspect-video relative overflow-hidden rounded-xl shadow-lg mb-6">
+             
+              <div className="group relative aspect-video overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-lg mb-6">
                 <Image
                   src={course.coverImageUrl || "/placeholder.svg?height=400&width=700"}
                   alt={course.title}
                   fill
-                  className="object-cover"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                  <Button size="lg" className="bg-yellow-400 hover:bg-yellow-500 text-white">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/25 to-transparent" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Button
+                    size="lg"
+                    className="bg-yellow-400 hover:bg-yellow-500 text-white shadow-lg hover:shadow-xl rounded-xl px-6 py-6 ring-1 ring-white/20 transition-all"
+                  >
                     <Play className="h-6 w-6 mr-2" />
                     ดูตัวอย่าง
                   </Button>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 mb-4">
-                <Badge className="bg-yellow-400 text-white">{course.category?.name ?? "คอร์ส"}</Badge>
-                {course.instructor?.name && <Badge variant="outline">{course.instructor?.name}</Badge>}
+             
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                <Badge className="rounded-full bg-yellow-400 text-white px-3 py-1 h-7">
+                  {course.category?.name ?? "คอร์ส"}
+                </Badge>
+                {course.instructor?.name && (
+                  <Badge variant="outline" className="rounded-full h-7 px-3">
+                    {course.instructor?.name}
+                  </Badge>
+                )}
               </div>
 
-              <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 text-balance">{course.title}</h1>
+           
+              <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3 leading-tight text-balance">
+                {course.title}
+              </h1>
+              <p className="text-lg text-gray-600 mb-6 text-pretty">
+                {course.description}
+              </p>
 
-              <p className="text-xl text-gray-600 mb-6 text-pretty">{course.description}</p>
-
-              <div className="flex flex-wrap items-center gap-6 text-gray-600">
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  <span>{course._count?.enrollments ?? 0} นักเรียน</span>
+           
+              <div className="flex flex-wrap items-center gap-6 text-gray-700">
+                <div className="inline-flex items-center gap-2">
+                  <Users className="h-5 w-5 text-[#004B7D]" />
+                  <span className="font-medium">
+                    {course._count?.enrollments ?? 0} นักเรียน
+                  </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5" />
-                  <span>{course._count?.chapters ?? 0} บทเรียน</span>
+                <div className="inline-flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-[#004B7D]" />
+                  <span className="font-medium">
+                    {course._count?.chapters ?? 0} บทเรียน
+                  </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  <span>{course.duration ?? "-"}</span>
+                <div className="inline-flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-[#004B7D]" />
+                  <span className="font-medium">{course.duration ?? "-"}</span>
                 </div>
               </div>
             </motion.div>
 
-            {/* Course Overview */}
-            <motion.div variants={fadeInUp} initial="initial" animate="animate" transition={{ delay: 0.2 }}>
-              <Card>
-                <CardHeader>
-                  <div className="flex items-end justify-between gap-4">
+           
+            <motion.div
+              variants={fadeInUp}
+              initial="initial"
+              animate="animate"
+              transition={{ delay: 0.2 }}
+            >
+              <Card className="rounded-2xl border-gray-200 shadow-sm">
+                <CardHeader className="pb-2">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <CardTitle className="text-2xl">Course Overview</CardTitle>
                     <div className="flex items-center gap-4 text-sm text-gray-600">
                       <div className="inline-flex items-center gap-1">
@@ -565,18 +760,30 @@ export default function CourseDetailPage() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-2">
                   {totalContents > 0 && (
-                    <div className="mb-4">
+                    <div className="mb-5">
                       <div className="flex items-center justify-between text-sm text-gray-700 mb-2">
                         <div>ความคืบหน้า</div>
-                        <div className="font-medium">{progressPercent}% {saving ? "(กำลังบันทึก...)" : ""}</div>
+                        <div className="font-semibold">
+                          {progressPercent}% {saving ? "(กำลังบันทึก...)" : ""}
+                        </div>
                       </div>
-                      <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
-                        <div className="h-full bg-yellow-400 transition-all" style={{ width: `${progressPercent}%` }} />
+                      <div
+                        className="h-2 w-full rounded-full bg-gray-100 overflow-hidden"
+                        role="progressbar"
+                        aria-valuenow={progressPercent}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                      >
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-yellow-400 to-yellow-500 transition-[width] duration-500"
+                          style={{ width: `${progressPercent}%` }}
+                        />
                       </div>
                     </div>
                   )}
+
                   {chapters.length === 0 ? (
                     <div className="text-gray-500">ยังไม่มีบทเรียน</div>
                   ) : (
@@ -587,21 +794,27 @@ export default function CourseDetailPage() {
                         .map((ch, idx) => {
                           const number = (ch.order ?? idx + 1).toString().padStart(2, "0")
                           return (
-                            <div key={ch.id} className="p-4 rounded-xl border bg-white">
+                            <div
+                              key={ch.id}
+                              className="p-4 rounded-xl border bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-gray-200 hover:border-yellow-300/60 hover:bg-yellow-50/30 transition-colors shadow-sm"
+                            >
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4 min-w-0">
-                                  <div className="h-9 w-9 rounded-full bg-yellow-400 text-white flex items-center justify-center font-semibold shadow-sm">
+                                  <div className="h-9 w-9 rounded-full bg-yellow-400 text-white flex items-center justify-center font-semibold shadow-sm ring-1 ring-black/5">
                                     {number}
                                   </div>
                                   <div className="truncate">
-                                    <div className="font-medium text-gray-900 truncate">{ch.title}</div>
+                                    <div className="font-medium text-gray-900 truncate">
+                                      {ch.title}
+                                    </div>
                                     {ch.isFreePreview && (
-                                      <span className="mt-1 inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-300">
+                                      <span className="mt-1 inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
                                         ตัวอย่างฟรี
                                       </span>
                                     )}
                                   </div>
                                 </div>
+
                                 <div className="flex items-center gap-3 text-sm text-gray-600 shrink-0">
                                   {typeof ch.duration === "number" && (
                                     <div className="inline-flex items-center gap-1">
@@ -609,11 +822,19 @@ export default function CourseDetailPage() {
                                     </div>
                                   )}
                                   {ch.isFreePreview ? (
-                                    <Button variant="ghost" size="sm" className="text-[#004B7D] hover:bg-[#004B7D1A]">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-[#004B7D] hover:bg-[#004B7D1A] rounded-lg"
+                                    >
                                       <Play className="h-4 w-4 mr-1" /> ดูตัวอย่าง
                                     </Button>
                                   ) : isEnrolled ? (
-                                    <Button variant="ghost" size="sm" className="text-[#004B7D] hover:bg-[#004B7D1A]">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-[#004B7D] hover:bg-[#004B7D1A] rounded-lg"
+                                    >
                                       <Play className="h-4 w-4 mr-1" /> เริ่มเรียน
                                     </Button>
                                   ) : (
@@ -624,29 +845,46 @@ export default function CourseDetailPage() {
                                 </div>
                               </div>
 
-                              {Array.isArray((ch as any).contents) && (ch as any).contents.length > 0 && (
-                                <div className="mt-3 space-y-2">
-                                  {(ch as any).contents.slice().sort((a: any,b: any) => (a.order ?? 0) - (b.order ?? 0)).map((ct: any) => {
-                                    const checked = viewedIds.includes(ct.id)
-                                    const canToggle = isEnrolled
-                                    return (
-                                      <div key={ct.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-yellow-50/50">
-                                        <div className="text-sm text-gray-800 truncate">• {ct.title}</div>
-                                        <div className="flex items-center gap-3">
-                                          {canToggle ? (
-                                            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
-                                              <input type="checkbox" checked={checked} onChange={() => toggleContentViewed(ct.id)} />
-                                              <span>เรียนแล้ว</span>
-                                            </label>
-                                          ) : (
-                                            <span className="text-xs text-gray-400">ล็อก</span>
-                                          )}
-                                        </div>
-                                      </div>
-                                    )
-                                  })}
-                                </div>
-                              )}
+                              {Array.isArray((ch as any).contents) &&
+                                (ch as any).contents.length > 0 && (
+                                  <div className="mt-3 space-y-1.5 border-l-2 border-yellow-200 pl-3">
+                                    {(ch as any).contents
+                                      .slice()
+                                      .sort(
+                                        (a: any, b: any) =>
+                                          (a.order ?? 0) - (b.order ?? 0)
+                                      )
+                                      .map((ct: any) => {
+                                        const checked = viewedIds.includes(ct.id)
+                                        const canToggle = isEnrolled
+                                        return (
+                                          <div
+                                            key={ct.id}
+                                            className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-yellow-50/60"
+                                          >
+                                            <div className="text-sm text-gray-800 truncate">
+                                              • {ct.title}
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                              {canToggle ? (
+                                                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+                                                  <input
+                                                    type="checkbox"
+                                                    className="accent-yellow-500 h-4 w-4"
+                                                    checked={checked}
+                                                    onChange={() => toggleContentViewed(ct.id)}
+                                                  />
+                                                  <span>เรียนแล้ว</span>
+                                                </label>
+                                              ) : (
+                                                <span className="text-xs text-gray-400">ล็อก</span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )
+                                      })}
+                                  </div>
+                                )}
                             </div>
                           )
                         })}
@@ -656,9 +894,14 @@ export default function CourseDetailPage() {
               </Card>
             </motion.div>
 
-            {/* -------- Reviews Section (ใหม่) -------- */}
-            <motion.div variants={fadeInUp} initial="initial" animate="animate" transition={{ delay: 0.25 }}>
-              <Card>
+            {/* -------- Reviews -------- */}
+            <motion.div
+              variants={fadeInUp}
+              initial="initial"
+              animate="animate"
+              transition={{ delay: 0.25 }}
+            >
+              <Card className="rounded-2xl border-gray-200 shadow-sm">
                 <CardHeader className="pb-3">
                   <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
                     <div>
@@ -670,10 +913,14 @@ export default function CourseDetailPage() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="outline" onClick={() => setReviewsPage((p) => Math.max(1, p))}>
+                      <Button
+                        variant="outline"
+                        className="rounded-xl border-gray-200"
+                        onClick={() => setReviewsPage((p) => Math.max(1, p))}
+                      >
                         รีเฟรช
                       </Button>
-                      <Button className="bg-yellow-400 hover:bg-yellow-500 text-white" onClick={openReviewDialog}>
+                      <Button className="bg-yellow-400 hover:bg-yellow-500 text-white rounded-xl">
                         เขียนรีวิว
                       </Button>
                     </div>
@@ -689,23 +936,32 @@ export default function CourseDetailPage() {
                   ) : (
                     <div className="space-y-4">
                       {reviews.map((rv) => (
-                        <div key={rv.id} className="rounded-xl border p-4 bg-white">
+                        <div
+                          key={rv.id}
+                          className="rounded-xl border border-gray-200 p-4 bg-white/90 shadow-sm"
+                        >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
                                 <div className="font-semibold text-gray-900 truncate">
                                   {rv.user?.name || "ผู้ใช้"}
                                 </div>
-                                <span className="text-xs text-gray-400">• {formatThaiDate(rv.createdAt)}</span>
+                                <span className="text-xs text-gray-400">
+                                  • {formatThaiDate(rv.createdAt)}
+                                </span>
                               </div>
                               <div className="mt-1">
                                 <StarRating value={rv.rating} readOnly />
                               </div>
                               {rv.title && (
-                                <div className="mt-2 text-gray-900 font-medium">{rv.title}</div>
+                                <div className="mt-2 text-gray-900 font-medium">
+                                  {rv.title}
+                                </div>
                               )}
                               {rv.comment && (
-                                <p className="mt-1 text-gray-700 whitespace-pre-wrap">{rv.comment}</p>
+                                <p className="mt-1 text-gray-700 whitespace-pre-wrap">
+                                  {rv.comment}
+                                </p>
                               )}
                             </div>
                           </div>
@@ -716,7 +972,7 @@ export default function CourseDetailPage() {
                         {hasMoreReviews ? (
                           <Button
                             variant="outline"
-                            className="w-full"
+                            className="w-full rounded-xl"
                             disabled={reviewsLoading}
                             onClick={() => setReviewsPage((p) => p + 1)}
                           >
@@ -730,7 +986,9 @@ export default function CourseDetailPage() {
                             )}
                           </Button>
                         ) : (
-                          <div className="text-center text-sm text-gray-500">แสดงครบแล้ว</div>
+                          <div className="text-center text-sm text-gray-500">
+                            แสดงครบแล้ว
+                          </div>
                         )}
                       </div>
                     </div>
@@ -738,10 +996,9 @@ export default function CourseDetailPage() {
                 </CardContent>
               </Card>
             </motion.div>
-            {/* -------- End Reviews Section -------- */}
-      
           </div>
 
+          {/* -------- Right: Sticky Sidebar -------- */}
           <div className="lg:col-span-1">
             <motion.div
               className="sticky top-24"
@@ -750,42 +1007,63 @@ export default function CourseDetailPage() {
               animate="animate"
               transition={{ delay: 0.1 }}
             >
-              <Card className="shadow-lg">
+              <Card className="rounded-2xl shadow-lg ring-1 ring-black/5">
                 <CardContent className="p-6">
-
+                
                   <div className="text-center mb-6">
-                    <div className="flex items-center justify-center gap-2 mb-2">
+                    <div className="flex items-center justify-center gap-2 mb-1">
                       {price === 0 ? (
-                        <span className="text-3xl font-bold text-green-600">ฟรี</span>
+                        <span className="text-3xl font-extrabold text-green-600 tracking-tight">
+                          ฟรี
+                        </span>
                       ) : (
-                        <span className="text-3xl font-bold text-yellow-600">฿{(price || 0).toLocaleString()}</span>
+                        <span className="text-3xl font-extrabold text-yellow-600 tracking-tight">
+                          ฿{(price || 0).toLocaleString()} บาท
+                        </span>
                       )}
                     </div>
+                    <p className="text-xs text-gray-500">
+                      ราคานี้รวมภาษีมูลค่าเพิ่ม
+                    </p>
                   </div>
 
                   <Separator className="mb-6" />
 
-                  <div className="space-y-4 mb-6">
+                 
+                  <div className="space-y-3 mb-6 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">ระยะเวลา:</span>
+                      <span className="text-gray-600">ระยะเวลา</span>
                       <span className="font-medium">{course.duration ?? "-"}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">บทเรียน:</span>
-                      <span className="font-medium">{course._count?.chapters ?? 0} บทเรียน</span>
+                      <span className="text-gray-600">บทเรียน</span>
+                      <span className="font-medium">
+                        {course._count?.chapters ?? 0} บทเรียน
+                      </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">นักเรียน:</span>
-                      <span className="font-medium">{course._count?.enrollments ?? 0} คน</span>
+                      <span className="text-gray-600">นักเรียน</span>
+                      <span className="font-medium">
+                        {course._count?.enrollments ?? 0} คน
+                      </span>
                     </div>
+
                     {price > 0 && (
                       <div className="space-y-2 pt-2">
                         <div className="text-sm font-medium">คูปองส่วนลด</div>
                         <div className="flex gap-2">
-                          <Input placeholder="กรอกรหัสคูปอง (ถ้ามี)"
-                                 value={couponCode}
-                                 onChange={(e) => setCouponCode(e.target.value)} />
-                          <Button variant="outline" disabled={validatingCoupon} onClick={applyCoupon}>
+                          <Input
+                            placeholder="กรอกรหัสคูปอง (ถ้ามี)"
+                            value={couponCode}
+                            onChange={(e) => setCouponCode(e.target.value)}
+                            className="h-10 rounded-lg"
+                          />
+                          <Button
+                            variant="outline"
+                            disabled={validatingCoupon}
+                            onClick={applyCoupon}
+                            className="rounded-lg"
+                          >
                             {validatingCoupon ? (
                               <>
                                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -796,7 +1074,9 @@ export default function CourseDetailPage() {
                             )}
                           </Button>
                         </div>
-                        {couponError && <div className="text-xs text-red-600">{couponError}</div>}
+                        {couponError && (
+                          <div className="text-xs text-red-600">{couponError}</div>
+                        )}
                         {discount > 0 && (
                           <div className="flex justify-between text-sm text-green-700">
                             <span>ส่วนลดคูปอง</span>
@@ -811,19 +1091,24 @@ export default function CourseDetailPage() {
                     )}
                   </div>
 
-                  {/* Removed inline banner. Replaced with modal below. */}
-
+             
                   <div className="space-y-3">
                     {isEnrolled ? (
                       <Link href={`/courses/${id}/learn`}>
-                        <Button className="w-full bg-yellow-400 hover:bg-yellow-500 text-white text-lg py-3">เข้าเรียนทันที</Button>
+                        <Button className="w-full bg-yellow-400 hover:bg-yellow-500 text-white text-lg py-3 rounded-xl shadow hover:shadow-md transition">
+                          เข้าเรียนทันที
+                        </Button>
                       </Link>
                     ) : (
-                      <Button onClick={createOrder} disabled={creating} className="w-full bg-yellow-400 hover:bg-yellow-500 text-white text-lg py-3">
+                      <Button
+                        onClick={createOrder}
+                        disabled={creating}
+                        className="w-full bg-yellow-400 hover:bg-yellow-500 text-white text-lg py-3 rounded-xl shadow hover:shadow-md transition"
+                      >
                         {creating ? "กำลังสร้างคำสั่งซื้อ..." : "สมัครเรียนเลย"}
                       </Button>
                     )}
-                    <Button variant="outline" className="w-full bg-transparent">
+                    <Button variant="outline" className="w-full rounded-xl">
                       เพิ่มในรายการโปรด
                     </Button>
                   </div>
@@ -839,113 +1124,155 @@ export default function CourseDetailPage() {
             </motion.div>
           </div>
         </div>
-        )}
-      </div>
+      )}
     </div>
+  </div>
 
-    <LoginModal isOpen={loginOpen} onClose={() => setLoginOpen(false)} />
+  <LoginModal isOpen={loginOpen} onClose={() => setLoginOpen(false)} />
 
-    {/* Enrolled Modal */}
-    <Dialog open={enrolledOpen} onOpenChange={setEnrolledOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>คุณได้ซื้อคอร์สนี้แล้ว</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="text-gray-700">เริ่มเรียนต่อได้ทันทีที่หน้าเรียน</div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setEnrolledOpen(false)}>ปิด</Button>
-            <Link href={`/courses/${id}/learn`}>
-              <Button className="bg-yellow-400 hover:bg-yellow-500 text-white">เข้าเรียน</Button>
+
+  <Dialog open={enrolledOpen} onOpenChange={setEnrolledOpen}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>คุณได้ซื้อคอร์สนี้แล้ว</DialogTitle>
+      </DialogHeader>
+      <div className="space-y-4">
+        <div className="text-gray-700">เริ่มเรียนต่อได้ทันทีที่หน้าเรียน</div>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setEnrolledOpen(false)}>
+            ปิด
+          </Button>
+          <Link href={`/courses/${id}/learn`}>
+            <Button className="bg-yellow-400 hover:bg-yellow-500 text-white">
+              เข้าเรียน
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </DialogContent>
+  </Dialog>
+
+  {/* Upload Slip Modal */}
+  <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>อัพโหลดหลักฐานการชำระเงิน</DialogTitle>
+      </DialogHeader>
+      <div className="space-y-3">
+        <div className="text-sm text-gray-700">
+          ยอดชำระ: ฿{(orderInfo?.total ?? 0).toLocaleString()}
+        </div>
+        <Input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setSlip(e.target.files?.[0] || null)}
+          className="h-10"
+        />
+        {uploadMsg && (
+          <div
+            className={
+              uploadMsg.includes("สำเร็จ") ? "text-green-600" : "text-red-600"
+            }
+          >
+            {uploadMsg}
+          </div>
+        )}
+        <div className="flex justify-end gap-2">
+          {orderInfo && (
+            <Link href={`/order-success/${orderInfo.orderId}`} className="mr-auto">
+              <Button variant="outline">รายละเอียดคำสั่งซื้อ</Button>
             </Link>
-          </div>
+          )}
+          <Button variant="outline" onClick={() => setUploadOpen(false)}>
+            ปิด
+          </Button>
+          <Button
+            disabled={!slip || uploading}
+            onClick={uploadSlip}
+            className="bg-yellow-400 hover:bg-yellow-500 text-white"
+          >
+            {uploading ? "กำลังอัพโหลด..." : "อัพโหลดสลิป"}
+          </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </DialogContent>
+  </Dialog>
 
-    {/* Upload Slip Modal */}
-    <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>อัพโหลดหลักฐานการชำระเงิน</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div className="text-sm text-gray-700">ยอดชำระ: ฿{(orderInfo?.total ?? 0).toLocaleString()}</div>
-          <Input type="file" accept="image/*" onChange={(e) => setSlip(e.target.files?.[0] || null)} />
-          {uploadMsg && <div className={uploadMsg.includes("สำเร็จ") ? "text-green-600" : "text-red-600"}>{uploadMsg}</div>}
-          <div className="flex justify-end gap-2">
-            {orderInfo && (
-              <Link href={`/order-success/${orderInfo.orderId}`} className="mr-auto">
-                <Button variant="outline">รายละเอียดคำสั่งซื้อ</Button>
-              </Link>
-            )}
-            <Button variant="outline" onClick={() => setUploadOpen(false)}>ปิด</Button>
-            <Button disabled={!slip || uploading} onClick={uploadSlip} className="bg-yellow-400 hover:bg-yellow-500 text-white">
-              {uploading ? "กำลังอัพโหลด..." : "อัพโหลดสลิป"}
-            </Button>
-          </div>
+
+  <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>เขียนรีวิวคอร์สนี้</DialogTitle>
+      </DialogHeader>
+      <div className="space-y-4">
+        <div>
+          <div className="text-sm text-gray-700 mb-1">ให้คะแนน</div>
+          <StarRating value={reviewRating} onChange={setReviewRating} />
         </div>
-      </DialogContent>
-    </Dialog>
-
-    {/* Review Form Modal */}
-    <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>เขียนรีวิวคอร์สนี้</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div>
-            <div className="text-sm text-gray-700 mb-1">ให้คะแนน</div>
-            <StarRating value={reviewRating} onChange={setReviewRating} />
-          </div>
-          <div>
-            <div className="text-sm text-gray-700 mb-1">หัวข้อรีวิว</div>
-            <Input
-              placeholder="เช่น เยี่ยมมาก! ได้ความรู้ครบถ้วน"
-              value={reviewTitle}
-              onChange={(e) => setReviewTitle(e.target.value)}
+        <div>
+          <div className="text-sm text-gray-700 mb-1">หัวข้อรีวิว</div>
+          <Input
+            placeholder="เช่น เยี่ยมมาก! ได้ความรู้ครบถ้วน"
+            value={reviewTitle}
+            onChange={(e) => setReviewTitle(e.target.value)}
+            className="h-10"
+          />
+        </div>
+        <div>
+          <div className="text-sm text-gray-700 mb-1">รายละเอียด</div>
+          {Textarea ? (
+            <Textarea
+              rows={4}
+              placeholder="แชร์ประสบการณ์ของคุณเกี่ยวกับคอร์สนี้..."
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)}
+              className="min-h-[120px]"
             />
-          </div>
-          <div>
-            <div className="text-sm text-gray-700 mb-1">รายละเอียด</div>
-            {Textarea ? (
-              <Textarea
-                rows={4}
-                placeholder="แชร์ประสบการณ์ของคุณเกี่ยวกับคอร์สนี้..."
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-              />
-            ) : (
-              <textarea
-                rows={4}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="แชร์ประสบการณ์ของคุณเกี่ยวกับคอร์สนี้..."
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-              />
-            )}
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setReviewDialogOpen(false)}>ยกเลิก</Button>
-            <Button
-              className="bg-yellow-400 hover:bg-yellow-500 text-white"
-              disabled={postingReview || !reviewTitle.trim() || !reviewComment.trim()}
-              onClick={submitReview}
-            >
-              {postingReview ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  กำลังส่ง...
-                </>
-              ) : (
-                "ส่งรีวิว"
-              )}
-            </Button>
-          </div>
+          ) : (
+            <textarea
+              rows={4}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[120px]"
+              placeholder="แชร์ประสบการณ์ของคุณเกี่ยวกับคอร์สนี้..."
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)}
+            />
+          )}
         </div>
-      </DialogContent>
-    </Dialog>
-    </>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setReviewDialogOpen(false)}>
+            ยกเลิก
+          </Button>
+          <Button
+            className="bg-yellow-400 hover:bg-yellow-500 text-white"
+            disabled={postingReview || !reviewTitle.trim() || !reviewComment.trim()}
+            onClick={submitReview}
+          >
+            {postingReview ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                กำลังส่ง...
+              </>
+            ) : (
+              "ส่งรีวิว"
+            )}
+          </Button>
+        </div>
+      </div>
+    </DialogContent>
+  </Dialog>
+  <style jsx>{`
+  .shimmer {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+    animation: shimmer 1.8s infinite;
+  }
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+`}</style>
+
+</>
+
   )
+  
 }

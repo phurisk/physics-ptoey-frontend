@@ -29,6 +29,7 @@ function deriveExcerpt(input?: string, max = 160) {
 }
 
 export default function Articles() {
+ 
   const fallbackMapped: ArticleItem[] = useMemo(
     () =>
       fallbackArticles.map((a) => ({
@@ -43,7 +44,8 @@ export default function Articles() {
     []
   )
 
-  const [items, setItems] = useState<ArticleItem[]>(fallbackMapped)
+  const [items, setItems] = useState<ArticleItem[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let mounted = true
@@ -51,31 +53,28 @@ export default function Articles() {
       try {
         const params = new URLSearchParams({ postType: "บทความ" })
         const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
-        if (res.ok) {
-          console.log("[ArticlesSection] Fetch /api/posts: OK", res.status)
-        } else {
-          console.warn("[ArticlesSection] Fetch /api/posts: NOT OK", res.status, res.statusText)
-        }
-        const json: any = await res.json().catch(() => null)
+        if (!mounted) return
 
+        if (!res.ok) {
+          console.warn("[ArticlesSection] Fetch /api/posts: NOT OK", res.status, res.statusText)
+          setItems(fallbackMapped)
+          return
+        }
+
+        const json: any = await res.json().catch(() => null)
         const list: any[] = Array.isArray(json)
           ? json
           : Array.isArray(json?.data)
           ? json.data
           : []
 
-       
-        const filtered = list.filter(
-          (p) => p?.postType?.name === "บทความ" && p?.isFeatured === true
-        )
+     
+        const filtered = list.filter((p) => p?.postType?.name === "บทความ" && p?.isFeatured === true)
 
         if (!filtered.length) {
-          console.warn(
-            `[ArticlesSection] API ไม่มีบทความเด่น ใช้รูป dummy แทน (${fallbackArticles.length} ภาพ)`
-          )
+          console.warn("[ArticlesSection] API ไม่มีบทความเด่น → ใช้ fallback")
+          setItems(fallbackMapped)
           return
-        } else {
-          console.log(`[ArticlesSection] Posts loaded (featured): ${filtered.length}`)
         }
 
         const mapped: ArticleItem[] = filtered
@@ -83,6 +82,9 @@ export default function Articles() {
             const desktop = p?.imageUrl || p?.imageUrlMobileMode || ""
             const mobile = p?.imageUrlMobileMode || p?.imageUrl || ""
             const excerpt = p?.excerpt || deriveExcerpt(p?.content, 180)
+            const dateIso = p?.publishedAt
+              ? new Date(p.publishedAt).toISOString()
+              : new Date().toISOString()
             return {
               id: p?.id ?? idx,
               slug: p?.slug || "",
@@ -90,31 +92,28 @@ export default function Articles() {
               imageDesktop: desktop,
               imageMobile: mobile,
               excerpt: excerpt || "",
-              date: p?.publishedAt
-                ? new Date(p.publishedAt).toISOString()
-                : new Date().toISOString(),
+              date: dateIso,
             }
           })
           .filter((a) => !!(a.imageDesktop || a.imageMobile))
 
-        console.log(`[ArticlesSection] Articles mapped: ${mapped.length}`)
-
-        if (mounted && mapped.length) {
+        if (mapped.length) {
           setItems(mapped)
-          console.log(`[ArticlesSection] ใช้รูปจาก API จำนวน ${mapped.length} ภาพ`)
-        } else if (mounted) {
-          console.warn(
-            `[ArticlesSection] API ไม่มีรูป (imageUrl/imageUrlMobileMode) ใช้รูป dummy แทน (${fallbackArticles.length} ภาพ)`
-          )
+        } else {
+          console.warn("[ArticlesSection] บทความเด่นไม่มีรูป → ใช้ fallback")
+          setItems(fallbackMapped)
         }
       } catch (err) {
         console.error("[ArticlesSection] Failed to load posts", err)
+        if (mounted) setItems(fallbackMapped)
+      } finally {
+        if (mounted) setLoading(false)
       }
     })()
     return () => {
       mounted = false
     }
-  }, [])
+  }, [fallbackMapped])
 
   return (
     <section className="py-16 lg:py-24 bg-gray-50">
@@ -128,94 +127,151 @@ export default function Articles() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {items.map((article) => (
-            <Card
-              key={article.id}
-              className="group hover:shadow-xl transition-all duration-300 overflow-hidden bg-white pt-0"
-            >
-              <CardContent className="p-0">
-                <Link href={article.slug ? `/articles/${article.slug}` : `#`}>
-                  <div className="aspect-[16/7.5] relative overflow-hidden cursor-pointer">
-                    {article.imageDesktop && (
-                      <Image
-                        src={article.imageDesktop}
-                        alt={article.title}
-                        fill
-                        sizes="(min-width: 768px) 100vw, 0px"
-                        className="object-contain hidden md:block group-hover:scale-105 transition-transform duration-300"
-                      />
-                    )}
-                    {article.imageMobile && (
-                      <Image
-                        src={article.imageMobile}
-                        alt={article.title}
-                        fill
-                        sizes="(max-width: 767px) 100vw, 0px"
-                        className="object-contain md:hidden group-hover:scale-105 transition-transform duration-300"
-                      />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+
+        {loading ? (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[0, 1, 2].map((i) => (
+              <Card key={i} className="overflow-hidden bg-white pt-0">
+                <CardContent className="p-0">
+                  <div className="aspect-[16/7.5] relative overflow-hidden">
+                    <div className="absolute inset-0 shimmer rounded-b-none" />
                   </div>
-                </Link>
-
-                <div className="p-6">
-                  <div className="flex items-center text-sm text-gray-500 mb-3 space-x-4">
-                    <div className="flex items-center">
-                      <Calendar className="w-4 h-4 mr-1" />
-                      {new Date(article.date).toLocaleDateString("th-TH", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </div>
+                  <div className="p-6 space-y-3">
+                    <div className="h-4 w-40 shimmer rounded" />
+                    <div className="h-6 w-3/4 shimmer rounded" />
+                    <div className="h-4 w-full shimmer rounded" />
+                    <div className="h-4 w-5/6 shimmer rounded" />
+                    <div className="h-4 w-2/3 shimmer rounded" />
+                    <div className="h-10 w-28 shimmer rounded-lg" />
                   </div>
-
-                  <Link href={article.slug ? `/articles/${article.slug}` : `#`}>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-3 text-balance group-hover:text-yellow-600 transition-colors duration-200 cursor-pointer">
-                      {article.title}
-                    </h3>
-                  </Link>
-
-                  <p className="text-gray-600 mb-6 text-pretty leading-relaxed">{article.excerpt}</p>
-
-                  <Button asChild variant="ghost" className="group/btn p-0 h-auto text-yellow-600 hover:text-yellow-700">
-                    <Link href={article.slug ? `/articles/${article.slug}` : `#`}>
-                      อ่านต่อ
-                      <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform duration-200" />
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <div className="text-center mt-12">
-          <Button
-            size="lg"
-            variant="outline"
-            className="border-yellow-400 text-yellow-600 hover:bg-yellow-50 bg-transparent"
-          >
-            <Link href="/articles">ดูบทความเพิ่มเติม</Link>
-          </Button>
-        </div>
-
-        <div className="mt-16 bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-2xl p-8 text-center">
-          <h3 className="text-2xl font-bold text-gray-900 mb-4">ติดตามบทความใหม่ๆ</h3>
-          <p className="text-gray-600 mb-6 max-w-md mx-auto">
-            รับบทความและเทคนิคการเรียนฟิสิกส์ใหม่ๆ ส่งตรงถึงอีเมลของคุณ
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-            <input
-              type="email"
-              placeholder="กรอกอีเมลของคุณ"
-              className="flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
-            />
-            <Button className="bg-yellow-400 hover:bg-yellow-500 text-white px-6 py-3">สมัครรับข่าวสาร</Button>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {items.map((article) => (
+                <Card
+                  key={article.id}
+                  className="group hover:shadow-xl transition-all duration-300 overflow-hidden bg-white pt-0"
+                >
+                  <CardContent className="p-0">
+                    <Link href={article.slug ? `/articles/${article.slug}` : `#`}>
+                      <div className="aspect-[16/7.5] relative overflow-hidden cursor-pointer">
+                        {article.imageDesktop && (
+                          <Image
+                            src={article.imageDesktop}
+                            alt={article.title}
+                            fill
+                            sizes="(min-width: 768px) 100vw, 0px"
+                            className="object-contain hidden md:block group-hover:scale-105 transition-transform duration-300"
+                          />
+                        )}
+                        {article.imageMobile && (
+                          <Image
+                            src={article.imageMobile}
+                            alt={article.title}
+                            fill
+                            sizes="(max-width: 767px) 100vw, 0px"
+                            className="object-contain md:hidden group-hover:scale-105 transition-transform duration-300"
+                          />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                      </div>
+                    </Link>
+
+                    <div className="p-6">
+                      <div className="flex items-center text-sm text-gray-500 mb-3 space-x-4">
+                        <div className="flex items-center">
+                          <Calendar className="w-4 h-4 mr-1" />
+                          {new Date(article.date).toLocaleDateString("th-TH", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </div>
+                      </div>
+
+                      <Link href={article.slug ? `/articles/${article.slug}` : `#`}>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-3 text-balance group-hover:text-yellow-600 transition-colors duration-200 cursor-pointer">
+                          {article.title}
+                        </h3>
+                      </Link>
+
+                      <p className="text-gray-600 mb-6 text-pretty leading-relaxed">
+                        {article.excerpt}
+                      </p>
+
+                      <Button
+                        asChild
+                        variant="ghost"
+                        className="group/btn p-0 h-auto text-yellow-600 hover:text-yellow-700"
+                      >
+                        <Link href={article.slug ? `/articles/${article.slug}` : `#`}>
+                          อ่านต่อ
+                          <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform duration-200" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <div className="text-center mt-12">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-yellow-400 text-yellow-600 hover:bg-yellow-50 bg-transparent"
+              >
+                <Link href="/articles">ดูบทความเพิ่มเติม</Link>
+              </Button>
+            </div>
+
+            <div className="mt-16 bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-2xl p-8 text-center">
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">ติดตามบทความใหม่ๆ</h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                รับบทความและเทคนิคการเรียนฟิสิกส์ใหม่ๆ ส่งตรงถึงอีเมลของคุณ
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+                <input
+                  type="email"
+                  placeholder="กรอกอีเมลของคุณ"
+                  className="flex-1 px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                />
+                <Button className="bg-yellow-400 hover:bg-yellow-500 text-white px-6 py-3">
+                  สมัครรับข่าวสาร
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
+
+
+      <style jsx>{`
+        .shimmer {
+          position: relative;
+          overflow: hidden;
+          background: linear-gradient(
+            90deg,
+            rgba(229, 229, 229, 1) 0%,
+            rgba(243, 244, 246, 1) 50%,
+            rgba(229, 229, 229, 1) 100%
+          );
+          background-size: 200% 100%;
+          animation: shimmerSlide 1.4s ease-in-out infinite;
+        }
+        @keyframes shimmerSlide {
+          0% {
+            background-position: 200% 0;
+          }
+          100% {
+            background-position: -200% 0;
+          }
+        }
+      `}</style>
     </section>
   )
 }
