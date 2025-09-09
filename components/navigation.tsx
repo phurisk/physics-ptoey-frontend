@@ -69,10 +69,10 @@ export function Navigation() {
         }`}
       >
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20 lg:h-20">
+          <div className="flex justify-between items-center h-16 lg:h-20">
       
             <Link href="/" className="flex items-center pl-2">
-              <img src="/new-logo.png" alt="Logo" className="h-20 lg:h-20" />
+              <img src="/new-logo.png" alt="Logo" className="h-16 lg:h-20" />
             </Link>
 
       

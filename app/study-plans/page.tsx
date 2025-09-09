@@ -7,7 +7,6 @@ import Link from "next/link"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/sections/footer"
 
-
 type WorkItem = {
   id: string | number
   imageDesktop: string
@@ -15,28 +14,35 @@ type WorkItem = {
 }
 
 const studyPlans: WorkItem[] = [
-  {
-    id: 1,
-    imageDesktop: "/student-plan1.jpeg",
-    imageMobile: "/student-plan1.jpeg",
-  },
-  {
-    id: 2,
-    imageDesktop: "/student-plan2.jpeg",
-    imageMobile: "/student-plan2.jpeg",
-  },
-  {
-    id: 3,
-    imageDesktop: "/student-plan3.jpeg",
-    imageMobile: "/student-plan3.jpeg",
-  },
-  {
-    id: 4,
-    imageDesktop: "/student-plan4.jpeg",
-    imageMobile: "/student-plan4.jpeg",
-  },
+  { id: 1, imageDesktop: "/student-plan1.jpeg", imageMobile: "/student-plan1.jpeg" },
+  { id: 2, imageDesktop: "/student-plan2.jpeg", imageMobile: "/student-plan2.jpeg" },
+  { id: 3, imageDesktop: "/student-plan3.jpeg", imageMobile: "/student-plan3.jpeg" },
+  { id: 4, imageDesktop: "/student-plan4.jpeg", imageMobile: "/student-plan4.jpeg" },
 ]
 
+
+function Skeleton({ className = "" }: { className?: string }) {
+  return (
+    <div className={`relative overflow-hidden bg-gray-200 ${className}`}>
+      <div className="absolute inset-0 -translate-x-full shimmer" />
+    </div>
+  )
+}
+
+function ElegantStackSkeleton({ count = 4 }: { count?: number }) {
+  return (
+    <div className="mx-auto max-w-3xl space-y-8 sm:space-y-10" aria-busy="true" aria-live="polite">
+      {Array.from({ length: count }).map((_, i) => (
+        <motion.figure key={i} initial={false}>
+          <TileFrame>
+            <Skeleton className="h-full w-full rounded-none" />
+          </TileFrame>
+        </motion.figure>
+      ))}
+    </div>
+  )
+}
+// -------------------------------------
 
 export default function StudentWorksPage() {
   const [items, setItems] = useState<typeof studyPlans>([])
@@ -49,71 +55,37 @@ export default function StudentWorksPage() {
         setLoading(true)
         const params = new URLSearchParams({ postType: "แผนการเรียน" })
         const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
-        if (res.ok) {
-          console.log("[StudyPlans] Fetch /api/posts: OK", res.status)
-        } else {
-          console.warn("[StudyPlans] Fetch /api/posts: NOT OK", res.status, res.statusText)
-        }
         const json: any = await res.json().catch(() => null)
-
         const list = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
-        if (!list.length) {
-          console.warn(
-            `[StudyPlans] API ไม่มีข้อมูลโพสต์ เตรียมใช้รูป dummy แทน (${studyPlans.length} ภาพ)`
-          )
-        } else {
-          console.log(`[StudyPlans] Posts loaded: ${list.length}`)
-        }
 
         const mapped: WorkItem[] = list
           .map((p: any, idx: number) => {
             const desktop = p?.imageUrl || p?.imageUrlMobileMode || ""
             const mobile = p?.imageUrlMobileMode || p?.imageUrl || ""
-            return {
-              id: p?.id ?? idx,
-              imageDesktop: desktop,
-              imageMobile: mobile,
-            }
+            return { id: p?.id ?? idx, imageDesktop: desktop, imageMobile: mobile }
           })
           .filter((s: WorkItem) => !!(s.imageDesktop || s.imageMobile))
 
-        console.log(`[StudyPlans] Slides mapped: ${mapped.length}`)
-
         if (!mounted) return
-
-        if (mapped.length) {
-          setItems(mapped as any)
-          console.log(`[StudyPlans] ใช้รูปจาก API จำนวน ${mapped.length} ภาพ`)
-        } else {
-          setItems(studyPlans)
-          console.warn(
-            `[StudyPlans] API ไม่มีรูป (imageUrl/imageUrlMobileMode) ใช้รูป dummy แทน (${studyPlans.length} ภาพ)`
-          )
-        }
+        setItems(mapped.length ? mapped : studyPlans)
       } catch (err) {
-        console.error("[StudyPlans] Failed to load posts", err)
         if (mounted) setItems(studyPlans)
       } finally {
         if (mounted) setLoading(false)
       }
     })()
-    return () => {
-      mounted = false
-    }
+    return () => { mounted = false }
   }, [])
+
   return (
     <MotionConfig transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}>
       <Navigation />
       <main className="min-h-screen bg-white flex flex-col">
-
-
         <section className="relative">
-
+          {/* soft rails + subtle grid */}
           <div className="pointer-events-none absolute inset-0">
-
             <div className="absolute inset-y-0 left-0 w-28 bg-gradient-to-r from-yellow-50 via-yellow-50/40 to-transparent" />
             <div className="absolute inset-y-0 right-0 w-28 bg-gradient-to-l from-yellow-50 via-yellow-50/40 to-transparent" />
-
             <div
               className="absolute inset-0"
               style={{
@@ -121,7 +93,6 @@ export default function StudentWorksPage() {
                   "radial-gradient(1200px 400px at 50% -200px, rgba(253, 224, 71, .22), transparent 60%)",
               }}
             />
-
             <div
               className="absolute inset-0 opacity-[0.08]"
               style={{
@@ -131,15 +102,8 @@ export default function StudentWorksPage() {
             />
           </div>
 
-
           <div className="relative mx-auto max-w-7xl px-4 py-12 sm:py-16">
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-16 w-16 border-4 border-yellow-400 border-t-transparent" />
-              </div>
-            ) : (
-              <ElegantStack items={items} />
-            )}
+            {loading ? <ElegantStackSkeleton count={4} /> : <ElegantStack items={items} />}
           </div>
         </section>
 
@@ -153,9 +117,7 @@ export default function StudentWorksPage() {
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
               คุณก็สามารถเป็นส่วนหนึ่งของความสำเร็จได้
             </h2>
-            <p className="text-lg text-gray-700 mb-8">
-              เริ่มต้นการเรียนรู้ฟิสิกส์กับเราวันนี้
-            </p>
+            <p className="text-lg text-gray-700 mb-8">เริ่มต้นการเรียนรู้ฟิสิกส์กับเราวันนี้</p>
             <Link
               href="/courses"
               className="inline-block bg-white text-yellow-700 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition-colors duration-300"
@@ -166,14 +128,24 @@ export default function StudentWorksPage() {
         </motion.section>
       </main>
       <Footer />
+
+     
+      <style jsx>{`
+        .shimmer {
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+          animation: shimmer 1.6s infinite;
+        }
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+      `}</style>
     </MotionConfig>
   )
 }
 
-
 function ElegantStack({ items }: { items: typeof studyPlans }) {
   const layout = useMemo(() => items, [items])
-
   return (
     <motion.div
       initial={false}
@@ -181,10 +153,7 @@ function ElegantStack({ items }: { items: typeof studyPlans }) {
       viewport={{ once: true, amount: 0.01 }}
       variants={{
         hidden: { opacity: 1 },
-        show: {
-          opacity: 1,
-          transition: { staggerChildren: 0.12, delayChildren: 0.04 },
-        },
+        show: { opacity: 1, transition: { staggerChildren: 0.12, delayChildren: 0.04 } },
       }}
       className="mx-auto max-w-3xl space-y-8 sm:space-y-10"
     >
@@ -195,23 +164,11 @@ function ElegantStack({ items }: { items: typeof studyPlans }) {
   )
 }
 
-function ElegantTile({
-  work,
-  index,
-}: {
-  work: WorkItem
-  index: number
-}) {
+function ElegantTile({ work, index }: { work: WorkItem; index: number }) {
   const variants = useMemo(
     () => ({
       hidden: { opacity: 0, y: 18, scale: 0.992, filter: "blur(4px)" },
-      show: {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        filter: "blur(0px)",
-        transition: { duration: 0.55 },
-      },
+      show: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)", transition: { duration: 0.55 } },
     }),
     []
   )
@@ -219,7 +176,7 @@ function ElegantTile({
   return (
     <motion.figure variants={variants}>
       <TileFrame>
-        {/** Desktop (md+) ใช้ imageUrl */}
+        
         {work.imageDesktop && (
           <Image
             src={work.imageDesktop}
@@ -230,7 +187,7 @@ function ElegantTile({
             fetchPriority={index < 1 ? "high" : undefined}
           />
         )}
-        {/** Mobile (< md) ใช้ imageUrlMobileMode */}
+        
         {work.imageMobile && (
           <Image
             src={work.imageMobile}
@@ -246,7 +203,6 @@ function ElegantTile({
   )
 }
 
-
 function TileFrame({ children }: { children: React.ReactNode }) {
   return (
     <motion.div
@@ -255,11 +211,9 @@ function TileFrame({ children }: { children: React.ReactNode }) {
       className="relative rounded-2xl overflow-hidden shadow-[0_6px_24px_rgba(0,0,0,0.07)] ring-1 ring-black/5 bg-white/80"
       style={{ transformStyle: "preserve-3d" }}
     >
-
+      {/* คุมสัดส่วนภาพ (มือถือ 3:4 / sm=4:5 / md=2:3) */}
       <div className="relative w-full aspect-[3/4] sm:aspect-[4/5] md:aspect-[2/3]">
         <div className="absolute inset-0">{children}</div>
-
-
       </div>
     </motion.div>
   )

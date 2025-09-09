@@ -4,32 +4,44 @@ import { useState, useEffect } from "react"
 import Image from "next/image"
 import { bannerSlides as fallbackSlides } from "@/lib/dummy-data"
 
-type Slide = { id: string | number; image: string }
+type Slide = {
+  id: string | number
+  desktop: string  
+  mobile: string   
+}
 
 export default function HeroBanner() {
   const [currentSlide, setCurrentSlide] = useState(0)
-  const [slides, setSlides] = useState<Slide[]>([])         
-  const [loading, setLoading] = useState(true)                
+  const [slides, setSlides] = useState<Slide[]>([])
+  const [loading, setLoading] = useState(true)
+
+ 
+  const [isMobile, setIsMobile] = useState(false)
+
+ 
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const mql = window.matchMedia("(max-width: 767px)")
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+
+    setIsMobile(mql.matches)
+
+    if (typeof mql.addEventListener === "function") {
+      mql.addEventListener("change", onChange)
+      return () => mql.removeEventListener("change", onChange)
+    }
+    ;(mql as any).addListener?.(onChange)
+    return () => { ;(mql as any).removeListener?.(onChange) }
+  }, [])
 
   useEffect(() => {
     let isMounted = true
-
     async function loadBannerPosts() {
       try {
         const res = await fetch(`/api/posts`, { cache: "no-store" })
-        if (res.ok) {
-          console.log("[HeroBanner] Fetch /api/posts: OK", res.status)
-        } else {
-          console.warn("[HeroBanner] Fetch /api/posts: NOT OK", res.status, res.statusText)
-        }
         const json: any = await res.json().catch(() => null)
 
-        const items = Array.isArray(json)
-          ? json
-          : Array.isArray(json?.data)
-          ? json.data
-          : []
-
+        const items = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
         const targetName = "ป้ายประกาศหลัก"
         const typed = items.filter((p: any) => p?.postType?.name === targetName)
 
@@ -43,44 +55,41 @@ export default function HeroBanner() {
         const mapped: Slide[] = activePublished
           .map((p: any, idx: number) => ({
             id: p?.id ?? idx,
-            image: p?.imageUrl || p?.imageUrlMobileMode || "",
+            desktop: p?.imageUrl || p?.imageUrlMobileMode || "",
+            mobile: p?.imageUrlMobileMode || p?.imageUrl || "",
           }))
-          .filter((s: Slide) => !!s.image)
-
-        console.log(`[HeroBanner] Slides mapped from API: ${mapped.length}`)
+          .filter((s: Slide) => !!(s.desktop || s.mobile))
 
         if (!isMounted) return
-
         if (mapped.length > 0) {
-          setSlides(mapped) 
+          setSlides(mapped)
           setCurrentSlide(0)
-          console.log(`[HeroBanner] ใช้รูปจาก API จำนวน ${mapped.length} ภาพ`)
         } else {
-
-          console.warn(
-            `[HeroBanner] API ไม่มีรูป (imageUrl/imageUrlMobileMode) → ใช้รูป dummy (${fallbackSlides.length} ภาพ)`
-          )
-          setSlides(fallbackSlides)
+          const fb: Slide[] = (fallbackSlides || []).map((s: any, idx: number) => ({
+            id: s?.id ?? idx,
+            desktop: s?.image || "",
+            mobile: s?.image || "",
+          }))
+          setSlides(fb)
           setCurrentSlide(0)
         }
-      } catch (err) {
-        console.error("[HeroBanner] Failed to load banner posts", err)
-
+      } catch {
         if (isMounted) {
-          setSlides(fallbackSlides)
+          const fb: Slide[] = (fallbackSlides || []).map((s: any, idx: number) => ({
+            id: s?.id ?? idx,
+            desktop: s?.image || "",
+            mobile: s?.image || "",
+          }))
+          setSlides(fb)
           setCurrentSlide(0)
         }
       } finally {
-        if (isMounted) setLoading(false) 
+        if (isMounted) setLoading(false)
       }
     }
-
     loadBannerPosts()
-    return () => {
-      isMounted = false
-    }
+    return () => { isMounted = false }
   }, [])
-
 
   useEffect(() => {
     if (loading || slides.length === 0) return
@@ -94,14 +103,17 @@ export default function HeroBanner() {
     if (!slides.length) return
     setCurrentSlide((prev) => (prev + 1) % slides.length)
   }
-
   const prevSlide = () => {
     if (!slides.length) return
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)
   }
 
+
+  const pickSrc = (s: Slide) => (isMobile ? s.mobile || s.desktop : s.desktop || s.mobile)
+
   return (
-    <section className="relative w-full aspect-[3840/1799] overflow-hidden px-2 py-1 md:py-2 md:px-8">
+   
+    <section className="relative w-full aspect-[4/5] md:aspect-[3840/1799] overflow-hidden px-2 py-1 md:py-2 md:px-8">
       <div className="relative w-full h-full">
 
         {loading && (
@@ -111,45 +123,33 @@ export default function HeroBanner() {
         )}
 
         {!loading &&
-          slides.map((slide, index) => (
-            <div
-              key={slide.id}
-              className={`absolute inset-0 transition-opacity duration-700 ${
-                index === currentSlide ? "opacity-100" : "opacity-0"
-              }`}
-            >
-              <Image
-                src={slide.image || "/placeholder.svg"}
-                alt="Hero Banner"
-                fill
-                className="object-cover rounded-xl"
-                fetchPriority={index === 0 ? "high" : undefined}
-              />
-              <div className="absolute inset-0 bg-black/0" />
-            </div>
-          ))}
+          slides.map((slide, index) => {
+            const src = pickSrc(slide)
+            return (
+              <div
+                key={slide.id}
+                className={`absolute inset-0 transition-opacity duration-700 ${
+                  index === currentSlide ? "opacity-100" : "opacity-0"
+                }`}
+              >
+                <Image
+                  src={src || "/placeholder.svg"}
+                  alt="Hero Banner"
+                  fill
+                  className="object-cover object-center rounded-xl"
+                  sizes="(max-width: 767px) 100vw, 100vw"
+                  fetchPriority={index === currentSlide ? "high" : undefined}
+                  priority={index === currentSlide}
+                />
+                <div className="absolute inset-0 bg-black/0" />
+              </div>
+            )
+          })}
       </div>
 
-      {/* ปุ่มเลื่อน */}
-      {/*
-      <button
-        aria-label="Previous slide"
-        className="absolute left-4 top-1/2 -translate-y-1/2 text-black hover:bg-black/20 p-2 rounded-full"
-        onClick={prevSlide}
-      >
-        <ChevronLeft className="h-6 w-6" />
-      </button>
-      <button
-        aria-label="Next slide"
-        className="absolute right-4 top-1/2 -translate-y-1/2 text-black hover:bg-black/20 p-2 rounded-full"
-        onClick={nextSlide}
-      >
-        <ChevronRight className="h-6 w-6" />
-      </button>
-      */}
-
+     
       {!loading && slides.length > 0 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+        <div className="absolute bottom-3 md:bottom-5 left-1/2 -translate-x-1/2 flex space-x-2">
           {slides.map((_, index) => (
             <button
               key={index}
@@ -173,15 +173,11 @@ export default function HeroBanner() {
           );
           background-size: 200% 100%;
           animation: bannerShimmer 1.4s ease-in-out infinite;
-          border-radius: 0.75rem; /* ให้ขอบมนเท่ากับ rounded-xl */
+          border-radius: 0.75rem; /* rounded-xl */
         }
         @keyframes bannerShimmer {
-          0% {
-            background-position: 200% 0;
-          }
-          100% {
-            background-position: -200% 0;
-          }
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
         }
       `}</style>
     </section>

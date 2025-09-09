@@ -7,7 +7,6 @@ import Link from "next/link"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/sections/footer"
 
-
 type WorkItem = {
   id: string | number
   imageDesktop: string
@@ -20,6 +19,33 @@ const studentWorks: WorkItem[] = [
   { id: 3, imageDesktop: "/student-work3.jpeg", imageMobile: "/student-work3.jpeg" },
 ]
 
+
+function Skeleton({ className = "" }: { className?: string }) {
+  return (
+    <div className={`relative overflow-hidden bg-gray-200 ${className}`}>
+      <div className="absolute inset-0 -translate-x-full shimmer" />
+    </div>
+  )
+}
+
+function ElegantStackSkeleton({ count = 3 }: { count?: number }) {
+  return (
+    <div
+      className="mx-auto max-w-3xl space-y-8 sm:space-y-10"
+      aria-busy="true"
+      aria-live="polite"
+    >
+      {Array.from({ length: count }).map((_, i) => (
+        <motion.figure key={i} initial={false}>
+          <TileFrame>
+            <Skeleton className="h-full w-full rounded-none" />
+          </TileFrame>
+        </motion.figure>
+      ))}
+    </div>
+  )
+}
+// -------------------------------
 
 export default function StudentWorksPage() {
   const [items, setItems] = useState<typeof studentWorks>([])
@@ -84,19 +110,16 @@ export default function StudentWorksPage() {
       mounted = false
     }
   }, [])
+
   return (
     <MotionConfig transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}>
       <Navigation />
       <main className="min-h-screen bg-white flex flex-col">
-
-
         <section className="relative">
-
+         
           <div className="pointer-events-none absolute inset-0">
-
             <div className="absolute inset-y-0 left-0 w-28 bg-gradient-to-r from-yellow-50 via-yellow-50/40 to-transparent" />
             <div className="absolute inset-y-0 right-0 w-28 bg-gradient-to-l from-yellow-50 via-yellow-50/40 to-transparent" />
-
             <div
               className="absolute inset-0"
               style={{
@@ -104,7 +127,6 @@ export default function StudentWorksPage() {
                   "radial-gradient(1200px 400px at 50% -200px, rgba(253, 224, 71, .22), transparent 60%)",
               }}
             />
-
             <div
               className="absolute inset-0 opacity-[0.08]"
               style={{
@@ -114,15 +136,8 @@ export default function StudentWorksPage() {
             />
           </div>
 
-
           <div className="relative mx-auto max-w-7xl px-4 py-12 sm:py-16">
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-16 w-16 border-4 border-yellow-400 border-t-transparent" />
-              </div>
-            ) : (
-              <ElegantStack items={items} />
-            )}
+            {loading ? <ElegantStackSkeleton count={3} /> : <ElegantStack items={items} />}
           </div>
         </section>
 
@@ -136,9 +151,7 @@ export default function StudentWorksPage() {
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
               คุณก็สามารถเป็นส่วนหนึ่งของความสำเร็จได้
             </h2>
-            <p className="text-lg text-gray-700 mb-8">
-              เริ่มต้นการเรียนรู้ฟิสิกส์กับเราวันนี้
-            </p>
+            <p className="text-lg text-gray-700 mb-8">เริ่มต้นการเรียนรู้ฟิสิกส์กับเราวันนี้</p>
             <Link
               href="/courses"
               className="inline-block bg-white text-yellow-700 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition-colors duration-300"
@@ -149,10 +162,21 @@ export default function StudentWorksPage() {
         </motion.section>
       </main>
       <Footer />
+
+   
+      <style jsx>{`
+        .shimmer {
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+          animation: shimmer 1.6s infinite;
+        }
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+      `}</style>
     </MotionConfig>
   )
 }
-
 
 function ElegantStack({ items }: { items: typeof studentWorks }) {
   const layout = useMemo(() => items, [items])
@@ -178,13 +202,7 @@ function ElegantStack({ items }: { items: typeof studentWorks }) {
   )
 }
 
-function ElegantTile({
-  work,
-  index,
-}: {
-  work: WorkItem
-  index: number
-}) {
+function ElegantTile({ work, index }: { work: WorkItem; index: number }) {
   const variants = useMemo(
     () => ({
       hidden: { opacity: 0, y: 18, scale: 0.992, filter: "blur(4px)" },
@@ -202,7 +220,7 @@ function ElegantTile({
   return (
     <motion.figure variants={variants}>
       <TileFrame>
-        {/** Desktop (md+) ใช้ imageUrl */}
+       
         {work.imageDesktop && (
           <Image
             src={work.imageDesktop}
@@ -213,7 +231,7 @@ function ElegantTile({
             fetchPriority={index < 1 ? "high" : undefined}
           />
         )}
-        {/** Mobile (< md) ใช้ imageUrlMobileMode */}
+        
         {work.imageMobile && (
           <Image
             src={work.imageMobile}
@@ -229,7 +247,6 @@ function ElegantTile({
   )
 }
 
-
 function TileFrame({ children }: { children: React.ReactNode }) {
   return (
     <motion.div
@@ -238,11 +255,9 @@ function TileFrame({ children }: { children: React.ReactNode }) {
       className="relative rounded-2xl overflow-hidden shadow-[0_6px_24px_rgba(0,0,0,0.07)] ring-1 ring-black/5 bg-white/80"
       style={{ transformStyle: "preserve-3d" }}
     >
-
+      {/* คุมสัดส่วนภาพ (มือถือ 3:4 / sm=4:5 / md=2:3) */}
       <div className="relative w-full aspect-[3/4] sm:aspect-[4/5] md:aspect-[2/3]">
         <div className="absolute inset-0">{children}</div>
-
-
       </div>
     </motion.div>
   )
