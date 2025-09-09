@@ -9,6 +9,7 @@ export function MyCourses() {
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [progressMap, setProgressMap] = useState<Record<string, number>>({}) // <courseId, progress>
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -19,12 +20,41 @@ export function MyCourses() {
   const loadCourses = async () => {
     setLoading(true)
     setError('')
-    
+    setProgressMap({})
+
     try {
       const result = await getMyCourses()
-      
+
       if (result.success) {
-        setCourses(result.courses || [])
+        const fetchedCourses = result.courses || []
+        setCourses(fetchedCourses)
+
+        // Fetch progress for each course
+        const progresses = await Promise.all(
+          fetchedCourses.map(async (course: any) => {
+            const apiUrl = `/api/progress?userId=${user.id}&courseId=${course.id}`
+            console.log("Fetching progress for:", apiUrl)
+            try {
+              const res = await fetch(apiUrl)
+              const json = await res.json()
+              console.log("Response:", json)
+              if (json.success) {
+                return { courseId: course.id, progress: json.data.progress || 0 }
+              }
+            } catch (err) {
+              console.error('Error loading progress for course', course.id, err)
+            }
+            return { courseId: course.id, progress: 0 }
+          })
+        )
+        
+
+        const progressObj: Record<string, number> = {}
+        progresses.forEach(p => {
+          progressObj[p.courseId] = p.progress
+        })
+
+        setProgressMap(progressObj)
       } else {
         setError(result.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล')
       }
@@ -69,49 +99,62 @@ export function MyCourses() {
         </div>
       ) : courses.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {courses.map((course: any) => (
-            <div key={course.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-              {course.cover && (
-                <img 
-                  src={course.cover} 
-                  alt={course.title}
-                  className="w-full h-48 object-cover"
-                />
-              )}
-              <div className="p-4">
-                <h3 className="text-lg font-semibold mb-2">{course.title}</h3>
-                <p className="text-gray-600 text-sm mb-2">{course.description}</p>
-                
-                <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
-                  <span>ราคา: ฿{course.price?.toLocaleString()}</span>
-                  <span>ระดับ: {course.level}</span>
-                </div>
-                
-                {course.instructor && (
-                  <p className="text-sm text-gray-600 mb-3">
-                    อาจารย์: {course.instructor.name}
-                  </p>
+          {courses.map((course: any) => {
+            const progress = progressMap[course.id] || 0
+            return (
+              <div key={course.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+                {course.cover && (
+                  <img 
+                    src={course.cover} 
+                    alt={course.title}
+                    className="w-full h-48 object-cover"
+                  />
                 )}
-                
-                <div className="flex items-center justify-between">
-                  <span className={`px-2 py-1 rounded text-xs ${
-                    course.status === 'PUBLISHED' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {course.status === 'PUBLISHED' ? 'เปิดแล้ว' : 'กำลังเตรียม'}
-                  </span>
-                  
-                  <button 
-                    className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
-                    onClick={() => window.open(`/courses/${course.id}`, '_blank')}
-                  >
-                    เข้าเรียน
-                  </button>
+                <div className="p-4">
+                  <h3 className="text-lg font-semibold mb-2">{course.title}</h3>
+                  <p className="text-gray-600 text-sm mb-2">{course.description}</p>
+
+                  <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
+                    <span>ราคา: ฿{course.price?.toLocaleString()}</span>
+                    <span>ระดับ: {course.level}</span>
+                  </div>
+
+                  {course.instructor && (
+                    <p className="text-sm text-gray-600 mb-3">
+                      อาจารย์: {course.instructor.name}
+                    </p>
+                  )}
+
+                  <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden mb-3">
+                    <div
+                      className="bg-green-500 h-2"
+                      style={{ width: `${progress}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-right text-xs text-gray-500 mb-3">
+                    ความคืบหน้า: {progress}%
+                  </p>
+
+                  <div className="flex items-center justify-between">
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      course.status === 'PUBLISHED' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {course.status === 'PUBLISHED' ? 'เปิดแล้ว' : 'กำลังเตรียม'}
+                    </span>
+
+                    <button 
+                      className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+                      onClick={() => window.open(`/courses/${course.id}`, '_blank')}
+                    >
+                      เข้าเรียน
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       ) : (
         <div className="text-center py-12">
