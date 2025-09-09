@@ -174,7 +174,7 @@ export default function Books() {
 
   return (
     <>
-    <section className="py-12 lg:py-24 bg-white"> 
+    <section className="pt-0 pb-10 lg:pt-24 lg:pb-5 bg-white"> 
       <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8">
     
         <div className="text-center mb-8 lg:mb-12"> 

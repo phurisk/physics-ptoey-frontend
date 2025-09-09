@@ -138,13 +138,13 @@ export default function CourseDetailPage() {
         
         if (active) {
           setCourse(json.course)
-          // Set first content as default selected
+         
           const firstChapter = json.course.chapters.find(ch => ch.contents.length > 0)
           if (firstChapter && firstChapter.contents.length > 0) {
             setSelectedContent(firstChapter.contents[0])
           }
           
-          // Load progress data
+        
           try {
             const progressRes = await fetch(`/api/progress?userId=${encodeURIComponent(user.id)}&courseId=${courseId}`)
             const progressData = await progressRes.json()
@@ -278,14 +278,14 @@ export default function CourseDetailPage() {
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Header skeleton */}
+     
         <div className="flex items-center gap-4 mb-6">
           <Skeleton className="h-10 w-10 rounded" />
           <Skeleton className="h-8 w-64" />
         </div>
         
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Video player skeleton */}
+      
           <div className="lg:col-span-2">
             <Skeleton className="aspect-video w-full rounded-lg" />
             <div className="mt-4 space-y-2">
@@ -294,7 +294,7 @@ export default function CourseDetailPage() {
             </div>
           </div>
           
-          {/* Sidebar skeleton */}
+        
           <div className="space-y-4">
             <Skeleton className="h-32 w-full rounded-lg" />
             <div className="space-y-2">
@@ -328,7 +328,7 @@ export default function CourseDetailPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
-      {/* Header */}
+      
       <div className="flex items-center gap-4 mb-6">
         <Link href="/profile/my-courses">
           <Button variant="ghost" size="sm">
@@ -340,9 +340,9 @@ export default function CourseDetailPage() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Main Content Area */}
+       
         <div className="lg:col-span-2">
-          {/* Video Player */}
+        
           {selectedContent && (
             <div className="bg-black rounded-lg overflow-hidden mb-4">
               {selectedContent.contentType === 'VIDEO' && getYouTubeEmbedUrl(selectedContent.contentUrl) ? (
@@ -363,7 +363,7 @@ export default function CourseDetailPage() {
             </div>
           )}
           
-          {/* Content Info */}
+   
           {selectedContent && (
             <div className="bg-white rounded-lg p-6 border">
               <div className="flex items-start justify-between mb-4">
@@ -378,7 +378,7 @@ export default function CourseDetailPage() {
                   </div>
                 </div>
                 
-                {/* Simple Progress Update Button */}
+               
                 <div className="flex items-center gap-2">
                   {completedContents.includes(selectedContent.id) ? (
                     <div className="flex items-center gap-2 text-green-600">
@@ -411,9 +411,8 @@ export default function CourseDetailPage() {
           )}
         </div>
 
-        {/* Sidebar */}
         <div>
-          {/* Course Info */}
+         
           <Card className="mb-6">
             <CardContent className="p-4">
               <div className="aspect-video relative mb-4 rounded overflow-hidden">
@@ -452,7 +451,7 @@ export default function CourseDetailPage() {
                   </span>
                 </div>
                 
-                {/* Progress Section */}
+                
                 <div className="border-t pt-4 mt-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-gray-600">ความคืบหน้า:</span>

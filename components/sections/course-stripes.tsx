@@ -56,7 +56,7 @@ const stripes: Stripe[] = [
 
 export default function CourseStripes() {
   return (
-    <section className="py-12 lg:py-16 bg-white">
+    <section className="pt-0 pb-10 lg:pt-20 lg:pb-5 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">
           <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-2 text-balance bg-[#ffbf00] px-8 py-4 w-fit mx-auto rounded-full shadow-sm">
@@ -75,7 +75,7 @@ export default function CourseStripes() {
               aria-label={`${s.title} ${s.subtitle}`}
               className={`group relative overflow-hidden rounded-[28px] ring-1 ring-black/5 bg-gradient-to-br ${s.bg} px-5 py-6 md:px-8 md:py-7 flex items-center justify-between hover:shadow-xl transition-all duration-300`}
             >
-              {/* Left cluster illustration */}
+            
               <div className="flex items-center gap-4 md:gap-6">
                 <div className="relative hidden sm:flex items-center justify-center h-14 w-14 md:h-16 md:w-16 rounded-2xl bg-white/70 ring-1 ring-black/5 shadow-sm">
                   <Atom className="h-7 w-7 text-[#2688DF]" />
@@ -90,7 +90,7 @@ export default function CourseStripes() {
                   <div className="mt-0.5 text-gray-700 text-sm md:text-base">{s.subtitle}</div>
                 </div>
               </div>
-              {/* CTA */}
+           
               <div className="flex items-center gap-3">
                 <span
                   className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold transition-colors ${s.ctaClass}`}
@@ -100,11 +100,11 @@ export default function CourseStripes() {
                 </span>
               </div>
 
-              {/* Decorative blobs */}
+             
               <div className="pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full bg-white/40 blur-2xl opacity-60" />
               <div className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-white/30 blur-2xl opacity-40" />
 
-              {/* Chem pattern */}
+            
               <div className="pointer-events-none absolute inset-0 opacity-[0.08]">
                 <svg className="absolute right-6 top-1/2 -translate-y-1/2" width="220" height="120" viewBox="0 0 220 120" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <g stroke="currentColor" strokeWidth="2" className="text-gray-700">

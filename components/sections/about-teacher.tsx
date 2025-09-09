@@ -8,7 +8,7 @@ import { Award, Target } from "lucide-react"
 export default function AboutTeacher() {
 
   return (
-    <section className="py-16 lg:py-24 bg-gradient-to-br from-yellow-50 to-white">
+    <section className="pt-10 pb-10 lg:pt-24 lg:pb-5 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
