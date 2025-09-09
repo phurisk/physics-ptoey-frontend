@@ -496,7 +496,7 @@ export default function CourseDetailPage() {
 <>
   <div className="min-h-screen bg-gray-50 pt-0 md:pt-20">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      {/* Back */}
+  
       <div className="mb-6">
         <Link href="/courses">
           <Button
@@ -509,23 +509,23 @@ export default function CourseDetailPage() {
         </Link>
       </div>
 
-      {/* States */}
+     
       {loading && (
         <div className="grid lg:grid-cols-3 gap-12 py-4" aria-busy="true" aria-live="polite">
-          {/* LEFT (Hero/Overview skeleton) */}
+         
           <section className="lg:col-span-2 space-y-8 order-1 lg:order-1">
-            {/* Hero */}
+          
             <div className="aspect-video rounded-2xl ring-1 ring-black/5 shadow-lg overflow-hidden">
               <Skeleton className="h-full w-full rounded-none" />
             </div>
 
-            {/* Meta badges */}
+          
             <div className="flex items-center gap-2">
               <Skeleton className="h-7 w-24 rounded-full" />
               <Skeleton className="h-7 w-32 rounded-full" />
             </div>
 
-            {/* Title & description */}
+        
             <Skeleton className="h-8 w-3/4" />
             <div className="space-y-2">
               <Skeleton className="h-4 w-full" />
@@ -533,14 +533,14 @@ export default function CourseDetailPage() {
               <Skeleton className="h-4 w-2/3" />
             </div>
 
-            {/* Stats row */}
+        
             <div className="flex flex-wrap items-center gap-6">
               <Skeleton className="h-6 w-28" />
               <Skeleton className="h-6 w-24" />
               <Skeleton className="h-6 w-24" />
             </div>
 
-            {/* Course Overview card */}
+           
             <Card className="rounded-2xl border-gray-200 shadow-sm">
               <CardHeader className="pb-2">
                 <div className="flex items-end justify-between gap-4">
@@ -552,7 +552,7 @@ export default function CourseDetailPage() {
                 </div>
               </CardHeader>
               <CardContent className="pt-2">
-                {/* progress */}
+              
                 <div className="mb-5">
                   <div className="flex items-center justify-between mb-2">
                     <Skeleton className="h-4 w-24" />
@@ -561,7 +561,7 @@ export default function CourseDetailPage() {
                   <Skeleton className="h-2 w-full rounded-full" />
                 </div>
 
-                {/* chapters skeleton list */}
+             
                 <div className="space-y-3">
                   {[...Array(4)].map((_, i) => (
                     <div key={i} className="p-4 rounded-xl border bg-white/90 backdrop-blur border-gray-200 shadow-sm">
@@ -590,7 +590,7 @@ export default function CourseDetailPage() {
             </Card>
           </section>
 
-          {/* RIGHT sidebar skeleton */}
+  
           <aside className="lg:col-span-1 order-2 lg:order-2">
             <Card className="rounded-2xl shadow-lg ring-1 ring-black/5">
               <CardContent className="p-6 space-y-6">
@@ -631,7 +631,7 @@ export default function CourseDetailPage() {
             </Card>
           </aside>
 
-          {/* Reviews skeleton (แยกเป็น item ล่างสุดของมือถือ) */}
+        
           <section className="lg:col-span-2 order-3 lg:order-3">
             <Card className="rounded-2xl border-gray-200 shadow-sm">
               <CardHeader className="pb-3">
@@ -675,7 +675,7 @@ export default function CourseDetailPage() {
 
       {!loading && !error && course && (
         <div className="grid lg:grid-cols-3 gap-12">
-          {/* ซ้าย: Hero + Overview */}
+        
           <section className="lg:col-span-2 space-y-8 order-1 lg:order-1">
             <motion.div variants={fadeInUp} initial="initial" animate="animate">
               <div className="group relative aspect-video overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-lg mb-6">
@@ -892,7 +892,7 @@ export default function CourseDetailPage() {
             </motion.div>
           </section>
 
-          {/* ขวา: Sticky Sidebar */}
+         
           <aside className="lg:col-span-1 order-2 lg:order-2">
             <motion.div
               className="lg:sticky lg:top-24"
@@ -1015,7 +1015,7 @@ export default function CourseDetailPage() {
             </motion.div>
           </aside>
 
-          {/* Reviews: แยกเป็น item ของตัวเอง (อยู่ล่างสุดบนมือถือ) */}
+       
           <section id="reviewsSection" className="lg:col-span-2 order-3 lg:order-3">
             <motion.div
               variants={fadeInUp}
@@ -1150,7 +1150,7 @@ export default function CourseDetailPage() {
     </DialogContent>
   </Dialog>
 
-  {/* Upload Slip Modal */}
+
   <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
     <DialogContent>
       <DialogHeader>
