@@ -18,7 +18,7 @@ type Stripe = {
 
 const stripes: Stripe[] = [
   {
-    title: "แผนการเรียน",
+    title: "คอร์ส",
     highlight: "ม.ต้น",
     subtitle: "(ปูพื้นฐาน-เเข่งขันสอบเข้าม.4)",
     href: "/courses?category=ม.ต้น",
@@ -27,7 +27,7 @@ const stripes: Stripe[] = [
     accent: "bg-[#2688DF]",
   },
   {
-    title: "แผนการเรียน",
+    title: "คอร์ส",
     highlight: "ม.ปลาย",
     subtitle: "(ปูพื้นฐาน-เก็บเกรดเเต่ละเทอม)",
     href: "/courses?category=ม.ปลาย",
@@ -38,14 +38,14 @@ const stripes: Stripe[] = [
   {
     title: "คอร์สแข่งขัน",
     highlight: "ม.ปลาย",
-    subtitle: "(A level ,Netsat ,สอวน.)",
+    subtitle: "(A level ,Netsat ,สอวน. ,ENTRANCE)",
     href: "/courses?category=แข่งขัน",
     bg: "from-blue-50 via-white to-blue-50",
     ctaClass: "bg-[#2688DF] hover:bg-[#1f6fba] text-white",
     accent: "bg-[#2688DF]",
   },
   {
-    title: "ตารางรอบสดที่โรงเรียน",
+    title: "ตารางรอบสดที่โรงเรียน,ถ่ายทอดสด",
     subtitle: "(Onsite and Online)",
     href: "/courses?category=สอนสด",
     bg: "from-amber-50 via-white to-amber-50",

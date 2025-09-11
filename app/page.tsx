@@ -11,6 +11,7 @@ import Articles from "@/components/sections/articles"
 import TeachingVideos from "@/components/sections/teaching-videos"
 import { Footer } from "@/components/sections/footer"
 import PopupPromotion from "@/components/sections/popup-promotion"
+import AcademicTeam from "@/components/sections/academic-team"
 
 const fadeInUp = {
   initial: { opacity: 0, y: 60 },
@@ -36,6 +37,10 @@ export default function HomePage() {
 
       <motion.div variants={fadeInUp}>
         <AboutTeacher />
+      </motion.div>
+
+      <motion.div variants={fadeInUp}>
+        <AcademicTeam />
       </motion.div>
 
       <motion.div variants={fadeInUp}>
