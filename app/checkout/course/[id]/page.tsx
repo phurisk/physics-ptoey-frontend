@@ -35,6 +35,9 @@ export default function CheckoutCoursePage() {
   const [validatingCoupon, setValidatingCoupon] = useState(false)
   const [couponError, setCouponError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  type ShippingAddress = { name: string; phone: string; address: string; district: string; province: string; postalCode: string }
+  const [shipping, setShipping] = useState<ShippingAddress>({ name: "", phone: "", address: "", district: "", province: "", postalCode: "" })
+  const [shippingError, setShippingError] = useState<string | null>(null)
 
   useEffect(() => {
     const prefill = search.get("coupon") || ""
@@ -133,6 +136,37 @@ export default function CheckoutCoursePage() {
     if (!isAuthenticated) { router.push(`/courses/${encodeURIComponent(String(id))}`); return }
     try {
       setCreating(true)
+      setShippingError(null)
+
+      // บังคับกรอกที่อยู่จัดส่งสำหรับคอร์สที่มีค่าใช้จ่าย
+      if ((price || 0) > 0) {
+        const s = shipping
+        const missing = [
+          !s.name && "ชื่อผู้รับ",
+          !s.phone && "เบอร์โทร",
+          !s.address && "ที่อยู่",
+          !s.district && "อำเภอ/เขต",
+          !s.province && "จังหวัด",
+          !s.postalCode && "รหัสไปรษณีย์",
+        ].filter(Boolean) as string[]
+        if (missing.length > 0) {
+          setShippingError(`กรุณากรอก: ${missing.join(", ")}`)
+          setCreating(false)
+          return
+        }
+        const phoneDigits = s.phone.replace(/\D/g, "")
+        if (phoneDigits.length !== 10) {
+          setShippingError("กรุณากรอกเบอร์โทรให้เป็นตัวเลข 10 หลัก")
+          setCreating(false)
+          return
+        }
+        const postalDigits = s.postalCode.replace(/\D/g, "")
+        if (postalDigits.length !== 5) {
+          setShippingError("กรุณากรอกรหัสไปรษณีย์เป็นตัวเลข 5 หลัก")
+          setCreating(false)
+          return
+        }
+      }
 
       const userId = (user as any)?.id
       if (userId) {
@@ -159,7 +193,13 @@ export default function CheckoutCoursePage() {
       const res = await fetch(`/api/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user?.id, itemType: "course", itemId: course.id, couponCode: couponCode || undefined }),
+        body: JSON.stringify({
+          userId: user?.id,
+          itemType: "course",
+          itemId: course.id,
+          couponCode: couponCode || undefined,
+          shippingAddress: (price || 0) > 0 ? shipping : undefined,
+        }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) throw new Error(json?.error || "สร้างคำสั่งซื้อไม่สำเร็จ")
@@ -203,6 +243,22 @@ export default function CheckoutCoursePage() {
                   <div className="text-sm text-gray-700">ยอดชำระ</div>
                   <div className="text-lg font-semibold">฿{finalTotal.toLocaleString()}</div>
                 </div>
+              </div>
+            )}
+            {price > 0 && (
+              <div className="space-y-2">
+                <div className="text-sm font-medium">ที่อยู่จัดส่ง</div>
+                <div className="grid md:grid-cols-2 gap-2">
+                  <Input placeholder="ชื่อผู้รับ" value={shipping.name} onChange={(e) => setShipping({ ...shipping, name: e.target.value })} />
+                  <Input placeholder="เบอร์โทร" value={shipping.phone} onChange={(e) => setShipping({ ...shipping, phone: e.target.value })} />
+                </div>
+                <Input placeholder="ที่อยู่" value={shipping.address} onChange={(e) => setShipping({ ...shipping, address: e.target.value })} />
+                <div className="grid md:grid-cols-3 gap-2">
+                  <Input placeholder="อำเภอ/เขต" value={shipping.district} onChange={(e) => setShipping({ ...shipping, district: e.target.value })} />
+                  <Input placeholder="จังหวัด" value={shipping.province} onChange={(e) => setShipping({ ...shipping, province: e.target.value })} />
+                  <Input placeholder="รหัสไปรษณีย์" value={shipping.postalCode} onChange={(e) => setShipping({ ...shipping, postalCode: e.target.value })} />
+                </div>
+                {shippingError && <div className="text-xs text-red-600">{shippingError}</div>}
               </div>
             )}
             <div className="flex justify-end gap-2">

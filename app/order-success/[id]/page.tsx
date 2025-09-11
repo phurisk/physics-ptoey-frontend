@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import Image from "next/image"
-import { CheckCircle2, Clock, AlertCircle, FileText, RefreshCw } from "lucide-react"
+import { CheckCircle2, Clock, AlertCircle, FileText, RefreshCw, MapPin } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 
 type Order = {
@@ -39,6 +39,7 @@ type Order = {
     uploadedAt?: string
   }
   shipping?: { shippingMethod?: string; status?: string }
+  shippingAddress?: { name?: string; phone?: string; address?: string; district?: string; province?: string; postalCode?: string }
 }
 
 type OrderResponse = { success: boolean; data?: Order; error?: string }
@@ -65,6 +66,9 @@ export default function OrderSuccessPage() {
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState<string | null>(null)
+  const [editingShipping, setEditingShipping] = useState(false)
+  const [shipping, setShipping] = useState({ name: "", phone: "", address: "", district: "", province: "", postalCode: "" })
+  const [shippingMsg, setShippingMsg] = useState<string | null>(null)
 
   const [enrollErr, setEnrollErr] = useState<string | null>(null)
   const triedEnrollRef = useRef(false)
@@ -82,6 +86,45 @@ export default function OrderSuccessPage() {
     }
     return json.data!
   }
+
+  // Normalize shipping from either order.shippingAddress (frontend JSON) or order.shipping (backend relation)
+  const normalizedShipping = useMemo(() => {
+    const s1: any = (order as any)?.shippingAddress
+    if (s1 && (s1.name || s1.address || s1.district || s1.province || s1.postalCode)) {
+      return {
+        name: s1.name || "",
+        phone: s1.phone || "",
+        address: s1.address || "",
+        district: s1.district || "",
+        province: s1.province || "",
+        postalCode: s1.postalCode || "",
+      }
+    }
+    const s2: any = (order as any)?.shipping
+    if (s2 && (s2.recipientName || s2.address || s2.district || s2.province || s2.postalCode)) {
+      return {
+        name: s2.recipientName || "",
+        phone: s2.recipientPhone || "",
+        address: s2.address || "",
+        district: s2.district || "",
+        province: s2.province || "",
+        postalCode: s2.postalCode || "",
+      }
+    }
+    return null
+  }, [order])
+
+  useEffect(() => {
+    const s = normalizedShipping || {}
+    setShipping({
+      name: (s as any).name || "",
+      phone: (s as any).phone || "",
+      address: (s as any).address || "",
+      district: (s as any).district || "",
+      province: (s as any).province || "",
+      postalCode: (s as any).postalCode || "",
+    })
+  }, [order?.id, normalizedShipping])
 
   async function pollUntilPaid(orderId: string, timeoutMs = 60_000) {
     const start = Date.now()
@@ -242,6 +285,14 @@ export default function OrderSuccessPage() {
       : null
   const slipUrl = order?.payment?.slipUrl
 
+  const needsShipping = useMemo(() => {
+    if (!order) return false
+    if ((order as any)?.shipping) return true
+    if ((order as any)?.shippingFee > 0) return true
+    if (order.orderType === "EBOOK") return order.ebook?.isPhysical === true
+    return false
+  }, [order])
+
   const slipInfo = useMemo(() => {
     try {
       const n = order?.payment?.notes ? JSON.parse(order.payment.notes) : null
@@ -386,7 +437,28 @@ export default function OrderSuccessPage() {
                     </div>
                   </div>
 
-                
+                  {needsShipping && (
+                    <div className="space-y-2 border-t pt-4 mt-2">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-medium inline-flex items-center">
+                          <MapPin className="h-4 w-4 mr-2" /> ที่อยู่จัดส่ง
+                        </div>
+                      </div>
+
+                      {normalizedShipping ? (
+                        <div className="text-sm text-gray-700 whitespace-pre-line">
+                          {normalizedShipping.name} • {normalizedShipping.phone}
+                          {"\n"}
+                          {normalizedShipping.address}
+                          {"\n"}
+                          {normalizedShipping.district} {normalizedShipping.province} {normalizedShipping.postalCode}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-gray-500">ไม่ได้เพิ่มที่อยู่จัดส่ง</div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap gap-2">
                     {isPending && (
                       <Button className="bg-yellow-400 hover:bg-yellow-500 text-white" onClick={() => setOpenUpload(true)}>

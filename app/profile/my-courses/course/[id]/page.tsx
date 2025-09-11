@@ -664,6 +664,27 @@ export default function CourseDetailPage() {
                 <div className="mt-2 text-xs text-gray-500">
                   เรียนแล้ว {completedCount} จาก {totalContents} เนื้อหา
                 </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      if (!user?.id) return
+                      const cid = String(courseId)
+                      window.location.href = `/profile/my-courses/course/${encodeURIComponent(cid)}/exams`
+                    }}
+                  >
+                    ทำข้อสอบของคอร์สนี้
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      if (!user?.id) return
+                      window.location.href = `/profile/my-courses/exam-results`
+                    }}
+                  >
+                    ดูประวัติข้อสอบ
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 

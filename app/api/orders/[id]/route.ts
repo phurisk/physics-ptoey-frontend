@@ -36,3 +36,41 @@ export async function GET(
   }
 }
 
+export async function PATCH(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const baseUrl = process.env.API_BASE_URL
+  if (!baseUrl) {
+    return NextResponse.json(
+      { success: false, message: "API_BASE_URL is not configured" },
+      { status: 500 }
+    )
+  }
+
+  const { id } = await context.params
+  if (!id) {
+    return NextResponse.json(
+      { success: false, message: "Missing order id" },
+      { status: 400 }
+    )
+  }
+
+  try {
+    const body = await req.json().catch(() => ({}))
+    const cookie = req.headers.get("cookie") ?? ""
+    const res = await fetch(`${baseUrl}/api/orders/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json", cookie },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    })
+    const data = await res.json().catch(() => ({}))
+    return NextResponse.json(data, { status: res.status })
+  } catch (err) {
+    return NextResponse.json(
+      { success: false, message: "Failed to update order" },
+      { status: 502 }
+    )
+  }
+}

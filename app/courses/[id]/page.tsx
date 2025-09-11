@@ -410,68 +410,9 @@ export default function CourseDetailPage() {
   const createOrder = async () => {
     if (!course) return
     if (!isAuthenticated) { setLoginOpen(true); return }
-    try {
-      setCreating(true)
-
-      // Frontend-only duplicate order guard
-      const userId = (user as any)?.id
-      if (userId && course?.id) {
-        try {
-          const res0 = await fetch(`/api/orders?userId=${encodeURIComponent(userId)}`, { cache: "no-store" })
-          const text0 = await res0.text().catch(() => "")
-          let json0: any = null
-          try { json0 = text0 ? JSON.parse(text0) : null } catch {}
-          const list: any[] = Array.isArray(json0?.data) ? json0.data : (Array.isArray(json0) ? json0 : [])
-          const exists = list.find((o: any) => {
-            const t = String(o?.orderType || o?.type || "").toUpperCase()
-            const status = String(o?.status || "").toUpperCase()
-            const courseId = o?.course?.id || o?.courseId || (t === "COURSE" ? (o?.itemId || o?.itemID) : undefined)
-            const isCancelled = ["CANCELLED", "REJECTED"].includes(status)
-            return t === "COURSE" && courseId && String(courseId) === String(course.id) && !isCancelled
-          })
-          if (exists) {
-            const status = String(exists?.status || "").toUpperCase()
-            const isPending = ["PENDING", "PENDING_VERIFICATION"].includes(status)
-            if (isPending) {
-              setOrderInfo({ orderId: String(exists.id), total: Number(exists.total || 0) })
-              setUploadOpen(true)
-            } else {
-              setEnrolledOpen(true)
-            }
-            setCreating(false)
-            return
-          }
-        } catch { /* ignore pre-check errors and continue */ }
-      }
-      const res = await fetch(`/api/orders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user?.id,
-          itemType: "course",
-          itemId: course.id,
-          couponCode: couponCode || undefined,
-        }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || json?.success === false) throw new Error(json?.error || "สร้างคำสั่งซื้อไม่สำเร็จ")
-      if (json?.data?.isFree) {
-        setOrderInfo({ orderId: json?.data?.orderId, total: 0 })
-        setUploadMsg("ลงทะเบียนฟรีสำเร็จ")
-      } else {
-        setOrderInfo({ orderId: json?.data?.orderId, total: json?.data?.total })
-        setUploadOpen(true)
-      }
-    } catch (e: any) {
-      const msg = e?.message || "สร้างคำสั่งซื้อไม่สำเร็จ"
-      if (msg.includes("ซื้อแล้ว") || msg.includes("ได้ซื้อ") || msg.includes("มีสินค้") || msg.includes("ซื้อคอร์สนี้แล้ว")) {
-        setEnrolledOpen(true)
-      } else {
-        setCouponError(msg)
-      }
-    } finally {
-      setCreating(false)
-    }
+    // ส่งไปหน้า Checkout เพื่อให้กรอกที่อยู่จัดส่งและใช้คูปอง
+    const couponQuery = couponCode ? `?coupon=${encodeURIComponent(couponCode)}` : ""
+    router.push(`/checkout/course/${encodeURIComponent(String(id))}${couponQuery}`)
   }
 
   const uploadSlip = async () => {

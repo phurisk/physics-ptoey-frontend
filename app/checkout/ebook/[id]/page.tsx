@@ -36,6 +36,7 @@ export default function CheckoutEbookPage() {
   const [validatingCoupon, setValidatingCoupon] = useState(false)
   const [couponError, setCouponError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [shippingError, setShippingError] = useState<string | null>(null)
 
   const [shipping, setShipping] = useState({ name: "", phone: "", address: "", district: "", province: "", postalCode: "" })
 
@@ -136,6 +137,36 @@ export default function CheckoutEbookPage() {
     if (!isAuthenticated) { router.push("/"); return }
     try {
       setCreating(true)
+      setShippingError(null)
+
+      if (ebook.isPhysical) {
+        const s = shipping
+        const missing = [
+          !s.name && "ชื่อผู้รับ",
+          !s.phone && "เบอร์โทร",
+          !s.address && "ที่อยู่",
+          !s.district && "อำเภอ/เขต",
+          !s.province && "จังหวัด",
+          !s.postalCode && "รหัสไปรษณีย์",
+        ].filter(Boolean) as string[]
+        if (missing.length > 0) {
+          setShippingError(`กรุณากรอก: ${missing.join(", ")}`)
+          setCreating(false)
+          return
+        }
+        const phoneDigits = s.phone.replace(/\D/g, "")
+        if (phoneDigits.length !== 10) {
+          setShippingError("กรุณากรอกเบอร์โทรให้เป็นตัวเลข 10 หลัก")
+          setCreating(false)
+          return
+        }
+        const postalDigits = s.postalCode.replace(/\D/g, "")
+        if (postalDigits.length !== 5) {
+          setShippingError("กรุณากรอกรหัสไปรษณีย์เป็นตัวเลข 5 หลัก")
+          setCreating(false)
+          return
+        }
+      }
 
       const userId = (user as any)?.id
       if (userId) {
@@ -219,6 +250,7 @@ export default function CheckoutEbookPage() {
                   <Input placeholder="จังหวัด" value={shipping.province} onChange={(e) => setShipping({ ...shipping, province: e.target.value })} />
                   <Input placeholder="รหัสไปรษณีย์" value={shipping.postalCode} onChange={(e) => setShipping({ ...shipping, postalCode: e.target.value })} />
                 </div>
+                {shippingError && <div className="text-xs text-red-600">{shippingError}</div>}
               </div>
             )}
 
