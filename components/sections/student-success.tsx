@@ -6,6 +6,7 @@ import type React from "react"
 import { X } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { studentSuccesses as fallbackSuccesses } from "@/lib/dummy-data"
+import http from "@/lib/http"
 
 function ImageModal({
   isOpen,
@@ -86,8 +87,8 @@ export default function StudentSuccess() {
     ;(async () => {
       try {
         const params = new URLSearchParams({ postType: "ความสำเร็จลูกศิษย์" })
-        const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
-        const json: any = await res.json().catch(() => null)
+        const res = await http.get(`/api/posts?${params.toString()}`)
+        const json: any = res.data || null
         const items = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
 
         const mapped: { id: string | number; image: string }[] =
@@ -100,7 +101,7 @@ export default function StudentSuccess() {
 
         if (!mounted) return
 
-        if (res.ok && mapped.length > 0) {
+        if ((res.status >= 200 && res.status < 300) && mapped.length > 0) {
           setSlides(mapped)
           setCurrentSlideSafe(0)
         } else {

@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react"
 import { exchangeToken } from "@/lib/api-utils"
+import http from "@/lib/http"
 
 type User = any
 
@@ -81,17 +82,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (code) {
           //  LINE callback code -  login
           try {
-            const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000/'
-            const response = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/api/external/auth/line`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                code: code, 
-                redirectUri: window.location.origin 
-              })
+            const { data: result } = await http.post(`/api/external/auth/line`, {
+              code,
+              // Must match the redirect URI used in the LINE authorize request
+              redirectUri: `${window.location.origin}/api/auth/callback/line`,
             })
-            
-            const result = await response.json()
             if (result.success && result.data) {
               const userData = result.data.user
               setUser(userData)
@@ -114,14 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const savedToken = localStorage.getItem('token')
         if (savedToken) {
           try {
-            const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000/'
-            const response = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/api/external/auth/validate`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ token: savedToken })
-            })
-            
-            const result = await response.json()
+            const { data: result } = await http.post(`/api/external/auth/validate`, { token: savedToken })
             if (result.valid && result.user) {
               if (active) setUser(result.user)
               localStorage.setItem('user', JSON.stringify(result.user))
@@ -146,10 +134,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return
         }
 
-        // Try to recover session from server cookie (e.g., LINE login)
-        const res = await fetch("/api/auth/me", { cache: "no-store" })
-        const data = await res.json().catch(() => ({} as any))
-        if (active && res.ok && data && data.success !== false && data.data) {
+        // Try to recover session from server cookie (LINE login)
+        const res = await http.get("/api/auth/me")
+        const data: any = res.data || {}
+        if (active && res.status >= 200 && res.status < 300 && data && data.success !== false && data.data) {
           setUser(data.data)
           try { localStorage.setItem("user", JSON.stringify(data.data)) } catch {}
         }
@@ -169,14 +157,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      })
-      const data = await res.json().catch(() => ({}))
+      const res = await http.post("/api/auth/login", { email, password })
+      const data = res.data || {}
 
-      if (!res.ok || data?.success === false) {
+      if ((res.status < 200 || res.status >= 300) || data?.success === false) {
         return { success: false, error: (data as any)?.error || (data as any)?.message || "อีเมลหรือรหัสผ่านไม่ถูกต้อง" }
       }
 
@@ -198,14 +182,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = async (userData: any) => {
     try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(userData),
-      })
-      const data = await res.json().catch(() => ({}))
+      const res = await http.post("/api/auth/register", userData)
+      const data = res.data || {}
 
-      if (!res.ok || data?.success === false) {
+      if ((res.status < 200 || res.status >= 300) || data?.success === false) {
         return { success: false, error: (data as any)?.error || (data as any)?.message || "ลงทะเบียนไม่สำเร็จ" }
       }
 
@@ -228,7 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     
     try {
-      await fetch("/api/auth/logout", { method: "POST" }).catch(() => {})
+      await http.post("/api/auth/logout").catch(() => {})
     } catch {}
     setUser(null)
     try {
@@ -238,15 +218,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const loginWithLine = () => {
-    const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000/'
-    const redirectUri = `${API_BASE_URL.replace(/\/$/, '')}/api/auth/callback/line`
-    
-    const lineURL = 'https://access.line.me/oauth2/v2.1/authorize?' +
+    const redirectUri = `${window.location.origin}/api/auth/callback/line`
+
+    const clientId = process.env.NEXT_PUBLIC_LINE_CLIENT_ID
+    const state = JSON.stringify({ returnUrl: window.location.href })
+    const lineURL =
+      'https://access.line.me/oauth2/v2.1/authorize?' +
       'response_type=code' +
-      `&client_id=${process.env.NEXT_PUBLIC_LINE_CHANNEL_ID}` +
+      `&client_id=${clientId}` +
       '&redirect_uri=' + encodeURIComponent(redirectUri) +
       '&scope=profile%20openid' +
-      '&state=' + encodeURIComponent(window.location.origin) // sent origin to state for redirect back
+      '&state=' + encodeURIComponent(state)
 
     window.location.href = lineURL
   }

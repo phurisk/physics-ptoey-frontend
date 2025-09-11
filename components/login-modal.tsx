@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, Loader2 } from "lucide-react"
 import { SiLine } from "react-icons/si"
@@ -126,6 +126,10 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           p-0 overflow-hidden
         "
       >
+        {/* Accessible description for the dialog to avoid a11y warning */}
+        <DialogDescription className="sr-only">
+          กล่องโต้ตอบสำหรับเข้าสู่ระบบหรือสมัครสมาชิกด้วยอีเมลหรือ LINE
+        </DialogDescription>
         <DialogHeader className="px-6 pt-6 pb-3 text-center">
           <DialogTitle className="text-xl font-semibold text-gray-900 text-center">
             {tab === "login" ? "เข้าสู่ระบบ" : "สมัครใช้งาน"}
@@ -356,5 +360,4 @@ function LineIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
-
 

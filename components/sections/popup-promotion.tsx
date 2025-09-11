@@ -5,6 +5,7 @@ import Image from "next/image"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Root as VisuallyHidden } from "@radix-ui/react-visually-hidden"
+import http from "@/lib/http"
 
 type PromotionPost = {
   id?: string
@@ -38,9 +39,9 @@ export default function PopupPromotion() {
     let cancelled = false
     ;(async () => {
       try {
-        const res = await fetch(`/api/post?type=promotion`, { cache: "no-store" })
-        if (res.ok) {
-          const json = await res.json().catch(() => ({}))
+        const res = await http.get(`/api/post?type=promotion`)
+        if (res.status >= 200 && res.status < 300) {
+          const json = res.data || {}
           const promo: PromotionPost = json?.data ?? json
           if (!cancelled) {
             setData(promo)

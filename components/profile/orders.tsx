@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/components/auth-provider"
+import http from "@/lib/http"
 
 type Order = {
   id: string
@@ -46,9 +47,9 @@ export default function Orders() {
       if (!user?.id) { setLoading(false); return }
       try {
         setLoading(true)
-        const res = await fetch(`/api/orders?userId=${encodeURIComponent(user.id)}`, { cache: "no-store" })
-        const json: OrdersResponse = await res.json().catch(() => ({ success: false, data: [] }))
-        if (!res.ok || json.success === false) throw new Error((json as any)?.error || "โหลดคำสั่งซื้อไม่สำเร็จ")
+        const res = await http.get(`/api/orders`, { params: { userId: user.id } })
+        const json: OrdersResponse = res.data || { success: false, data: [] }
+        if ((res.status < 200 || res.status >= 300) || json.success === false) throw new Error((json as any)?.error || "โหลดคำสั่งซื้อไม่สำเร็จ")
         if (active) setOrders(Array.isArray(json.data) ? json.data : [])
       } catch (e: any) {
         if (active) setError(e?.message ?? "โหลดคำสั่งซื้อไม่สำเร็จ")
@@ -70,7 +71,7 @@ export default function Orders() {
     return status || "-"
   }
 
-  // สี badge ตามสถานะ (อ่านง่ายใน mobile)
+ 
   const statusTone = (status?: string) => {
     const s = (status || "").toUpperCase()
     if (s === "COMPLETED") return "bg-green-50 text-green-700 border border-green-200"
@@ -88,23 +89,33 @@ export default function Orders() {
     setOpenUpload(true)
   }
 
+  const [uploadProgress, setUploadProgress] = useState<number>(0)
+
   const handleUpload = async () => {
     if (!selectedOrder || !file) return
     try {
       setUploading(true)
       setUploadError(null)
       setUploadSuccess(null)
+      setUploadProgress(0)
       const form = new FormData()
       form.append("orderId", selectedOrder.id)
       form.append("file", file)
-      const res = await fetch(`/api/payments/upload-slip`, { method: "POST", body: form })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || json?.success === false) throw new Error(json?.error || "อัพโหลดไม่สำเร็จ")
+      const res = await http.post(`/api/payments/upload-slip`, form, {
+        onUploadProgress: (evt) => {
+          if (evt.total) {
+            const pct = Math.round((evt.loaded * 100) / evt.total)
+            setUploadProgress(pct)
+          }
+        },
+      })
+      const json = res.data || {}
+      if ((res.status < 200 || res.status >= 300) || json?.success === false) throw new Error(json?.error || "อัพโหลดไม่สำเร็จ")
       setUploadSuccess("อัพโหลดสลิปสำเร็จ กำลังรอตรวจสอบ")
       try {
-        const r = await fetch(`/api/orders?userId=${encodeURIComponent(user!.id)}`, { cache: "no-store" })
-        const j: OrdersResponse = await r.json().catch(() => ({ success: false, data: [] }))
-        if (r.ok && j.success !== false) setOrders(j.data || [])
+        const r = await http.get(`/api/orders`, { params: { userId: user!.id } })
+        const j: OrdersResponse = r.data || { success: false, data: [] }
+        if ((r.status >= 200 && r.status < 300) && j.success !== false) setOrders(j.data || [])
       } catch { }
     } catch (e: any) {
       setUploadError(e?.message ?? "อัพโหลดไม่สำเร็จ")
@@ -115,7 +126,7 @@ export default function Orders() {
 
   return (
     <div>
-      {/* Loading Skeletons (ปรับสัดส่วนให้เหมือนภาพจริง) */}
+   
       {loading && (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -159,9 +170,7 @@ export default function Orders() {
             const thumb =
               isEbook ? (o.ebook?.coverImageUrl || "/placeholder.svg") : "/placeholder.svg"
 
-            // คุมสัดส่วนรูปให้ “ตามภาพ” มากขึ้น:
-            // - EBOOK: ปกหนังสือทั่วไป 2:3 (สูงกว่ากว้าง)
-            // - COURSE: 16:9 (วิดีโอ/โปสเตอร์คอร์ส)
+
             const aspectClass = isEbook ? "aspect-[2/3]" : "aspect-video"
 
             const statusLabel = orderStatusText(o.status)
@@ -171,23 +180,22 @@ export default function Orders() {
             return (
               <Card key={o.id} className="shadow-sm">
                 <CardContent className="p-4">
-                  {/* ในมือถือ: เรียงเป็น 1 คอลัมน์ — รูปเต็มบรรทัด, เนื้อหา, ปุ่มกด */}
-                  {/* ในเดสก์ท็อป: 3 คอลัมน์ — รูปคงที่, เนื้อหา, ปุ่มกด/สถานะ */}
+
                   <div className="grid gap-4 grid-cols-1 sm:grid-cols-[8rem_1fr_auto] sm:items-center">
-                    {/* Thumbnail */}
+              
                     <div className={`relative w-full sm:w-auto ${aspectClass} rounded-md bg-white ring-1 ring-black/5 overflow-hidden`}>
                       <Image
                         src={thumb}
                         alt={title}
                         fill
-                        // ใช้ object-contain เพื่อ “ตามสัดส่วนจริงของรูป” ไม่บิด/ครอป
+                    
                         className="object-contain"
                         sizes="(max-width: 640px) 100vw, 8rem"
                         priority={false}
                       />
                     </div>
 
-                    {/* Info */}
+                 
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <div className="font-medium text-gray-900 truncate mr-2">{title}</div>
@@ -198,7 +206,7 @@ export default function Orders() {
                         ยอดรวม ฿{o.total.toLocaleString()}
                       </div>
 
-                      {/* สถานะชำระเงินย่อย */}
+                   
                       <div className="mt-1 text-xs text-gray-500">
                         สถานะตรวจสลิป:{" "}
                         {payStatus === "COMPLETED"
@@ -215,7 +223,7 @@ export default function Orders() {
                       )}
                     </div>
 
-                    {/* Actions */}
+               
                     <div className="flex flex-col gap-2 sm:flex-col sm:justify-self-end w-full">
                       <Link href={`/order-success/${o.id}`} className="w-full sm:w-auto">
                         <Button variant="outline" className="w-full sm:w-28">
@@ -245,7 +253,7 @@ export default function Orders() {
         </div>
       )}
 
-      {/* Upload Slip Modal (UI เดิม, ปรับปลีกย่อยนิดหน่อยให้อ่านง่าย) */}
+
       <Dialog open={openUpload} onOpenChange={setOpenUpload}>
         <DialogContent>
           <DialogHeader>
@@ -275,7 +283,7 @@ export default function Orders() {
                 onClick={handleUpload}
                 className="bg-yellow-400 hover:bg-yellow-500 text-white"
               >
-                {uploading ? "กำลังอัพโหลด..." : "อัพโหลด"}
+                {uploading ? `กำลังอัพโหลด ${uploadProgress}%` : "อัพโหลด"}
               </Button>
             </div>
           </div>

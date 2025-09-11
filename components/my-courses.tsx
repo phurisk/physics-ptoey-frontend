@@ -2,6 +2,7 @@
 
 import { useAuth } from '@/components/auth-provider'
 import { getMyCourses } from '@/lib/api-utils'
+import http from '@/lib/http'
 import { useState, useEffect } from 'react'
 
 export function MyCourses() {
@@ -29,17 +30,20 @@ export function MyCourses() {
         const fetchedCourses = result.courses || []
         setCourses(fetchedCourses)
 
-        // Fetch progress for each course
+        // Fetch progress
         const progresses = await Promise.all(
           fetchedCourses.map(async (course: any) => {
-            const apiUrl = `/api/progress?userId=${user.id}&courseId=${course.id}`
-            console.log("Fetching progress for:", apiUrl)
+            const apiUrl = `/api/progress`
+            console.log("Fetching progress for:", `${apiUrl}?userId=${user.id}&courseId=${course.id}`)
             try {
-              const res = await fetch(apiUrl)
-              const json = await res.json()
+              const res = await http.get(apiUrl, { params: { userId: user.id, courseId: course.id } })
+              const json = res.data
               console.log("Response:", json)
               if (json.success) {
-                return { courseId: course.id, progress: json.data.progress || 0 }
+                let p = Number(json.data?.percent ?? json.data?.progress ?? 0) || 0
+                if (p > 0 && p <= 1) p = p * 100
+                const progress = Math.max(0, Math.min(100, Math.round(p)))
+                return { courseId: course.id, progress }
               }
             } catch (err) {
               console.error('Error loading progress for course', course.id, err)

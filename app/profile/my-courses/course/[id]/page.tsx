@@ -97,12 +97,7 @@ type CourseResponse = {
   message?: string
 }
 
-// ===== Brand =====
-const BRAND = { primary: '#01BDCC', primaryDark: '#0E7490' }
 
-// ===== Helpers aligned with API behavior =====
-
-// API progress = round(((index+1)/total)*100)
 function indexToProgress(index: number, total: number) {
   if (total <= 0) return 0
   return Math.round(((index + 1) / total) * 100)
@@ -132,21 +127,20 @@ export default function CourseDetailPage() {
   const [course, setCourse] = useState<CourseDetail | null>(null)
   const [loginOpen, setLoginOpen] = useState(false)
 
-  // แทน completedContents ด้วย highestCompletedIndex
   const [highestCompletedIndex, setHighestCompletedIndex] = useState<number>(-1)
   const [progressLoading, setProgressLoading] = useState(false)
 
-  // Content selection
+
   const [selectedContent, setSelectedContent] = useState<Content | null>(null)
 
-  // Responsive navigation
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   const courseId = params?.id as string
 
-  // --- All hooks must stay before any early returns ---
+ 
 
-  // Flatten chapters + contents ตามลำดับ order
+
   const flat: FlatItem[] = useMemo(() => {
     if (!course) return []
     const chaptersSorted = [...course.chapters].sort((a, b) => a.order - b.order)
@@ -169,7 +163,7 @@ export default function CourseDetailPage() {
     return m
   }, [flat])
 
-  // ⬇️ ย้าย useMemo นี้มาที่นี่ (ก่อน guard returns) เพื่อคง order ของ Hooks
+
   const selectedItem = useMemo(
     () => flat.find((f) => f.content.id === selectedContent?.id),
     [flat, selectedContent?.id]
@@ -177,7 +171,7 @@ export default function CourseDetailPage() {
   const currentChapter = selectedItem?.chapter
   const completedCount = Math.max(0, highestCompletedIndex + 1)
 
-  // derive progress / texts
+
   const currentProgress = course?.enrollment?.progress || 0
   const progressText =
     currentProgress === 0
@@ -226,7 +220,6 @@ export default function CourseDetailPage() {
         if (active) {
           setCourse(json.course)
 
-          // เลือก content แรก
           const firstChapter = [...json.course.chapters]
             .sort((a, b) => a.order - b.order)
             .find((ch) => ch.contents.length > 0)
@@ -235,7 +228,7 @@ export default function CourseDetailPage() {
             setSelectedContent(firstContent)
           }
 
-          // ตั้งค่า highestCompletedIndex จาก progress ปัจจุบัน
+         
           const total = json.course.stats?.totalContents ?? 0
           const hi = progressToIndex(json.course.enrollment?.progress ?? 0, total)
           setHighestCompletedIndex(hi)
@@ -257,7 +250,7 @@ export default function CourseDetailPage() {
     const idMatch = url.match(
       /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\n?#]+)/
     )?.[1]
-    return idMatch ? `https://www.youtube.com/embed/${idMatch}` : null
+    return idMatch ? `https://www.youtube-nocookie.com/embed/${idMatch}?rel=0&modestbranding=1` : null
   }
 
   const handleMarkCompleted = async (content: Content) => {
@@ -271,7 +264,6 @@ export default function CourseDetailPage() {
     const prevIndex = highestCompletedIndex
     const total = totalContents
 
-    // optimistic
     const optimisticIndex = Math.max(prevIndex, idx)
     setHighestCompletedIndex(optimisticIndex)
     setCourse((prev) => {
@@ -363,7 +355,6 @@ export default function CourseDetailPage() {
     </div>
   )
 
-  // ===== Guards (no more hooks below this line) =====
   if (!isAuthenticated) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-12">
@@ -568,7 +559,7 @@ export default function CourseDetailPage() {
                   )}
                 </div>
 
-                {/* Meta + complete button */}
+              
                 {selectedContent && (
                   <div className="p-4 sm:p-6">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-3">

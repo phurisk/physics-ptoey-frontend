@@ -6,6 +6,7 @@ import type React from "react"
 import { X } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { reviews as fallbackReviews } from "@/lib/dummy-data"
+import http from "@/lib/http"
 
 function ImageModal({
   isOpen,
@@ -86,9 +87,9 @@ export default function Reviews() {
     ;(async () => {
       try {
         const params = new URLSearchParams({ postType: "รีวิวจากน้องๆ" })
-        const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
+        const res = await http.get(`/api/posts?${params.toString()}`)
 
-        const json: any = await res.json().catch(() => null)
+        const json: any = res.data || null
         const items = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
 
         const mapped =
@@ -101,7 +102,7 @@ export default function Reviews() {
 
         if (!mounted) return
 
-        if (res.ok && mapped.length > 0) {
+        if ((res.status >= 200 && res.status < 300) && mapped.length > 0) {
           setSlides(mapped)
           setCurrentIndex(0)
           

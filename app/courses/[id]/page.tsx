@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { Users, BookOpen, Clock, Play, ArrowLeft, Lock, Loader2, Star, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -149,6 +149,7 @@ function formatThaiDate(iso: string) {
 
 export default function CourseDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const router = useRouter()
   const [course, setCourse] = useState<ApiCourse | null>(null)
   const [chapters, setChapters] = useState<ApiChapter[]>([])
   const [loading, setLoading] = useState(true)
@@ -411,6 +412,37 @@ export default function CourseDetailPage() {
     if (!isAuthenticated) { setLoginOpen(true); return }
     try {
       setCreating(true)
+
+      // Frontend-only duplicate order guard
+      const userId = (user as any)?.id
+      if (userId && course?.id) {
+        try {
+          const res0 = await fetch(`/api/orders?userId=${encodeURIComponent(userId)}`, { cache: "no-store" })
+          const text0 = await res0.text().catch(() => "")
+          let json0: any = null
+          try { json0 = text0 ? JSON.parse(text0) : null } catch {}
+          const list: any[] = Array.isArray(json0?.data) ? json0.data : (Array.isArray(json0) ? json0 : [])
+          const exists = list.find((o: any) => {
+            const t = String(o?.orderType || o?.type || "").toUpperCase()
+            const status = String(o?.status || "").toUpperCase()
+            const courseId = o?.course?.id || o?.courseId || (t === "COURSE" ? (o?.itemId || o?.itemID) : undefined)
+            const isCancelled = ["CANCELLED", "REJECTED"].includes(status)
+            return t === "COURSE" && courseId && String(courseId) === String(course.id) && !isCancelled
+          })
+          if (exists) {
+            const status = String(exists?.status || "").toUpperCase()
+            const isPending = ["PENDING", "PENDING_VERIFICATION"].includes(status)
+            if (isPending) {
+              setOrderInfo({ orderId: String(exists.id), total: Number(exists.total || 0) })
+              setUploadOpen(true)
+            } else {
+              setEnrolledOpen(true)
+            }
+            setCreating(false)
+            return
+          }
+        } catch { /* ignore pre-check errors and continue */ }
+      }
       const res = await fetch(`/api/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1064,7 +1096,11 @@ export default function CourseDetailPage() {
                           </Link>
                         ) : (
                           <Button
-                            onClick={createOrder}
+                            onClick={() => {
+                              if (!isAuthenticated) { setLoginOpen(true); return }
+                              const q = couponCode ? `?coupon=${encodeURIComponent(couponCode)}` : ""
+                              router.push(`/checkout/course/${encodeURIComponent(String(id))}${q}`)
+                            }}
                             disabled={creating}
                             className="w-full bg-yellow-400 hover:bg-yellow-500 text-white text-lg py-3 rounded-xl shadow hover:shadow-md transition"
                           >

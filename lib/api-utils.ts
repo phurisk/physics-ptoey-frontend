@@ -1,50 +1,40 @@
-// Utility functions สำหรับการเรียก API ที่ต้องใช้ authentication
-// เชื่อมต่อกับ e-learning backend
+import http from "@/lib/http"
 
-// Note: On the client, only NEXT_PUBLIC_* envs are exposed. Use a sensible fallback chain.
+
 const API_BASE_URL =
   (process.env.NEXT_PUBLIC_ELEARNING_BASE_URL as string | undefined) ||
   (process.env.API_BASE_URL as string | undefined) ||
-  "http://localhost:3000/";
+  "http://localhost:3000/"
 
 export async function apiCall(endpoint: string, options: RequestInit = {}) {
-  const token = localStorage.getItem("token");
-
+  const method = (options.method || "GET").toUpperCase()
+  const headers = options.headers as Record<string, string> | undefined
+  const data = options.body ? (() => { try { return JSON.parse(options.body as any) } catch { return options.body } })() : undefined
   const url = endpoint.startsWith("http")
     ? endpoint
-    : `${API_BASE_URL.replace(/\/$/, "")}${
-        endpoint.startsWith("/") ? endpoint : `/${endpoint}`
-      }`;
+    : `${API_BASE_URL.replace(/\/$/, "")}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...((options.headers as Record<string, string>) || {}),
-  };
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+  switch (method) {
+    case "GET":
+      return http.get(url, { headers })
+    case "POST":
+      return http.post(url, data, { headers })
+    case "PUT":
+      return http.put(url, data, { headers })
+    case "PATCH":
+      return http.patch(url, data, { headers })
+    case "DELETE":
+      return http.delete(url, { headers })
+    default:
+      return http.request({ url, method, data, headers })
   }
-
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
-
-  // when token expired, remove and redirect to login
-  if (response.status === 401) {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    // may redirect to login or refresh page
-  }
-
-  return response;
 }
 
 export async function getMyCourses() {
   try {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    const response = await apiCall(`/api/my-courses?userId=${user.id}`);
-    return await response.json();
+    const user = JSON.parse(localStorage.getItem("user") || "{}")
+    const response = await apiCall(`/api/my-courses?userId=${user.id}`)
+    return (response as any).data
   } catch (error) {
     console.error("Failed to fetch my courses:", error);
     return {
@@ -61,8 +51,8 @@ export async function validateToken(token: string) {
     const response = await apiCall("/api/external/auth/validate", {
       method: "POST",
       body: JSON.stringify({ token }),
-    });
-    return await response.json();
+    })
+    return (response as any).data
   } catch (error) {
     console.error("Token validation error:", error);
     return { valid: false, message: "เกิดข้อผิดพลาดในการตรวจสอบ token" };
@@ -74,8 +64,8 @@ export async function refreshToken(token: string) {
     const response = await apiCall("/api/external/auth/refresh", {
       method: "POST",
       body: JSON.stringify({ token }),
-    });
-    return await response.json();
+    })
+    return (response as any).data
   } catch (error) {
     console.error("Token refresh error:", error);
     return { success: false, message: "เกิดข้อผิดพลาดในการรีเฟรช token" };
@@ -87,8 +77,8 @@ export async function exchangeToken(userId: string, lineId?: string) {
     const response = await apiCall("/api/external/auth/exchange", {
       method: "POST",
       body: JSON.stringify({ userId, lineId }),
-    });
-    return await response.json();
+    })
+    return (response as any).data
   } catch (error) {
     console.error("Token exchange error:", error);
     return { success: false, message: "เกิดข้อผิดพลาดในการแลก token" };

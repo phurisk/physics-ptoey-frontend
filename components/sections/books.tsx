@@ -12,6 +12,7 @@ import { useAuth } from "@/components/auth-provider"
 import LoginModal from "@/components/login-modal"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import http from "@/lib/http"
 
 type Ebook = {
   id: string
@@ -61,10 +62,9 @@ export default function Books() {
     let cancelled = false
     async function run() {
       try {
-        
-        const res = await fetch(`/api/ebooks`, { cache: "no-store" })
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const json = await res.json()
+        const res = await http.get(`/api/ebooks`)
+        if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`)
+        const json = res.data
         if (!cancelled) {
           setEbooks(Array.isArray(json?.data) ? json.data : [])
         }
@@ -87,12 +87,7 @@ export default function Books() {
 
   const handleBuy = async (ebookId: string) => {
     if (!isAuthenticated) { setLoginOpen(true); return }
-    const book = ebooks.find(b => b.id === ebookId) || null
-    setSelectedBook(book)
-    setCouponCode("")
-    setDiscount(0)
-    setCouponError(null)
-    setPurchaseOpen(true)
+    router.push(`/checkout/ebook/${encodeURIComponent(String(ebookId))}`)
   }
 
   const applyCoupon = async () => {
@@ -102,13 +97,9 @@ export default function Books() {
       setValidatingCoupon(true)
       setCouponError(null)
       const subtotal = selectedBook.discountPrice || selectedBook.price
-      const res = await fetch(`/api/coupons/validate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: couponCode, userId: user?.id ?? "guest", itemType: "ebook", itemId: selectedBook.id, subtotal }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || json?.success === false) throw new Error(json?.error || "ใช้คูปองไม่สำเร็จ")
+      const res = await http.post(`/api/coupons/validate`, { code: couponCode, userId: user?.id ?? "guest", itemType: "ebook", itemId: selectedBook.id, subtotal })
+      const json = res.data || {}
+      if ((res.status < 200 || res.status >= 300) || json?.success === false) throw new Error(json?.error || "ใช้คูปองไม่สำเร็จ")
       setDiscount(Number(json?.data?.discount || 0))
     } catch (e: any) {
       setCouponError(e?.message ?? "ใช้คูปองไม่สำเร็จ")
@@ -123,16 +114,40 @@ export default function Books() {
     try {
       setCreating(true)
       setPurchaseError(null)
+      // Frontend-only duplicate order guard (prevent duplicate orders when one exists and not canceled/rejected)
+      if (user?.id && selectedBook?.id) {
+        try {
+          const res0 = await http.get(`/api/orders`, { params: { userId: user.id } })
+          const json0: any = res0.data || {}
+          const list: any[] = Array.isArray(json0?.data) ? json0.data : (Array.isArray(json0) ? json0 : [])
+          const exists = list.find((o: any) => {
+            const t = String(o?.orderType || o?.type || "").toUpperCase()
+            const status = String(o?.status || "").toUpperCase()
+            const ebookId = o?.ebook?.id || o?.ebookId || (t === "EBOOK" ? (o?.itemId || o?.itemID) : undefined)
+            const isCancelled = ["CANCELLED", "REJECTED"].includes(status)
+            return t === "EBOOK" && ebookId && String(ebookId) === String(selectedBook.id) && !isCancelled
+          })
+          if (exists) {
+            const status = String(exists?.status || "").toUpperCase()
+            const isPending = ["PENDING", "PENDING_VERIFICATION"].includes(status)
+            setPurchaseOpen(false)
+            if (isPending) {
+              setOrderInfo({ orderId: String(exists.id), total: Number(exists.total || 0) })
+              setUploadOpen(true)
+            } else {
+              setOwnedOpen(true)
+            }
+            setCreating(false)
+            return
+          }
+        } catch {}
+      }
       const payload: any = { userId: user?.id, itemType: "ebook", itemId: selectedBook.id }
       if (couponCode) payload.couponCode = couponCode
       if (selectedBook.isPhysical) payload.shippingAddress = shipping
-      const res = await fetch(`/api/orders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || json?.success === false) throw new Error(json?.error || "สั่งซื้อไม่สำเร็จ")
+      const res = await http.post(`/api/orders`, payload)
+      const json = res.data || {}
+      if ((res.status < 200 || res.status >= 300) || json?.success === false) throw new Error(json?.error || "สั่งซื้อไม่สำเร็จ")
       setPurchaseOpen(false)
       if (json?.data?.isFree) {
         router.push(`/order-success/${json?.data?.orderId}`)
@@ -153,17 +168,27 @@ export default function Books() {
     }
   }
 
+  const [uploadProgress, setUploadProgress] = useState<number>(0)
+
   const uploadSlip = async () => {
     if (!orderInfo || !slip) return
     try {
       setUploading(true)
       setUploadMsg(null)
+      setUploadProgress(0)
       const form = new FormData()
       form.append("orderId", orderInfo.orderId)
       form.append("file", slip)
-      const res = await fetch(`/api/payments/upload-slip`, { method: "POST", body: form })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || json?.success === false) throw new Error(json?.error || "อัพโหลดไม่สำเร็จ")
+      const res = await http.post(`/api/payments/upload-slip`, form, {
+        onUploadProgress: (evt) => {
+          if (evt.total) {
+            const pct = Math.round((evt.loaded * 100) / evt.total)
+            setUploadProgress(pct)
+          }
+        },
+      })
+      const json = res.data || {}
+      if ((res.status < 200 || res.status >= 300) || json?.success === false) throw new Error(json?.error || "อัพโหลดไม่สำเร็จ")
       setUploadMsg("อัพโหลดสลิปสำเร็จ กำลังรอตรวจสอบ")
     } catch (e: any) {
       setUploadMsg(e?.message ?? "อัพโหลดไม่สำเร็จ")
@@ -438,7 +463,7 @@ export default function Books() {
             )}
             <Button variant="outline" onClick={() => setUploadOpen(false)}>ปิด</Button>
             <Button disabled={!slip || uploading} onClick={uploadSlip} className="bg-yellow-400 hover:bg-yellow-500 text-white">
-              {uploading ? "กำลังอัพโหลด..." : "อัพโหลดสลิป"}
+              {uploading ? `กำลังอัพโหลด ${uploadProgress}%` : "อัพโหลดสลิป"}
             </Button>
           </div>
         </div>

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/components/auth-provider"
+import http from "@/lib/http"
 
 type ChapterSlim = {
   id: string
@@ -27,7 +28,8 @@ type PaidCourse = {
   category?: { id: string; name: string }
   instructor?: { id: string; name: string }
   _count?: { chapters: number; enrollments: number }
-  // เพิ่มเพื่อให้นับบทเรียนได้จาก API จริง
+  
+  progress?: number | null
   chapters?: ChapterSlim[]
 }
 
@@ -38,7 +40,7 @@ type MyCoursesResponse = {
   message?: string
 }
 
-// รูปแบบ progress response เผื่อหลายรูปแบบ
+
 type ProgressAPI =
   | { success?: boolean; data?: { percent?: number; progress?: number; complete?: boolean }; percent?: number; progress?: number; complete?: boolean }
   | any
@@ -49,10 +51,10 @@ export default function MyCourses() {
   const [error, setError] = useState<string | null>(null)
   const [courses, setCourses] = useState<PaidCourse[]>([])
 
-  // เก็บ progress เป็น map: courseId -> { percent, complete }
+ 
   const [progressMap, setProgressMap] = useState<Record<string, { percent: number; complete: boolean }>>({})
 
-  // โหลดรายการคอร์ส
+
   useEffect(() => {
     let active = true
     const load = async () => {
@@ -63,9 +65,9 @@ export default function MyCourses() {
       }
       try {
         setLoading(true)
-        const res = await fetch(`/api/my-courses?userId=${encodeURIComponent(user.id)}`, { cache: "no-store" })
-        const json: MyCoursesResponse = await res.json().catch(() => ({ success: false, courses: [], count: 0 }))
-        if (!res.ok || json.success === false) throw new Error((json as any)?.error || "โหลดคอร์สไม่สำเร็จ")
+        const res = await http.get(`/api/my-courses`, { params: { userId: user.id } })
+        const json: MyCoursesResponse = res.data || { success: false, courses: [], count: 0 }
+        if ((res.status < 200 || res.status >= 300) || json.success === false) throw new Error((json as any)?.error || "โหลดคอร์สไม่สำเร็จ")
         if (active) setCourses(json.courses || [])
       } catch (e: any) {
         if (active) setError(e?.message ?? "โหลดคอร์สไม่สำเร็จ")
@@ -79,7 +81,7 @@ export default function MyCourses() {
     }
   }, [user?.id])
 
-  // โหลด progress สำหรับแต่ละคอร์ส
+
   useEffect(() => {
     let active = true
     const fetchProgress = async () => {
@@ -88,14 +90,22 @@ export default function MyCourses() {
       try {
         const results = await Promise.all(
           courses.map(async (c) => {
+           
+            if (c.progress !== undefined && c.progress !== null) {
+              let p = Number(c.progress) || 0
+              if (p > 0 && p <= 1) p = p * 100
+              const percent = Math.max(0, Math.min(100, Math.round(p)))
+              return [c.id, { percent, complete: percent >= 100 }] as const
+            }
+
             try {
-              const url = `/api/progress?userId=${encodeURIComponent(user.id!)}&courseId=${encodeURIComponent(c.id)}`
-              const res = await fetch(url, { cache: "no-store" })
-              const json: ProgressAPI = await res.json().catch(() => ({}))
-              // รองรับหลายฟอร์แมต
+              const res = await http.get(`/api/progress`, { params: { userId: user.id!, courseId: c.id } })
+              const json: ProgressAPI = res.data || {}
               const raw = json?.data ?? json
               const pRaw = raw?.percent ?? raw?.progress ?? 0
-              const percent = Math.max(0, Math.min(100, Math.round(Number(pRaw) || 0)))
+              let pNum = Number(pRaw) || 0
+              if (pNum > 0 && pNum <= 1) pNum = pNum * 100
+              const percent = Math.max(0, Math.min(100, Math.round(pNum)))
               const complete = Boolean(raw?.complete ?? percent >= 100)
               return [c.id, { percent, complete }] as const
             } catch {
@@ -106,7 +116,7 @@ export default function MyCourses() {
         if (!active) return
         setProgressMap(Object.fromEntries(results))
       } catch {
-        // เงียบไว้ ไม่ให้รบกวน UI
+        
       }
     }
 
@@ -114,10 +124,10 @@ export default function MyCourses() {
     return () => {
       active = false
     }
-    // ผูกกับรายการคอร์สและ user
+   
   }, [user?.id, courses])
 
-  // util: แปลงวันที่ purchase
+ 
   const formatTHDate = (iso?: string | null) => {
     if (!iso) return ""
     try {
@@ -158,7 +168,7 @@ export default function MyCourses() {
 
       {!loading && !error && courses.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {courses.map((c) => {
+          {courses.map((c, i) => {
             const chaptersCount = c._count?.chapters ?? c.chapters?.length ?? 0 
             const prog = progressMap[c.id]
             const percent = prog?.percent ?? 0
@@ -173,6 +183,8 @@ export default function MyCourses() {
                       alt={c.title}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      priority={i === 0}
+                      fetchPriority={i === 0 ? "high" : undefined}
                     />
                     {c.category?.name && (
                       <Badge className="absolute top-3 left-3 bg-yellow-400 text-white">

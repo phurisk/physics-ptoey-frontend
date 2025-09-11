@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import http from '@/lib/http'
 
 export interface ProgressData {
   progress: number
@@ -20,19 +21,12 @@ export function useProgress(initialProgress: number = 0) {
   const updateProgress = useCallback(async (userId: string, courseId: string, contentId: string) => {
     setLoading(true)
     try {
-      const response = await fetch('/api/update-progress', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          courseId,
-          contentId,
-        }),
+      const response = await http.post('/api/update-progress', {
+        userId,
+        courseId,
+        contentId,
       })
-
-      const result = await response.json()
+      const result = response.data
       if (result.success) {
         setProgress(result.data?.progress || progress)
         return result.data
@@ -50,8 +44,8 @@ export function useProgress(initialProgress: number = 0) {
   const getProgress = useCallback(async (userId: string, courseId: string) => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/progress?userId=${userId}&courseId=${courseId}`)
-      const result = await response.json()
+      const response = await http.get(`/api/progress`, { params: { userId, courseId } })
+      const result = response.data
       
       if (result.success) {
         setProgress(result.data?.progress || 0)
@@ -70,11 +64,8 @@ export function useProgress(initialProgress: number = 0) {
   const resetProgress = useCallback(async (userId: string, courseId: string) => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/progress?userId=${userId}&courseId=${courseId}`, {
-        method: 'DELETE',
-      })
-      
-      const result = await response.json()
+      const response = await http.delete(`/api/progress`, { params: { userId, courseId } })
+      const result = response.data
       if (result.success) {
         setProgress(0)
         return result.data

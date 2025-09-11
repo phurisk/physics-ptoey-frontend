@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { bannerSlides as fallbackSlides } from "@/lib/dummy-data"
+import http from "@/lib/http"
 
 type Slide = {
   id: string | number
@@ -38,8 +39,8 @@ export default function HeroBanner() {
     let isMounted = true
     async function loadBannerPosts() {
       try {
-        const res = await fetch(`/api/posts`, { cache: "no-store" })
-        const json: any = await res.json().catch(() => null)
+        const res = await http.get(`/api/posts`)
+        const json: any = res.data || null
 
         const items = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
         const targetName = "ป้ายประกาศหลัก"

@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   const origin = `${url.protocol}//${url.host}`
 
   const returnUrl = url.searchParams.get("returnUrl") || ""
-  let callbackRaw = `${origin}/api/auth/line/callback`
+  let callbackRaw = `${origin}/api/auth/callback/line`
   if (returnUrl) {
     callbackRaw += `?returnUrl=${encodeURIComponent(returnUrl)}`
   }

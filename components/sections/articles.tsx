@@ -7,6 +7,7 @@ import { Calendar, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { articles as fallbackArticles } from "@/lib/dummy-data"
+import http from "@/lib/http"
 
 type ArticleItem = {
   id: string | number
@@ -52,16 +53,16 @@ export default function Articles() {
     ;(async () => {
       try {
         const params = new URLSearchParams({ postType: "บทความ" })
-        const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
+        const res = await http.get(`/api/posts?${params.toString()}`)
         if (!mounted) return
 
-        if (!res.ok) {
+        if (res.status < 200 || res.status >= 300) {
           console.warn("[ArticlesSection] Fetch /api/posts: NOT OK", res.status, res.statusText)
           setItems(fallbackMapped)
           return
         }
 
-        const json: any = await res.json().catch(() => null)
+        const json: any = res.data || null
         const list: any[] = Array.isArray(json)
           ? json
           : Array.isArray(json?.data)
