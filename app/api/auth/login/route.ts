@@ -24,12 +24,9 @@ export async function POST(req: Request) {
     const response = NextResponse.json(data, { status: res.status })
     const setCookie = res.headers.get("set-cookie")
     if (setCookie) {
-   
-      response.headers.set("set-cookie", setCookie)
-    
+
       try {
         const encoded = encodeURIComponent(setCookie)
-    
         const maxAge = 60 * 60 * 24 * 7
         response.cookies.set("backend_cookie", encoded, {
           httpOnly: true,

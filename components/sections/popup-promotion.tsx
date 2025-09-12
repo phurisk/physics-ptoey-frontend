@@ -39,13 +39,20 @@ export default function PopupPromotion() {
     let cancelled = false
     ;(async () => {
       try {
-        const res = await http.get(`/api/post?type=promotion`)
+
+        const params = new URLSearchParams({ postType: "promotion", featured: "true", limit: "1" })
+        const res = await http.get(`/api/posts?${params.toString()}`)
         if (res.status >= 200 && res.status < 300) {
           const json = res.data || {}
-          const promo: PromotionPost = json?.data ?? json
+          const list: any[] = Array.isArray(json)
+            ? json
+            : Array.isArray(json?.data)
+            ? json.data
+            : []
+          const promo: PromotionPost | null = list.length ? list[0] : null
           if (!cancelled) {
             setData(promo)
-            setImgSrc(promo?.imageUrl || "/promotion.png")
+            setImgSrc((promo as any)?.imageUrl || "/promotion.png")
             setOpen(true)
           }
         } else {

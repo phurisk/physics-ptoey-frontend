@@ -58,6 +58,8 @@ export default function Books() {
     postalCode: "",
   })
 
+  
+
   useEffect(() => {
     let cancelled = false
     async function run() {
@@ -69,7 +71,9 @@ export default function Books() {
           setEbooks(Array.isArray(json?.data) ? json.data : [])
         }
       } catch (e: any) {
-        if (!cancelled) setError(e?.message ?? "โหลดข้อมูลไม่สำเร็จ")
+        if (!cancelled) {
+          setError(e?.message ?? "โหลดข้อมูลไม่สำเร็จ")
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -79,6 +83,8 @@ export default function Books() {
       cancelled = true
     }
   }, [])
+
+  
 
   const calculateDiscount = (original: number, discounted: number) => {
     if (!original || original <= 0) return 0
@@ -100,7 +106,8 @@ export default function Books() {
       const res = await http.post(`/api/coupons/validate`, { code: couponCode, userId: user?.id ?? "guest", itemType: "ebook", itemId: selectedBook.id, subtotal })
       const json = res.data || {}
       if ((res.status < 200 || res.status >= 300) || json?.success === false) throw new Error(json?.error || "ใช้คูปองไม่สำเร็จ")
-      setDiscount(Number(json?.data?.discount || 0))
+      const d = Number(json?.data?.discount || 0)
+      setDiscount(d)
     } catch (e: any) {
       setCouponError(e?.message ?? "ใช้คูปองไม่สำเร็จ")
       setDiscount(0)
@@ -210,6 +217,8 @@ export default function Books() {
             หนังสือเรียนฟิสิกส์คุณภาพสูง เขียนโดยอาจารย์เต้ย พร้อมเทคนิคการแก้โจทย์ที่เข้าใจง่าย
           </p>
         </div>
+
+        
 
      
         <div
@@ -355,18 +364,13 @@ export default function Books() {
 
       
         <div className="text-center mt-10 lg:mt-12"> 
-          <p className="text-sm md:text-base text-gray-600 mb-4 md:mb-6">
-            ต้องการหนังสือเพิ่มเติม หรือมีคำถามเกี่ยวกับหนังสือ?
-          </p>
           <Button
             variant="outline"
             size="lg"
-            className="
-              border-yellow-400 text-yellow-600 hover:bg-yellow-50 bg-transparent
-              h-10 px-4 text-sm md:h-12 md:px-6 md:text-base  /* MOBILE-ONLY: ปรับขนาดปุ่ม */
-            "
+            className="border-yellow-400 text-yellow-600 hover:bg-yellow-50 bg-transparent h-10 px-4 text-sm md:h-12 md:px-6 md:text-base"
+            onClick={() => router.push('/books')}
           >
-            ติดต่อสอบถาม
+            ดูหนังสือเพิ่มเติม
           </Button>
         </div>
       </div>

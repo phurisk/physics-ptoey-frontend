@@ -9,7 +9,7 @@ import { Download, Eye, FileText, Search, Calendar } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { examCategories } from "@/lib/dummy-data"
+import http from "@/lib/http"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/sections/footer"
 import Link from "next/link"
@@ -53,6 +53,7 @@ export default function ExamBankPage() {
   const [loginOpen, setLoginOpen] = useState(false)
 
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [categories, setCategories] = useState<{ id: string; name: string; color: string }[]>([])
   const [selectedYear, setSelectedYear] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedExam, setSelectedExam] = useState<UiExam | null>(null)
@@ -84,6 +85,38 @@ export default function ExamBankPage() {
     return () => {
       active = false
     }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await http.get(`/api/exam-categories`)
+        const json: any = res.data || {}
+        const list: any[] = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : []
+        const palette = [
+          "rgb(250 202 21)",
+          "rgb(254 190 1)",
+          "rgb(0 75 125)",
+          "rgb(255 90 31)",
+          "rgb(155 28 28)",
+          "rgb(30 64 175)",
+          "rgb(16 185 129)",
+        ]
+        const mapped = list
+          .filter((c) => c?.isActive !== false)
+          .map((c: any, idx: number) => ({
+            id: String(c?.id ?? c?.slug ?? c?.name ?? idx),
+            name: c?.name ?? String(c?.slug ?? `ประเภท ${idx + 1}`),
+            color: palette[idx % palette.length],
+          }))
+        const withAll = [{ id: "all", name: "ทั้งหมด", color: "rgb(250 202 21)" }, ...mapped]
+        if (!cancelled) setCategories(withAll)
+      } catch {
+        if (!cancelled) setCategories([{ id: "all", name: "ทั้งหมด", color: "rgb(250 202 21)" }])
+      }
+    })()
+    return () => { cancelled = true }
   }, [])
 
   // โหลดไฟล์เมื่อเปิด Dialog
@@ -156,7 +189,7 @@ export default function ExamBankPage() {
 
   const getCategoryColor = (name?: string) => {
     if (!name) return "rgb(250 202 21)"
-    const match = examCategories.find((c) => c.name === name)
+    const match = categories.find((c) => c.name === name)
     return match?.color ?? "rgb(250 202 21)"
   }
 
@@ -184,14 +217,21 @@ export default function ExamBankPage() {
     [uiExams]
   )
 
-  const categories = useMemo(() => {
+  const categoriesForUI = useMemo(() => {
+    if (categories.length) return categories
     const names = Array.from(new Set(uiExams.map((e) => e.categoryName).filter((n) => !!n))) as string[]
-    return [{ id: "all", name: "ทั้งหมด" }, ...names.map((n) => ({ id: n, name: n }))]
-  }, [uiExams])
+    return [{ id: "all", name: "ทั้งหมด", color: "rgb(250 202 21)" }, ...names.map((n, i) => ({ id: n, name: n, color: getCategoryColor(n) }))]
+  }, [uiExams, categories])
+
+  const selectedCategoryName = useMemo(() => {
+    if (selectedCategory === "all") return null
+    const found = categoriesForUI.find((c) => c.id === selectedCategory)
+    return found?.name || null
+  }, [selectedCategory, categoriesForUI])
 
   const filteredExams = useMemo(() => {
     return uiExams.filter((exam) => {
-      const matchesCategory = selectedCategory === "all" || exam.categoryName === selectedCategory
+      const matchesCategory = selectedCategory === "all" || exam.categoryName === selectedCategoryName
       const matchesYear = selectedYear === "all" || exam.year.toString() === selectedYear
       const matchesSearch =
         exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -199,7 +239,7 @@ export default function ExamBankPage() {
         exam.year.toString().includes(searchTerm)
       return matchesCategory && matchesYear && matchesSearch
     })
-  }, [uiExams, selectedCategory, selectedYear, searchTerm])
+  }, [uiExams, selectedCategory, selectedCategoryName, selectedYear, searchTerm])
 
   const handleViewPDF = (examId: string) => {
     if (!examId) return
@@ -292,7 +332,7 @@ export default function ExamBankPage() {
             )}
             {!loading && (
               <div className="flex flex-wrap justify-center gap-3">
-                {categories.map((category) => (
+                {categoriesForUI.map((category) => (
                   <Button
                     key={category.id}
                     variant={selectedCategory === category.id ? "default" : "outline"}

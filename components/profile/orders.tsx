@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/components/auth-provider"
 import http from "@/lib/http"
+import { toast } from "@/hooks/use-toast"
 
 type Order = {
   id: string
@@ -21,8 +22,10 @@ type Order = {
   couponDiscount: number
   total: number
   createdAt: string
+  courseId?: string
+  ebookId?: string
   payment?: { id: string; status: string; ref?: string; amount?: number; slipUrl?: string }
-  course?: { title: string; description?: string | null; instructor?: { name?: string | null } | null }
+  course?: { title: string; description?: string | null; instructor?: { name?: string | null } | null; coverImageUrl?: string | null }
   ebook?: { title: string; author?: string | null; coverImageUrl?: string | null }
 }
 
@@ -33,6 +36,7 @@ export default function Orders() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
+  const [courseCovers, setCourseCovers] = useState<Record<string, string>>({})
 
   const [openUpload, setOpenUpload] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -60,6 +64,42 @@ export default function Orders() {
     load()
     return () => { active = false }
   }, [user?.id])
+
+  useEffect(() => {
+    let cancelled = false
+    const loadCovers = async () => {
+      const ids = Array.from(new Set(
+        orders
+          .filter((o) => o.orderType === 'COURSE')
+          .map((o) => (o as any).courseId)
+          .filter(Boolean) as string[]
+      ))
+      const missing = ids.filter((id) => !courseCovers[id])
+      if (!missing.length) return
+      try {
+        const results = await Promise.all(
+          missing.map(async (id) => {
+            try {
+              const res = await fetch(`/api/courses/${encodeURIComponent(id)}`, { cache: 'no-store' })
+              const json: any = await res.json().catch(() => ({}))
+              const cover = json?.data?.coverImageUrl || ''
+              return [id, cover] as const
+            } catch {
+              return [id, ''] as const
+            }
+          })
+        )
+        if (!cancelled) {
+          const next = { ...courseCovers }
+          for (const [id, cover] of results) next[id] = cover
+          setCourseCovers(next)
+        }
+      } catch {}
+    }
+    if (orders.length) loadCovers()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders])
 
   const orderStatusText = (status?: string) => {
     const s = (status || "").toUpperCase()
@@ -112,6 +152,7 @@ export default function Orders() {
       const json = res.data || {}
       if ((res.status < 200 || res.status >= 300) || json?.success === false) throw new Error(json?.error || "อัพโหลดไม่สำเร็จ")
       setUploadSuccess("อัพโหลดสลิปสำเร็จ กำลังรอตรวจสอบ")
+      toast({ title: "อัพโหลดสลิปสำเร็จ", description: "กำลังรอตรวจสอบ" })
       try {
         const r = await http.get(`/api/orders`, { params: { userId: user!.id } })
         const j: OrdersResponse = r.data || { success: false, data: [] }
@@ -119,6 +160,7 @@ export default function Orders() {
       } catch { }
     } catch (e: any) {
       setUploadError(e?.message ?? "อัพโหลดไม่สำเร็จ")
+      toast({ title: "อัพโหลดสลิปไม่สำเร็จ", description: e?.message ?? "ลองใหม่อีกครั้ง", variant: "destructive" as any })
     } finally {
       setUploading(false)
     }
@@ -167,8 +209,10 @@ export default function Orders() {
               o.orderType === "COURSE"
                 ? (o.course?.title || "คอร์สเรียน")
                 : (o.ebook?.title || "หนังสือ")
-            const thumb =
-              isEbook ? (o.ebook?.coverImageUrl || "/placeholder.svg") : "/placeholder.svg"
+            const courseId = (o as any).courseId as string | undefined
+            const thumb = isEbook
+              ? (o.ebook?.coverImageUrl || "/placeholder.svg")
+              : (courseId && courseCovers[courseId]) || "/placeholder.svg"
 
 
             const aspectClass = isEbook ? "aspect-[2/3]" : "aspect-video"
@@ -239,9 +283,7 @@ export default function Orders() {
                           อัพโหลดสลิป
                         </Button>
                       ) : (
-                        <Badge className="bg-green-600 text-white w-full sm:w-auto justify-center">
-                          ชำระเงินแล้ว
-                        </Badge>
+                        <Badge className="bg-green-600 text-white w-full sm:w-auto justify-center">ชำระเงินแล้ว</Badge>
                       )}
                     </div>
 

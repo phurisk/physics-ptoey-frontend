@@ -21,10 +21,7 @@ export async function POST(req: Request) {
 
     const data = await res.json().catch(() => ({}))
     const response = NextResponse.json(data, { status: res.status })
-    const setCookie = res.headers.get("set-cookie")
-    if (setCookie) {
-      response.headers.set("set-cookie", setCookie)
-    }
+
     return response
   } catch (err) {
     return NextResponse.json(

@@ -19,8 +19,7 @@ export async function POST(req: Request) {
 
     const data = await res.json().catch(() => ({}))
     const response = NextResponse.json(data, { status: res.status })
-    const setCookie = res.headers.get("set-cookie")
-    if (setCookie) response.headers.set("set-cookie", setCookie)
+   
 
     try { response.cookies.set("backend_cookie", "", { path: "/", maxAge: 0 }) } catch {}
     try { response.cookies.set("jwt", "", { path: "/", maxAge: 0 }) } catch {}

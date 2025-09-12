@@ -26,7 +26,7 @@ function deriveExcerpt(input?: string, max = 160) {
 
 async function fetchArticle(slug: string): Promise<ArticleItem | null> {
   const params = new URLSearchParams({ postType: "บทความ", slug })
-  const apiUrl = `${(process.env.API_BASE_URL || "").replace(/\/$/, "")}/api/posts?${params.toString()}`
+  const apiUrl = `/api/posts?${params.toString()}`
   try {
     const res = await fetch(apiUrl, { cache: "no-store" })
     if (!res.ok) return null
@@ -108,4 +108,3 @@ export default async function ArticleDetailPage({ params }: Params) {
     </section>
   )
 }
-

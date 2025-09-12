@@ -4,6 +4,7 @@ import { Sarabun } from "next/font/google"
 import "./globals.css"
 import { Navigation } from "@/components/navigation"
 import { AuthProvider } from "@/components/auth-provider"
+import { Toaster } from "@/components/ui/toaster"
 
 const sarabun = Sarabun({
   subsets: ["thai", "latin"],
@@ -34,6 +35,7 @@ export default function RootLayout({
         <AuthProvider>
           <Navigation />
           <main className="pt-16 lg:pt-20">{children}</main>
+          <Toaster />
         </AuthProvider>
       </body>
     </html>

@@ -253,6 +253,23 @@ export default function CourseDetailPage() {
     return idMatch ? `https://www.youtube-nocookie.com/embed/${idMatch}?rel=0&modestbranding=1` : null
   }
 
+  const getVimeoEmbedUrl = (url: string) => {
+    const idMatch = url.match(/(?:vimeo\.com|player\.vimeo\.com)\/(?:video\/)?(\d+)/)?.[1]
+    return idMatch ? `https://player.vimeo.com/video/${idMatch}?dnt=1&title=0&byline=0&portrait=0` : null
+  }
+
+  const getEmbedSrc = (url: string) => {
+    return getYouTubeEmbedUrl(url) || getVimeoEmbedUrl(url) || null
+  }
+
+  const getVideoThumbnailUrl = (url: string) => {
+    const ytId = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\n?#]+)/)?.[1]
+    if (ytId) return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`
+    const vmId = url.match(/(?:vimeo\.com|player\.vimeo\.com)\/(?:video\/)?(\d+)/)?.[1]
+    if (vmId) return `https://vumbnail.com/${vmId}.jpg`
+    return null
+  }
+
   const handleMarkCompleted = async (content: Content) => {
     if (!user?.id || !courseId) return
     if (!course) return
@@ -539,14 +556,14 @@ export default function CourseDetailPage() {
             {/* Video player */}
             <Card className="bg-white border-gray-200 pt-0">
               <CardContent className="p-0">
-                <div className="aspect-video bg-black rounded-t-lg overflow-hidden relative">
-                  {selectedContent &&
-                    selectedContent.contentType === 'VIDEO' &&
-                    getYouTubeEmbedUrl(selectedContent.contentUrl) ? (
+                <div className="aspect-video bg-black rounded-t-lg overflow-hidden relative" onContextMenu={(e) => e.preventDefault()}>
+                  {selectedContent && selectedContent.contentType === 'VIDEO' && getEmbedSrc(selectedContent.contentUrl) ? (
                     <iframe
-                      src={getYouTubeEmbedUrl(selectedContent.contentUrl) || ''}
+                      src={getEmbedSrc(selectedContent.contentUrl) || ''}
                       className="w-full h-full"
                       allowFullScreen
+                      referrerPolicy="no-referrer"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                       title={selectedContent.title}
                     />
                   ) : (
@@ -708,12 +725,21 @@ export default function CourseDetailPage() {
                         >
                           <CardContent className="p-3">
                             <div className="aspect-video bg-gray-200 rounded mb-3 relative overflow-hidden">
-                              <Image
-                                src={'/placeholder.svg'}
-                                alt={c.title}
-                                fill
-                                className="object-cover"
-                              />
+                              {c.contentType === 'VIDEO' && getVideoThumbnailUrl(c.contentUrl) ? (
+                                <Image
+                                  src={getVideoThumbnailUrl(c.contentUrl) || '/placeholder.svg'}
+                                  alt={c.title}
+                                  fill
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <Image
+                                  src={'/placeholder.svg'}
+                                  alt={c.title}
+                                  fill
+                                  className="object-cover"
+                                />
+                              )}
                             </div>
                             <h5 className="font-medium text-sm text-gray-800 text-balance line-clamp-2">
                               {c.title}

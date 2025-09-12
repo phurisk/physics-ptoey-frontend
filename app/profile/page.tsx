@@ -5,7 +5,7 @@ import { useState } from "react"
 import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { BookOpen, Receipt } from "lucide-react"
+import { BookOpen, Receipt, Book } from "lucide-react"
 import LoginModal from "@/components/login-modal"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
@@ -54,6 +54,20 @@ export default function ProfilePage() {
               <div className="flex-1 min-w-0">
                 <div className="text-lg font-semibold text-gray-900 group-hover:text-yellow-700">คอร์สของฉัน</div>
                 <div className="text-sm text-gray-600 truncate">ดูและเข้าเรียนคอร์สที่คุณซื้อไว้</div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/profile/my-books">
+          <Card className="group cursor-pointer hover:shadow-lg transition-shadow pt-0">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="h-12 w-12 rounded-xl bg-yellow-100 text-yellow-700 flex items-center justify-center">
+                <Book className="h-6 w-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-lg font-semibold text-gray-900 group-hover:text-yellow-700">หนังสือของฉัน</div>
+                <div className="text-sm text-gray-600 truncate">ดูและอ่าน/ดาวน์โหลด eBook ที่ซื้อไว้</div>
               </div>
             </CardContent>
           </Card>

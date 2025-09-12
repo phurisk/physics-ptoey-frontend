@@ -15,6 +15,7 @@ type ApiCourse = {
   description?: string | null
   price: number
   isFree?: boolean
+  isPhysical?: boolean
   coverImageUrl?: string | null
 }
 
@@ -138,8 +139,8 @@ export default function CheckoutCoursePage() {
       setCreating(true)
       setShippingError(null)
 
-      // บังคับกรอกที่อยู่จัดส่งสำหรับคอร์สที่มีค่าใช้จ่าย
-      if ((price || 0) > 0) {
+      // บังคับกรอกที่อยู่จัดส่งเฉพาะคอร์สที่เป็นสินค้ามีการจัดส่ง
+      if (course.isPhysical) {
         const s = shipping
         const missing = [
           !s.name && "ชื่อผู้รับ",
@@ -198,7 +199,7 @@ export default function CheckoutCoursePage() {
           itemType: "course",
           itemId: course.id,
           couponCode: couponCode || undefined,
-          shippingAddress: (price || 0) > 0 ? shipping : undefined,
+          shippingAddress: course.isPhysical ? shipping : undefined,
         }),
       })
       const json = await res.json().catch(() => ({}))
@@ -245,7 +246,7 @@ export default function CheckoutCoursePage() {
                 </div>
               </div>
             )}
-            {price > 0 && (
+            {course?.isPhysical && (
               <div className="space-y-2">
                 <div className="text-sm font-medium">ที่อยู่จัดส่ง</div>
                 <div className="grid md:grid-cols-2 gap-2">

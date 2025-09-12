@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { toast } from '@/hooks/use-toast'
 import http from '@/lib/http'
 
 export interface ProgressData {
@@ -35,6 +36,7 @@ export function useProgress(initialProgress: number = 0) {
       }
     } catch (error) {
       console.error('Error updating progress:', error)
+      toast({ title: 'อัพเดทความคืบหน้าไม่สำเร็จ', description: (error as any)?.message ?? 'ลองใหม่อีกครั้ง', variant: 'destructive' as any })
       throw error
     } finally {
       setLoading(false)
@@ -55,6 +57,7 @@ export function useProgress(initialProgress: number = 0) {
       }
     } catch (error) {
       console.error('Error getting progress:', error)
+      toast({ title: 'โหลดความคืบหน้าไม่สำเร็จ', description: (error as any)?.message ?? 'ลองใหม่อีกครั้ง', variant: 'destructive' as any })
       throw error
     } finally {
       setLoading(false)
@@ -68,12 +71,14 @@ export function useProgress(initialProgress: number = 0) {
       const result = response.data
       if (result.success) {
         setProgress(0)
+        toast({ title: 'รีเซ็ตความคืบหน้าแล้ว' })
         return result.data
       } else {
         throw new Error(result.message || 'Failed to reset progress')
       }
     } catch (error) {
       console.error('Error resetting progress:', error)
+      toast({ title: 'รีเซ็ตความคืบหน้าไม่สำเร็จ', description: (error as any)?.message ?? 'ลองใหม่อีกครั้ง', variant: 'destructive' as any })
       throw error
     } finally {
       setLoading(false)

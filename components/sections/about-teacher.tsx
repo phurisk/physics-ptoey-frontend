@@ -55,7 +55,7 @@ export default function AboutTeacher() {
                   "นักเรียนทุนส่งเสริมความเป็นเลิศทางวิทยาศาสตร์และเทคโนโลยี JSTP ของสวทช",
                   "รับเชิญเข้าร่วมประชุมสัมนาฟิสิกส์ศึกษา เกี่ยวกับการเรียนการสอนและงานวิจัยด้านฟิสิกส์ศึกษาของประเทศไทย",
                   "ผู้ช่วยดูแลการทดลองผู้แทนฟิสิกส์ประยุกต์ระดับนานาชาติ ของจุฬาลงกรณ์มหาวิทยาลัย"
-                  
+
                 ].map((achievement, index) => (
                   <motion.div
                     key={index}
@@ -106,7 +106,7 @@ export default function AboutTeacher() {
                   className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100 hover:shadow-lg transition-shadow duration-300"
                 >
                   <div className="flex items-start gap-4">
-                  <div className="bg-white rounded-lg p-2 shadow-sm flex items-center justify-center w-20 h-20">
+                    <div className="bg-white rounded-lg p-2 shadow-sm flex items-center justify-center w-20 h-20">
                       <img src="/logo/โรงเรียนจุฬาภรณราชวิทยาลัย.png" alt="โรงเรียนจุฬาภรณราชวิทยาลัย" width={50} height={50} />
                     </div>
                     <div className="flex-1">
@@ -145,10 +145,10 @@ export default function AboutTeacher() {
                 >
                   <div className="flex items-start gap-4">
                     <div className="bg-white rounded-lg p-2 shadow-sm flex items-center justify-center w-20 h-20">
-                      <img src="/logo/CHULA_ENG.png" alt="โรงเรียนจุฬาภรณราชวิทยาลัย" width={100} height={100}/>
+                      <img src="/logo/CHULA_ENG.png" alt="โรงเรียนจุฬาภรณราชวิทยาลัย" width={100} height={100} />
                     </div>
                     <div className="flex-1">
-                    <h5 className="font-semibold text-gray-900 mb-1">ปริญญาโท</h5>
+                      <h5 className="font-semibold text-gray-900 mb-1">ปริญญาโท</h5>
                       <p className="text-gray-700 leading-relaxed">คณะวิศวกรรมศาสตร์</p>
                       <p className="text-sm text-gray-600 mt-1">จุฬาลงกรณ์มหาวิทยาลัย</p>
                     </div>
@@ -164,11 +164,16 @@ export default function AboutTeacher() {
                 >
                   <div className="flex items-start gap-4">
                     <div className="bg-white rounded-lg p-2 shadow-sm flex items-center justify-center w-20 h-20">
-                      <img src="/logo/มสท.png" alt="โรงเรียนจุฬาภรณราชวิทยาลัย" width={100} height={100}/>
+                      <img src="/logo/มสท.png" alt="โรงเรียนจุฬาภรณราชวิทยาลัย" width={100} height={100} />
                     </div>
                     <div className="flex-1">
-                    <h5 className="font-semibold text-gray-900 mb-1">ปริญญาโท</h5>
-                      <p className="text-gray-700 leading-relaxed">คณะศึกษาศาสตร์ (จิตวิทยาการให้คำปรึกษา)</p>
+                      <h5 className="font-semibold text-gray-900 mb-1">ปริญญาโท</h5>
+                      <p className="text-gray-700 leading-relaxed">
+                        คณะศึกษาศาสตร์
+                        <br className="block md:hidden" />
+                        <span className="hidden md:inline"> (จิตวิทยาการให้คำปรึกษา)</span>
+                        <span className="block md:hidden">(จิตวิทยาการให้คำปรึกษา)</span>
+                      </p>
                       <p className="text-sm text-gray-600 mt-1">มหาวิทยาลัยสุโขทัยธรรมาธิราช (กำลังศึกษา)  </p>
                     </div>
                   </div>

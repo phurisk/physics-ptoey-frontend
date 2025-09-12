@@ -20,7 +20,7 @@ type Order = {
   couponDiscount: number
   total: number
   createdAt: string
-  course?: { id: string; title: string }
+  course?: { id: string; title: string; isPhysical?: boolean }
   ebook?: {
     id: string
     title: string
@@ -69,6 +69,7 @@ export default function OrderSuccessPage() {
   const [editingShipping, setEditingShipping] = useState(false)
   const [shipping, setShipping] = useState({ name: "", phone: "", address: "", district: "", province: "", postalCode: "" })
   const [shippingMsg, setShippingMsg] = useState<string | null>(null)
+  const [ebookLink, setEbookLink] = useState<string | null>(null)
 
   const [enrollErr, setEnrollErr] = useState<string | null>(null)
   const triedEnrollRef = useRef(false)
@@ -190,6 +191,8 @@ export default function OrderSuccessPage() {
     return () => { active = false }
   }, [id])
 
+  
+
   // ────────────────────────────────────────────────────────────────────────────
   // Auto-enroll เฉพาะเมื่อชำระเงินแล้ว
   // ────────────────────────────────────────────────────────────────────────────
@@ -236,11 +239,11 @@ export default function OrderSuccessPage() {
         const msg = json?.error || (text && text.slice(0, 300)) || `HTTP ${res.status}`
         throw new Error(msg)
       }
+      // แจ้งผลสำเร็จแบบย่อ ปิดป๊อปอัปอัตโนมัติ แล้วรีเฟรชคำสั่งซื้อ
       setUploadMsg("อัพโหลดสลิปสำเร็จ กำลังรอตรวจสอบ…")
-
-      const newOrder = await pollUntilPaid(order.id, 60_000)
-      setOrder(newOrder)
-      setUploadMsg("ตรวจสอบสลิปเสร็จสิ้น ระบบได้อนุมัติแล้ว")
+      setOpenUpload(false)
+      setFile(null)
+      await refreshOrder() // อัปเดตสถานะให้เห็นว่า "รอตรวจสอบสลิป"
     } catch (e: any) {
       setUploadMsg(e?.message ?? "อัพโหลดไม่สำเร็จ")
     } finally {
@@ -280,7 +283,7 @@ export default function OrderSuccessPage() {
   const paymentStatus = (order?.payment?.status || order?.status || "").toUpperCase()
   const courseId = order?.orderType === "COURSE" ? order?.course?.id : undefined
   const ebookFileUrl =
-    order?.orderType === "EBOOK" && order?.ebook && order.ebook.isPhysical !== true
+    order?.orderType === "EBOOK" && order?.ebook
       ? order.ebook.fileUrl || order.ebook.previewUrl || null
       : null
   const slipUrl = order?.payment?.slipUrl
@@ -290,6 +293,7 @@ export default function OrderSuccessPage() {
     if ((order as any)?.shipping) return true
     if ((order as any)?.shippingFee > 0) return true
     if (order.orderType === "EBOOK") return order.ebook?.isPhysical === true
+    if (order.orderType === "COURSE") return (order as any)?.course?.isPhysical === true
     return false
   }, [order])
 
@@ -311,8 +315,26 @@ export default function OrderSuccessPage() {
     isCompleted && order?.orderType === "COURSE" && courseId && isAuthenticated && !!getSafeUserId(user)
 
 
-    const API_BASE =
+  const API_BASE =
   (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/$/, "")
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const completed = isPaidLikeStatus(order?.status) || isPaidLikeStatus(order?.payment?.status)
+        if (!order || !completed || order.orderType !== 'EBOOK') return
+        if (ebookFileUrl) { setEbookLink(ebookFileUrl); return }
+        const eid = order.ebook?.id
+        if (!eid) return
+        const res = await fetch(`/api/ebooks/${encodeURIComponent(String(eid))}`, { cache: 'no-store' })
+        const json = await res.json().catch(() => ({} as any))
+        const link = json?.data?.previewUrl || null
+        if (!cancelled) setEbookLink(link)
+      } catch { }
+    })()
+    return () => { cancelled = true }
+  }, [order, ebookFileUrl])
 
   // ────────────────────────────────────────────────────────────────────────────
   // Render
@@ -468,7 +490,7 @@ export default function OrderSuccessPage() {
 
                     {isCompleted && order.orderType === "COURSE" && courseId && (
                       <>
-                        <Button onClick={() => router.push(`/courses/${courseId}`)} className="bg-yellow-400 hover:bg-yellow-500 text-white">
+                        <Button onClick={() => router.push(`/profile/my-courses/course/${courseId}`)} className="bg-yellow-400 hover:bg-yellow-500 text-white">
                           เข้าเรียน
                         </Button>
                         {canManualEnroll && (
@@ -489,13 +511,13 @@ export default function OrderSuccessPage() {
                       </>
                     )}
 
-                    {isCompleted && order.orderType === "EBOOK" && ebookFileUrl && (
+                    {isCompleted && order.orderType === "EBOOK" && (ebookFileUrl || ebookLink) && (
                       <>
                         <Button
                           className="bg-yellow-400 hover:bg-yellow-500 text-white"
                           onClick={() => {
                             const name = `${order.ebook?.title || "ebook"}.pdf`
-                            const url = `/api/proxy-view?url=${encodeURIComponent(ebookFileUrl)}&filename=${encodeURIComponent(name)}`
+                            const url = `/api/proxy-view?url=${encodeURIComponent(ebookFileUrl || ebookLink || "")}&filename=${encodeURIComponent(name)}`
                             window.open(url, "_blank")
                           }}
                         >
@@ -505,7 +527,7 @@ export default function OrderSuccessPage() {
                           variant="outline"
                           onClick={() => {
                             const name = `${order.ebook?.title || "ebook"}.pdf`
-                            const url = `/api/proxy-download?url=${encodeURIComponent(ebookFileUrl)}&filename=${encodeURIComponent(name)}`
+                            const url = `/api/proxy-download?url=${encodeURIComponent(ebookFileUrl || ebookLink || "")}&filename=${encodeURIComponent(name)}`
                             window.open(url, "_blank")
                           }}
                         >
