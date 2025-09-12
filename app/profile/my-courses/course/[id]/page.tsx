@@ -720,7 +720,7 @@ export default function CourseDetailPage() {
                       .map((c) => (
                         <Card
                           key={c.id}
-                          className="cursor-pointer hover:shadow-md transition-shadow bg-gray-50 border-gray-200 hover:border-yellow-300"
+                          className="cursor-pointer hover:shadow-md transition-shadow bg-gray-50 border-gray-200 hover:border-yellow-300 py-0"
                           onClick={() => handleSelectContent(c)}
                         >
                           <CardContent className="p-3">

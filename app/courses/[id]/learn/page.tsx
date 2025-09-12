@@ -218,7 +218,7 @@ export default function PhysicsCoursePage() {
                                 </CardContent>
                             </Card>
 
-                            {/* Related Videos */}
+                            
                             <Card className="bg-white border-gray-200">
                                 <CardContent className="p-6">
                                     <h4 className="font-semibold text-gray-800 mb-4">วิดีโออื่นๆ ใน Chapter {selectedChapter}</h4>

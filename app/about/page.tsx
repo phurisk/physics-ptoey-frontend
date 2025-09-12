@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, Award, Users, BookOpen, Target } from "lucide-react"
 import { useEffect, useState } from "react"
 import Image from "next/image"
-import AcademicTeam from "@/components/sections/academic-team"
 
 const teachingEnvironmentImages = [
   {
