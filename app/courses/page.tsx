@@ -6,6 +6,8 @@ import Image from "next/image"
 import Link from "next/link"
 import { Star, Users, BookOpen, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { GraduationCap, BookOpen as BookIcon } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -43,6 +45,7 @@ type ApiCourse = {
   instructor?: { id: string; name: string; email: string }
   category?: { id: string; name: string; description?: string }
   _count?: { enrollments: number; chapters: number }
+  subject?: string | null
 }
 
 type ApiResponse = {
@@ -53,7 +56,8 @@ type ApiResponse = {
 const COURSES_API = "/api/courses"
 
 export default function CoursesPage() {
-  const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [selectedLevel, setSelectedLevel] = useState<string>("all")
+  const [selectedSubject, setSelectedSubject] = useState<string>("all")
   const [data, setData] = useState<ApiCourse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -81,35 +85,54 @@ export default function CoursesPage() {
   }, [])
 
   useEffect(() => {
-    const spCategory = searchParams?.get("category")
-    if (!spCategory) return
-    const names = Array.from(
-      new Set(
-        (data || [])
-          .map((c) => c.category?.name)
-          .filter((v): v is string => typeof v === "string" && v.length > 0)
-      )
-    )
-    if (spCategory === "all" || names.includes(spCategory)) {
-      setSelectedCategory(spCategory)
-    }
+    void searchParams; void data
   }, [data, searchParams])
 
-  const categories = useMemo(() => {
-    const names = Array.from(
-      new Set(
-        (data || [])
-          .map((c) => c.category?.name)
-          .filter((v): v is string => typeof v === "string" && v.length > 0)
-      )
-    )
-    return [{ id: "all", name: "คอร์สทั้งหมด" }, ...names.map((n) => ({ id: n, name: n }))]
-  }, [data])
+  const levels = useMemo(() => (
+    [
+      { id: "all", name: "ทุกระดับ" },
+      { id: "middle", name: "คอร์ส ม.ต้น" },
+      { id: "high", name: "คอร์ส ม.ปลาย" },
+      { id: "competition", name: "คอร์สแข่งขัน" },
+    ]
+  ), [])
+
+  const subjects = useMemo(() => (
+    [
+      { id: "all", name: "ทุกวิชา" },
+      { id: "ฟิสิกส์", name: "ฟิสิกส์" },
+      { id: "คณิตศาสตร์", name: "คณิตศาสตร์" },
+      { id: "เคมี", name: "เคมี" },
+      { id: "ชีววิทยา", name: "ชีววิทยา" },
+      { id: "ภาษาอังกฤษ", name: "ภาษาอังกฤษ" },
+      { id: "ภาษาจีน", name: "ภาษาจีน" },
+    ]
+  ), [])
+
+  const detectLevel = (c: ApiCourse): string | null => {
+    const text = `${c.category?.name || ""} ${c.title || ""}`
+    if (/แข่งขัน/.test(text)) return "competition"
+    if (/ม\.ปลาย|ม\s*ปลาย/.test(text)) return "high"
+    if (/ม\.ต้น|ม\s*ต้น/.test(text)) return "middle"
+    return null
+  }
+
+  const detectSubject = (c: ApiCourse): string | null => {
+    if (c.subject && typeof c.subject === "string" && c.subject.trim()) return c.subject.trim()
+    const t = `${c.title || ""} ${c.description || ""}`
+    const list = ["ฟิสิกส์","คณิตศาสตร์","เคมี","ชีววิทยา","ภาษาอังกฤษ","ภาษาจีน"]
+    for (const s of list) {
+      if (t.includes(s)) return s
+    }
+    return null
+  }
 
   const filteredCourses = useMemo(() => {
-    if (selectedCategory === "all") return data
-    return (data || []).filter((c) => c.category?.name === selectedCategory)
-  }, [data, selectedCategory])
+    let list = data || []
+    if (selectedLevel !== "all") list = list.filter((c) => detectLevel(c) === selectedLevel)
+    if (selectedSubject !== "all") list = list.filter((c) => detectSubject(c) === selectedSubject)
+    return list
+  }, [data, selectedLevel, selectedSubject])
 
   return (
     <>
@@ -130,26 +153,68 @@ export default function CoursesPage() {
           </motion.div>
 
       
-          <motion.div
-            className="flex flex-wrap justify-center gap-4 mb-12"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            {categories.map((category) => (
-              <Button
-                key={category.id}
-                variant={selectedCategory === category.id ? "default" : "outline"}
-                className={`px-6 py-2 ${
-                  selectedCategory === category.id
-                    ? "bg-yellow-400 hover:bg-yellow-500 text-white"
-                    : "hover:bg-yellow-50 hover:border-yellow-400"
-                }`}
-                onClick={() => setSelectedCategory(category.id)}
-              >
-                {category.name}
-              </Button>
-            ))}
+          {/* Removed category filter as requested */}
+
+          <motion.div className="mb-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}>
+            <div className="flex items-center justify-center gap-2 text-gray-800 mb-3">
+              <GraduationCap className="h-5 w-5 text-yellow-600" />
+              <span className="font-semibold">เลือกระดับ</span>
+            </div>
+            <div className="hidden md:flex flex-wrap justify-center gap-3">
+              {levels.map((l) => (
+                <Button
+                  key={l.id}
+                  variant={selectedLevel === l.id ? "default" : "outline"}
+                  className={`px-5 py-2 ${selectedLevel === l.id ? "bg-yellow-400 hover:bg-yellow-500 text-white" : "hover:bg-yellow-50 hover:border-yellow-400"}`}
+                  onClick={() => setSelectedLevel(l.id)}
+                >
+                  {l.name}
+                </Button>
+              ))}
+            </div>
+            <div className="md:hidden max-w-xs mx-auto">
+              <Select value={selectedLevel} onValueChange={setSelectedLevel}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="เลือกระดับ" />
+                </SelectTrigger>
+                <SelectContent>
+                  {levels.map((l) => (
+                    <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </motion.div>
+
+          <motion.div className="mb-8" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.25 }}>
+            <div className="flex items-center justify-center gap-2 text-gray-800 mb-3">
+              <BookIcon className="h-5 w-5 text-yellow-600" />
+              <span className="font-semibold">เลือกวิชา</span>
+            </div>
+            <div className="hidden md:flex flex-wrap justify-center gap-2">
+              {subjects.map((s) => (
+                <Button
+                  key={s.id}
+                  variant={selectedSubject === s.id ? "default" : "outline"}
+                  className={`px-4 py-1.5 text-sm ${selectedSubject === s.id ? "bg-yellow-400 hover:bg-yellow-500 text-white" : "hover:bg-yellow-50 hover:border-yellow-400"}`}
+                  onClick={() => setSelectedSubject(s.id)}
+                >
+                  {s.name}
+                </Button>
+              ))}
+            </div>
+            <div className="md:hidden max-w-xs mx-auto">
+              <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="เลือกวิชา" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subjects.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </motion.div>
 
        

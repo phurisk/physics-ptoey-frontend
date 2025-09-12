@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Menu, X } from "lucide-react"
+import { Menu, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import LoginModal from "@/components/login-modal"
 import { useAuth } from "@/components/auth-provider"
@@ -23,7 +23,8 @@ export function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const pathname = usePathname() 
-  const { isAuthenticated, user, logout } = useAuth()
+  const { isAuthenticated, user, logout, loading } = useAuth()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -92,7 +93,14 @@ export function Navigation() {
                 </Link>
               ))}
 
-              {!isAuthenticated ? (
+              {loading || isLoggingOut ? (
+                <Button
+                  disabled
+                  className="ml-5 px-4 py-6 bg-gray-200 text-gray-600 rounded-lg text-base font-semibold cursor-not-allowed"
+                >
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isLoggingOut ? 'กำลังออกจากระบบ…' : 'กำลังเข้าสู่ระบบ…'}
+                </Button>
+              ) : !isAuthenticated ? (
                 <Button
                   onClick={handleLoginClick}
                   className="ml-5 px-4 py-6 bg-[linear-gradient(180deg,#4eb5ed_0%,#01579b)] hover:bg-[linear-gradient(180deg,#01579b,#00acc1)] text-white rounded-lg text-base font-bold transition-colors duration-200 cursor-pointer"
@@ -120,16 +128,21 @@ export function Navigation() {
                     <Link href="/profile">
                       <DropdownMenuItem>โปรไฟล์</DropdownMenuItem>
                     </Link>
-                    <DropdownMenuItem
-                      onClick={async () => {
-                        try {
-                          await logout()
-                        } catch {}
-                      }}
-                      variant="destructive"
-                    >
-                      ออกจากระบบ
-                    </DropdownMenuItem>
+                    {isLoggingOut ? (
+                      <DropdownMenuItem disabled>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> กำลังออกจากระบบ…
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem
+                        onClick={async () => {
+                          try { setIsLoggingOut(true); await logout() } catch {}
+                          finally { setIsLoggingOut(false) }
+                        }}
+                        variant="destructive"
+                      >
+                        ออกจากระบบ
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
@@ -169,7 +182,11 @@ export function Navigation() {
                     </Link>
                   ))}
 
-                  {!isAuthenticated ? (
+                  {loading || isLoggingOut ? (
+                    <Button disabled className="block w-full text-left px-3 py-0 rounded-md text-base font-medium bg-gray-200 text-gray-600">
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isLoggingOut ? 'กำลังออกจากระบบ…' : 'กำลังเข้าสู่ระบบ…'}
+                    </Button>
+                  ) : !isAuthenticated ? (
                     <Button
                       onClick={handleLoginClick}
                       className="block w-full text-left px-3 py-0 rounded-md text-base font-medium bg-[linear-gradient(180deg,#4eb5ed_0%,#01579b)] text-white"
@@ -197,13 +214,14 @@ export function Navigation() {
                       </Link>
                       <Button
                         onClick={async () => {
-                          try { await logout() } catch {}
-                          setIsOpen(false)
+                          try { setIsLoggingOut(true); await logout() } catch {}
+                          finally { setIsLoggingOut(false); setIsOpen(false) }
                         }}
                         variant="outline"
                         className="block w-full text-left"
+                        disabled={isLoggingOut}
                       >
-                        ออกจากระบบ
+                        {isLoggingOut ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> กำลังออกจากระบบ…</>) : 'ออกจากระบบ'}
                       </Button>
                     </div>
                   )}

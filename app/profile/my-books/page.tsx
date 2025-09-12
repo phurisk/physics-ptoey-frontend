@@ -24,6 +24,7 @@ export default function MyBooksPage() {
   const [error, setError] = useState<string | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
   const [links, setLinks] = useState<Record<string, string>>({})
+  const [linksLoading, setLinksLoading] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
 
   useEffect(() => {
@@ -51,8 +52,9 @@ export default function MyBooksPage() {
     const loadLinks = async () => {
       const paid = orders.filter((o) => o.orderType === 'EBOOK' && String(o.status).toUpperCase() === 'COMPLETED')
       const missing = paid.filter((o) => !links[o.id])
-      if (!missing.length) return
+      if (!missing.length) { setLinksLoading(false); return }
       try {
+        setLinksLoading(true)
         const results = await Promise.all(missing.map(async (o) => {
           try {
             const res = await fetch(`/api/orders/${encodeURIComponent(o.id)}`, { cache: 'no-store' })
@@ -67,6 +69,9 @@ export default function MyBooksPage() {
           setLinks(next)
         }
       } catch {}
+      finally {
+        if (!cancelled) setLinksLoading(false)
+      }
     }
     if (orders.length) loadLinks()
     return () => { cancelled = true }
@@ -92,7 +97,7 @@ export default function MyBooksPage() {
         </div>
       ) : (
         <>
-          {loading && (
+          {(loading || linksLoading) && (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {Array.from({ length: 3 }).map((_, i) => (
                 <Card key={`sk-${i}`} className="overflow-hidden">
@@ -115,12 +120,14 @@ export default function MyBooksPage() {
             <div className="text-gray-600">ยังไม่มี eBook ที่ชำระเงินแล้ว</div>
           )}
 
-          {!loading && !error && paidEbooks.length > 0 && (
+          {!loading && !linksLoading && !error && paidEbooks.length > 0 && (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {paidEbooks.map((o) => {
                 const title = o.ebook?.title || "eBook"
                 const cover = o.ebook?.coverImageUrl || "/placeholder.svg"
-                const fileUrl = links[o.id] || (o.ebook as any)?.fileUrl || (o.ebook as any)?.previewUrl || null
+                const inlineFile = (o.ebook as any)?.fileUrl || (o.ebook as any)?.previewUrl || null
+                const fileUrl = links[o.id] || inlineFile || null
+                const resolved = Object.prototype.hasOwnProperty.call(links, o.id) || !!inlineFile
                 const filename = `${title}.pdf`
                 return (
                   <Card key={o.id} className="overflow-hidden">
@@ -132,7 +139,12 @@ export default function MyBooksPage() {
                         <div className="font-semibold text-gray-900 line-clamp-2">{title}</div>
                         <div className="text-sm text-gray-600">{o.ebook?.author || "ไม่ระบุผู้เขียน"}</div>
                         <div className="flex gap-2">
-                          {fileUrl ? (
+                          {!resolved ? (
+                            <>
+                              <Button disabled className="bg-gray-200 text-gray-500">กำลังโหลด…</Button>
+                              <Button disabled variant="outline">กำลังโหลด…</Button>
+                            </>
+                          ) : fileUrl ? (
                             <>
                               <Button
                                 onClick={() => {
