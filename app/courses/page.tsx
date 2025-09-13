@@ -118,11 +118,48 @@ export default function CoursesPage() {
   }
 
   const detectSubject = (c: ApiCourse): string | null => {
-    if (c.subject && typeof c.subject === "string" && c.subject.trim()) return c.subject.trim()
+    const normalize = (s?: string | null): string | null => {
+      if (!s || typeof s !== "string") return null
+      const raw = s.trim()
+      if (!raw) return null
+      const key = raw.toLowerCase()
+      const enToTh: Record<string, string> = {
+        physics: "ฟิสิกส์",
+        physic: "ฟิสิกส์",
+        mathematics: "คณิตศาสตร์",
+        maths: "คณิตศาสตร์",
+        math: "คณิตศาสตร์",
+        chemistry: "เคมี",
+        chem: "เคมี",
+        biology: "ชีววิทยา",
+        bio: "ชีววิทยา",
+        english: "ภาษาอังกฤษ",
+        chinese: "ภาษาจีน",
+        mandarin: "ภาษาจีน",
+      }
+      if (enToTh[key]) return enToTh[key]
+      const thai = ["ฟิสิกส์", "คณิตศาสตร์", "เคมี", "ชีววิทยา", "ภาษาอังกฤษ", "ภาษาจีน"]
+      if (thai.includes(raw)) return raw
+      return null
+    }
+
+  
+    const byField = normalize(c.subject)
+    if (byField) return byField
+
+
     const t = `${c.title || ""} ${c.description || ""}`
-    const list = ["ฟิสิกส์","คณิตศาสตร์","เคมี","ชีววิทยา","ภาษาอังกฤษ","ภาษาจีน"]
-    for (const s of list) {
-      if (t.includes(s)) return s
+    const tLower = t.toLowerCase()
+    const candidates: Array<{ kw: string[]; th: string }> = [
+      { kw: ["ฟิสิกส์", "physics", "physic"], th: "ฟิสิกส์" },
+      { kw: ["คณิตศาสตร์", "mathematics", "maths", "math"], th: "คณิตศาสตร์" },
+      { kw: ["เคมี", "chemistry", "chem"], th: "เคมี" },
+      { kw: ["ชีววิทยา", "biology", "bio"], th: "ชีววิทยา" },
+      { kw: ["ภาษาอังกฤษ", "english"], th: "ภาษาอังกฤษ" },
+      { kw: ["ภาษาจีน", "chinese", "mandarin"], th: "ภาษาจีน" },
+    ]
+    for (const cnd of candidates) {
+      if (cnd.kw.some((k) => t.includes(k) || tLower.includes(k.toLowerCase()))) return cnd.th
     }
     return null
   }

@@ -33,6 +33,20 @@ function Skeleton({ className = "" }: { className?: string }) {
   )
 }
 
+// Helpers to build safe embed URLs for known providers
+function getYouTubeEmbedUrl(url: string) {
+  const id = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\n?#]+)/)?.[1]
+  return id ? `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1` : null
+}
+function getVimeoEmbedUrl(url: string) {
+  const id = url.match(/(?:vimeo\.com|player\.vimeo\.com)\/(?:video\/)?(\d+)/)?.[1]
+  return id ? `https://player.vimeo.com/video/${id}?dnt=1&title=0&byline=0&portrait=0` : null
+}
+function getEmbedSrc(url?: string | null) {
+  if (!url) return null
+  return getYouTubeEmbedUrl(url) || getVimeoEmbedUrl(url)
+}
+
 
 type ApiCourse = {
   id: string
@@ -191,6 +205,9 @@ export default function CourseDetailPage() {
   // ---------- Accordion state for chapters ----------
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null)
 
+  // Intro video source (from chapter named "แนะนำคอร์ส")
+  const [introSrc, setIntroSrc] = useState<string | null>(null)
+
   // Set default expanded chapter to the first (after sort) once chapters are loaded
   useEffect(() => {
     if (chapters.length) {
@@ -240,6 +257,34 @@ export default function CourseDetailPage() {
       active = false
     }
   }, [id])
+
+  // Try to resolve intro video (chapter title contains "แนะนำคอร์ส") when possible.
+  // For privacy, public course API doesn't expose contentUrl. If the user is
+  // authenticated (and typically enrolled), fetch via my-courses endpoint to get contentUrl.
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      try {
+        if (!id || !chapters.length || !isAuthenticated || !user?.id) return
+        const introChapter = chapters.find((ch) => /แนะนำคอร์ส/.test(ch.title || ""))
+        if (!introChapter) return
+        const res = await fetch(`/api/my-courses/course/${encodeURIComponent(String(id))}?userId=${encodeURIComponent(user.id)}`, { cache: "no-store" })
+        const json: any = await res.json().catch(() => ({}))
+        const chs: any[] = Array.isArray(json?.course?.chapters) ? json.course.chapters
+          : Array.isArray(json?.data?.chapters) ? json.data.chapters
+          : []
+        const matchChapter = chs.find((c) => String(c?.id) === String(introChapter.id) || (c?.title && c.title === introChapter.title))
+        const contents: any[] = Array.isArray(matchChapter?.contents) ? matchChapter.contents : []
+        const firstVideo = contents.find((c) => (c?.contentType || "").toUpperCase() === "VIDEO" && c?.contentUrl)
+        const src = getEmbedSrc(firstVideo?.contentUrl || null)
+        if (!cancelled) setIntroSrc(src || null)
+      } catch {
+        if (!cancelled) setIntroSrc(null)
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [id, chapters, isAuthenticated, user?.id])
 
   // load enrollment flag
   useEffect(() => {
@@ -698,22 +743,35 @@ export default function CourseDetailPage() {
               <section className="lg:col-span-2 space-y-8 order-1 lg:order-1">
                 <motion.div variants={fadeInUp} initial="initial" animate="animate">
                   <div className="group relative aspect-video overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-lg mb-6">
-                    <Image
-                      src={course.coverImageUrl || "/placeholder.svg?height=400&width=700"}
-                      alt={course.title}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/25 to-transparent" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Button
-                        size="lg"
-                        className="bg-yellow-400 hover:bg-yellow-500 text-white shadow-lg hover:shadow-xl rounded-xl px-6 py-6 ring-1 ring-white/20 transition-all"
-                      >
-                        <Play className="h-6 w-6 mr-2" />
-                        ดูตัวอย่าง
-                      </Button>
-                    </div>
+                    {introSrc ? (
+                      <iframe
+                        src={introSrc}
+                        className="w-full h-full"
+                        allowFullScreen
+                        referrerPolicy="no-referrer"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        title={`${course.title} - แนะนำคอร์ส`}
+                      />
+                    ) : (
+                      <>
+                        <Image
+                          src={course.coverImageUrl || "/placeholder.svg?height=400&width=700"}
+                          alt={course.title}
+                          fill
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/25 to-transparent" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Button
+                            size="lg"
+                            className="bg-yellow-400 hover:bg-yellow-500 text-white shadow-lg hover:shadow-xl rounded-xl px-6 py-6 ring-1 ring-white/20 transition-all"
+                          >
+                            <Play className="h-6 w-6 mr-2" />
+                            ดูตัวอย่าง
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 mb-4">

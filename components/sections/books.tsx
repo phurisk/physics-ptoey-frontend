@@ -24,6 +24,8 @@ type Ebook = {
   coverImageUrl?: string | null
   averageRating?: number
   isPhysical?: boolean
+  isActive?: boolean
+  isFeatured?: boolean
 }
 
 export default function Books() {
@@ -68,7 +70,9 @@ export default function Books() {
         if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`)
         const json = res.data
         if (!cancelled) {
-          setEbooks(Array.isArray(json?.data) ? json.data : [])
+          const list: Ebook[] = Array.isArray(json?.data) ? json.data : []
+          const featuredActive = list.filter((b) => b?.isActive === true && b?.isFeatured === true)
+          setEbooks(featuredActive)
         }
       } catch (e: any) {
         if (!cancelled) {

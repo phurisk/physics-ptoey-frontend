@@ -5,15 +5,20 @@ import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Users, BookOpen, Clock } from "lucide-react"
 
 type Post = { id: string; title?: string; content?: string | null }
 type Course = {
   id: string
   title: string
+  description?: string | null
   coverImageUrl?: string | null
   category?: { name?: string | null }
   price?: number
   isFree?: boolean
+  duration?: string | number | null
+  _count?: { enrollments?: number; chapters?: number }
 }
 
 function getYouTubeEmbed(url: string) {
@@ -243,38 +248,46 @@ export default function MiddleCoursesPage() {
           </div>
         ) : courses.length ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {courses.slice(0, 3).map((c) => (
-              <Card
-                key={c.id}
-                className="overflow-hidden group border-2 border-gray-100 hover:border-yellow-500/50 transition-all duration-300 hover:shadow-2xl"
-              >
+            {courses.slice(0, 3).map((course) => (
+              <Card key={course.id} className="h-full hover:shadow-xl transition-shadow duration-300 group pt-0">
                 <CardContent className="p-0">
-                  <div className="aspect-video relative bg-white overflow-hidden">
+                  <div className="aspect-video relative overflow-hidden rounded-t-lg">
                     <Image
-                      src={c.coverImageUrl || "/placeholder.svg"}
-                      alt={c.title}
+                      src={course.coverImageUrl || "/placeholder.svg?height=200&width=350"}
+                      alt={course.title}
                       fill
-                      className="object-cover group-hover:scale-110 transition-transform duration-500"
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="absolute top-4 left-4">
+                      <Badge className="bg-yellow-400 text-white">{course.category?.name ?? "คอร์ส"}</Badge>
+                    </div>
                   </div>
-                  <div className="p-6 space-y-4 bg-white">
-                    <div className="font-bold text-gray-900 line-clamp-2 text-lg leading-tight">{c.title}</div>
-                    <div className="flex items-center gap-2">
-                      {c.isFree ? (
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-700">
-                          ฟรี
-                        </span>
+                  <div className="p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2 text-balance line-clamp-2">{course.title}</h3>
+                    <p className="text-gray-600 mb-4 text-pretty line-clamp-2">{course.description}</p>
+                    <div className="flex items-center gap-4 mb-4 text-sm text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <Users className="h-4 w-4" />
+                        <span>{course._count?.enrollments ?? 0}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <BookOpen className="h-4 w-4" />
+                        <span>{course._count?.chapters ?? 0} บทเรียน</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        <span>{(course as any)?.duration ?? "-"}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mb-6">
+                      {course.isFree || course.price === 0 ? (
+                        <span className="text-2xl font-bold text-green-600">ฟรี</span>
                       ) : (
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-yellow-100 text-yellow-700">
-                          ฿{Number(c.price || 0).toLocaleString()}
-                        </span>
+                        <span className="text-2xl font-bold text-yellow-600">฿{(course.price || 0).toLocaleString()}</span>
                       )}
                     </div>
-                    <Link href={`/courses/${encodeURIComponent(c.id)}`}>
-                      <Button className="bg-yellow-500 hover:bg-yellow-600 text-white w-full font-semibold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5">
-                        ดูรายละเอียด
-                      </Button>
+                    <Link href={`/courses/${course.id}`}>
+                      <Button className="w-full bg-yellow-400 hover:bg-yellow-500 text-white">ดูรายละเอียด</Button>
                     </Link>
                   </div>
                 </CardContent>

@@ -110,10 +110,6 @@ export default function ExamViewer({ params }: { params: Promise<{ id: string }>
                   )}
                 </CardContent>
               </Card>
-
-              <div className="flex items-center gap-3">
-                <Button onClick={handleDownload} className="cursor-pointer"><Download className="h-4 w-4 mr-2" /> ดาวน์โหลด</Button>
-              </div>
             </div>
           )}
         </div>
