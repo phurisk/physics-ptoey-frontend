@@ -39,6 +39,7 @@ export default function Books() {
   const [uploadOpen, setUploadOpen] = useState(false)
   const [orderInfo, setOrderInfo] = useState<{ orderId: string; total: number } | null>(null)
   const [slip, setSlip] = useState<File | null>(null)
+  const [slipPreview, setSlipPreview] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState<string | null>(null)
   const [ownedOpen, setOwnedOpen] = useState(false)
@@ -207,6 +208,22 @@ export default function Books() {
       setUploading(false)
     }
   }
+
+  // Build/cleanup preview for selected slip
+  useEffect(() => {
+    if (!slip) {
+      if (slipPreview) {
+        try { URL.revokeObjectURL(slipPreview) } catch {}
+      }
+      setSlipPreview(null)
+      return
+    }
+    const url = URL.createObjectURL(slip)
+    setSlipPreview(url)
+    return () => {
+      try { URL.revokeObjectURL(url) } catch {}
+    }
+  }, [slip])
 
   return (
     <>
@@ -464,6 +481,14 @@ export default function Books() {
         <div className="space-y-3">
           <div className="text-sm text-gray-700">ยอดชำระ: ฿{(orderInfo?.total ?? 0).toLocaleString()}</div>
           <Input type="file" accept="image/*" onChange={(e) => setSlip(e.target.files?.[0] || null)} />
+          {slipPreview && (
+            <div className="mt-2">
+              <div className="text-xs text-gray-600 mb-1">ตัวอย่างรูปที่เลือก</div>
+              <div className="relative border rounded-md overflow-hidden bg-gray-50">
+                <img src={slipPreview} alt="ตัวอย่างสลิป" className="max-h-72 w-full object-contain" />
+              </div>
+            </div>
+          )}
           {uploadMsg && <div className={uploadMsg.includes("สำเร็จ") ? "text-green-600" : "text-red-600"}>{uploadMsg}</div>}
           <div className="flex justify-end gap-2">
             {orderInfo && (

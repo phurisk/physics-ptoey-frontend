@@ -185,6 +185,7 @@ export default function CourseDetailPage() {
   const [slip, setSlip] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState<string | null>(null)
+  const [slipPreview, setSlipPreview] = useState<string | null>(null)
 
   // ---------- Reviews state ----------
   const [reviews, setReviews] = useState<ApiReview[]>([])
@@ -478,6 +479,22 @@ export default function CourseDetailPage() {
       setUploading(false)
     }
   }
+
+  // Build/cleanup preview for selected slip
+  useEffect(() => {
+    if (!slip) {
+      if (slipPreview) {
+        try { URL.revokeObjectURL(slipPreview) } catch {}
+      }
+      setSlipPreview(null)
+      return
+    }
+    const url = URL.createObjectURL(slip)
+    setSlipPreview(url)
+    return () => {
+      try { URL.revokeObjectURL(url) } catch {}
+    }
+  }, [slip])
 
 
   useEffect(() => {
@@ -1288,6 +1305,14 @@ export default function CourseDetailPage() {
               onChange={(e) => setSlip(e.target.files?.[0] || null)}
               className="h-10"
             />
+            {slipPreview && (
+              <div className="mt-2">
+                <div className="text-xs text-gray-600 mb-1">ตัวอย่างรูปที่เลือก</div>
+                <div className="relative border rounded-md overflow-hidden bg-gray-50">
+                  <img src={slipPreview} alt="ตัวอย่างสลิป" className="max-h-72 w-full object-contain" />
+                </div>
+              </div>
+            )}
             {uploadMsg && (
               <div className={uploadMsg.includes("สำเร็จ") ? "text-green-600" : "text-red-600"}>
                 {uploadMsg}

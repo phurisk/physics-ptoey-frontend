@@ -64,6 +64,7 @@ export default function OrderSuccessPage() {
 
   const [openUpload, setOpenUpload] = useState(false)
   const [file, setFile] = useState<File | null>(null)
+  const [filePreview, setFilePreview] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState<string | null>(null)
   const [editingShipping, setEditingShipping] = useState(false)
@@ -250,6 +251,22 @@ export default function OrderSuccessPage() {
       setUploading(false)
     }
   }
+
+  // Build preview image when user picks a file
+  useEffect(() => {
+    if (!file) {
+      if (filePreview) {
+        try { URL.revokeObjectURL(filePreview) } catch {}
+      }
+      setFilePreview(null)
+      return
+    }
+    const url = URL.createObjectURL(file)
+    setFilePreview(url)
+    return () => {
+      try { URL.revokeObjectURL(url) } catch {}
+    }
+  }, [file])
 
   const refreshOrder = async () => {
     if (!order?.id) return
@@ -643,6 +660,14 @@ export default function OrderSuccessPage() {
               </DialogHeader>
               <div className="space-y-3">
                 <Input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                {filePreview && (
+                  <div className="mt-2">
+                    <div className="text-xs text-gray-600 mb-1">ตัวอย่างรูปที่เลือก</div>
+                    <div className="relative border rounded-md overflow-hidden bg-gray-50">
+                      <img src={filePreview} alt="ตัวอย่างสลิป" className="max-h-72 w-full object-contain" />
+                    </div>
+                  </div>
+                )}
                 {uploadMsg && (
                   <div aria-live="polite" className={uploadMsg.includes("สำเร็จ") || uploadMsg.includes("อนุมัติ") ? "text-green-600" : "text-red-600"}>
                     {uploadMsg}

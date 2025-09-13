@@ -114,7 +114,7 @@ export default function LiveSchedulePage() {
         </div>
 
         <div className="mb-12">
-          <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+          <div className="bg-white rounded-2xl shadow-lg p-0 border border-gray-100">
 
             <div className="aspect-video bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl overflow-hidden relative group">
               {loadingVideo && (
