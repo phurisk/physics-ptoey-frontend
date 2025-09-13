@@ -33,7 +33,7 @@ function Skeleton({ className = "" }: { className?: string }) {
   )
 }
 
-// Helpers to build safe embed URLs for known providers
+
 function getYouTubeEmbedUrl(url: string) {
   const id = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\n?#]+)/)?.[1]
   return id ? `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1` : null
@@ -53,7 +53,9 @@ type ApiCourse = {
   title: string
   description: string
   price: number
+  discountPrice?: number | null
   duration: string | null
+  sampleVideo?: string | null
   isFree: boolean
   status: string
   instructorId: string
@@ -203,13 +205,13 @@ export default function CourseDetailPage() {
   // -----------------------------------
   const [reviewsStats, setReviewsStats] = useState<{ totalReviews?: number; averageRating?: number } | null>(null)
 
-  // ---------- Accordion state for chapters ----------
+
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null)
 
-  // Intro video source (from chapter named "แนะนำคอร์ส")
+  // Intro video source 
   const [introSrc, setIntroSrc] = useState<string | null>(null)
 
-  // Set default expanded chapter to the first (after sort) once chapters are loaded
+
   useEffect(() => {
     if (chapters.length) {
       const first = chapters
@@ -219,7 +221,7 @@ export default function CourseDetailPage() {
     } else {
       setActiveChapterId(null)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+ 
   }, [chapters.length])
   // ---------------------------------------------------
 
@@ -259,33 +261,11 @@ export default function CourseDetailPage() {
     }
   }, [id])
 
-  // Try to resolve intro video (chapter title contains "แนะนำคอร์ส") when possible.
-  // For privacy, public course API doesn't expose contentUrl. If the user is
-  // authenticated (and typically enrolled), fetch via my-courses endpoint to get contentUrl.
+  // Resolve intro video from course.sampleVideo (public field)
   useEffect(() => {
-    let cancelled = false
-    const run = async () => {
-      try {
-        if (!id || !chapters.length || !isAuthenticated || !user?.id) return
-        const introChapter = chapters.find((ch) => /แนะนำคอร์ส/.test(ch.title || ""))
-        if (!introChapter) return
-        const res = await fetch(`/api/my-courses/course/${encodeURIComponent(String(id))}?userId=${encodeURIComponent(user.id)}`, { cache: "no-store" })
-        const json: any = await res.json().catch(() => ({}))
-        const chs: any[] = Array.isArray(json?.course?.chapters) ? json.course.chapters
-          : Array.isArray(json?.data?.chapters) ? json.data.chapters
-          : []
-        const matchChapter = chs.find((c) => String(c?.id) === String(introChapter.id) || (c?.title && c.title === introChapter.title))
-        const contents: any[] = Array.isArray(matchChapter?.contents) ? matchChapter.contents : []
-        const firstVideo = contents.find((c) => (c?.contentType || "").toUpperCase() === "VIDEO" && c?.contentUrl)
-        const src = getEmbedSrc(firstVideo?.contentUrl || null)
-        if (!cancelled) setIntroSrc(src || null)
-      } catch {
-        if (!cancelled) setIntroSrc(null)
-      }
-    }
-    run()
-    return () => { cancelled = true }
-  }, [id, chapters, isAuthenticated, user?.id])
+    const src = getEmbedSrc(course?.sampleVideo || null)
+    setIntroSrc(src)
+  }, [course?.sampleVideo])
 
   // load enrollment flag
   useEffect(() => {
@@ -422,8 +402,13 @@ export default function CourseDetailPage() {
     return m > 0 ? `${h} ชม. ${m} นาที` : `${h} ชม.`
   }
 
-  const price = course?.isFree || (course?.price ?? 0) === 0 ? 0 : (course?.price ?? 0)
-  const finalTotal = Math.max(0, (price || 0) - (discount || 0))
+  const originalPrice = course?.price ?? 0
+  const discountedPrice = course?.discountPrice ?? null
+  const effectivePrice = (course?.isFree || originalPrice === 0)
+    ? 0
+    : (discountedPrice != null ? discountedPrice : originalPrice)
+  const hasDiscount = !course?.isFree && discountedPrice != null && discountedPrice < originalPrice
+  const finalTotal = Math.max(0, (effectivePrice || 0) - (discount || 0))
 
   const applyCoupon = async () => {
     if (!course) return
@@ -439,7 +424,7 @@ export default function CourseDetailPage() {
           userId: user?.id ?? "guest",
           itemType: "course",
           itemId: course.id,
-          subtotal: price,
+          subtotal: effectivePrice,
         }),
       })
       const json = await res.json().catch(() => ({}))
@@ -1025,13 +1010,22 @@ export default function CourseDetailPage() {
                     <CardContent className="p-6">
                       <div className="text-center mb-6">
                         <div className="flex items-center justify-center gap-2 mb-1">
-                          {price === 0 ? (
+                          {effectivePrice === 0 ? (
                             <span className="text-3xl font-extrabold text-green-600 tracking-tight">
                               ฟรี
                             </span>
+                          ) : hasDiscount ? (
+                            <div className="flex items-end gap-3">
+                              <span className="text-xl text-gray-400 line-through">
+                                ฿{(originalPrice || 0).toLocaleString()}
+                              </span>
+                              <span className="text-3xl font-extrabold text-yellow-600 tracking-tight">
+                                ฿{(effectivePrice || 0).toLocaleString()} บาท
+                              </span>
+                            </div>
                           ) : (
                             <span className="text-3xl font-extrabold text-yellow-600 tracking-tight">
-                              ฿{(price || 0).toLocaleString()} บาท
+                              ฿{(effectivePrice || 0).toLocaleString()} บาท
                             </span>
                           )}
                         </div>
@@ -1060,7 +1054,7 @@ export default function CourseDetailPage() {
                           </span>
                         </div>
 
-                        {price > 0 && (
+                        {effectivePrice > 0 && (
                           <div className="space-y-2 pt-2">
                             <div className="text-sm font-medium">คูปองส่วนลด</div>
                             <div className="flex gap-2">

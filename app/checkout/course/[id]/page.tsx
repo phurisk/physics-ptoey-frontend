@@ -14,6 +14,7 @@ type ApiCourse = {
   title: string
   description?: string | null
   price: number
+  discountPrice?: number | null
   isFree?: boolean
   isPhysical?: boolean
   coverImageUrl?: string | null
@@ -65,7 +66,7 @@ export default function CheckoutCoursePage() {
     return () => { active = false }
   }, [id])
 
-  // ตรวจสอบคำสั่งซื้อเดิมตั้งแต่เริ่มเข้าหน้า เพื่อลดการเห็น UI คูปองชั่วคราว
+
   const [checkingExisting, setCheckingExisting] = useState(true)
   useEffect(() => {
     let abort = false
@@ -100,12 +101,14 @@ export default function CheckoutCoursePage() {
     return () => { abort = true }
   }, [id, isAuthenticated, authLoading, user, router])
 
-  // อย่าคืนค่าออกจากคอมโพเนนต์ก่อนเรียก Hooks อื่น ๆ เพื่อไม่ให้ลำดับ Hooks เปลี่ยน
 
   const price = useMemo(() => {
     if (!course) return 0
     if (course.isFree || (course.price ?? 0) === 0) return 0
-    return Number(course.price || 0)
+    const original = Number(course.price || 0)
+    const d = course.discountPrice as number | null | undefined
+    if (d != null && d < original) return Number(d)
+    return original
   }, [course])
 
   const finalTotal = Math.max(0, (price || 0) - (discount || 0))
@@ -139,7 +142,7 @@ export default function CheckoutCoursePage() {
       setCreating(true)
       setShippingError(null)
 
-      // บังคับกรอกที่อยู่จัดส่งเฉพาะคอร์สที่เป็นสินค้ามีการจัดส่ง
+
       if (course.isPhysical) {
         const s = shipping
         const missing = [

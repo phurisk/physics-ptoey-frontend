@@ -16,6 +16,7 @@ type Course = {
   coverImageUrl?: string | null
   category?: { name?: string | null }
   price?: number
+  discountPrice?: number | null
   isFree?: boolean
   duration?: string | number | null
   _count?: { enrollments?: number; chapters?: number }
@@ -179,12 +180,27 @@ export default function HighCompetitionCoursesPage(){
                         <span>{(course as any)?.duration ?? "-"}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 mb-6">
-                      {course.isFree || course.price === 0 ? (
+                    <div className="flex items-baseline gap-2 mb-6">
+                      {course.isFree || (course.price || 0) === 0 ? (
                         <span className="text-2xl font-bold text-green-600">ฟรี</span>
-                      ) : (
-                        <span className="text-2xl font-bold text-yellow-600">฿{(course.price || 0).toLocaleString()}</span>
-                      )}
+                      ) : (() => {
+                        const original = Number(course.price || 0)
+                        const d = course.discountPrice as number | null | undefined
+                        const hasDiscount = d != null && d < original
+                        const effective = hasDiscount ? Number(d) : original
+                        return (
+                          <>
+                            {hasDiscount && (
+                              <span className="text-sm text-gray-400 line-through mr-1">
+                                ฿{original.toLocaleString()}
+                              </span>
+                            )}
+                            <span className="text-2xl font-extrabold text-yellow-600">
+                              ฿{effective.toLocaleString()}
+                            </span>
+                          </>
+                        )
+                      })()}
                     </div>
                     <Link href={`/courses/${course.id}`}>
                       <Button className="w-full bg-yellow-400 hover:bg-yellow-500 text-white">ดูรายละเอียด</Button>

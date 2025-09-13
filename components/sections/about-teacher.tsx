@@ -150,7 +150,7 @@ export default function AboutTeacher() {
                     <div className="flex-1">
                       <h5 className="font-semibold text-gray-900 mb-1">ปริญญาโท</h5>
                       <p className="text-gray-700 leading-relaxed">คณะวิศวกรรมศาสตร์</p>
-                      <p className="text-sm text-gray-600 mt-1">จุฬาลงกรณ์มหาวิทยาลัย</p>
+                      <p className="text-sm text-gray-600 mt-1">จุฬาลงกรณ์มหาวิทยาลัย(กำลังศึกษา)</p>
                     </div>
                   </div>
                 </motion.div>
@@ -169,7 +169,7 @@ export default function AboutTeacher() {
                     <div className="flex-1">
                       <h5 className="font-semibold text-gray-900 mb-1">ปริญญาโท</h5>
                       <p className="text-gray-700 leading-relaxed">
-                        คณะศึกษาศาสตร์
+                        คณะครุศาสตร์
                         <br className="block md:hidden" />
                         <span className="hidden md:inline"> (จิตวิทยาการให้คำปรึกษา)</span>
                         <span className="block md:hidden">(จิตวิทยาการให้คำปรึกษา)</span>

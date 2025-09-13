@@ -34,6 +34,7 @@ type ApiCourse = {
   title: string
   description: string
   price: number
+  discountPrice?: number | null
   duration: string | null
   isFree: boolean
   status: string
@@ -337,12 +338,27 @@ export default function CoursesPage() {
                       {/* No rating data from API; hide rating block */}
 
                
-                      <div className="flex items-center gap-2 mb-6">
-                        {course.isFree || course.price === 0 ? (
+                      <div className="flex items-baseline gap-2 mb-6">
+                        {course.isFree || (course.price || 0) === 0 ? (
                           <span className="text-2xl font-bold text-green-600">ฟรี</span>
-                        ) : (
-                          <span className="text-2xl font-bold text-yellow-600">฿{(course.price || 0).toLocaleString()}</span>
-                        )}
+                        ) : (() => {
+                          const original = Number(course.price || 0)
+                          const d = (course as any).discountPrice as number | null | undefined
+                          const hasDiscount = d != null && d < original
+                          const effective = hasDiscount ? Number(d) : original
+                          return (
+                            <>
+                              {hasDiscount && (
+                                <span className="text-sm text-gray-400 line-through mr-1">
+                                  ฿{original.toLocaleString()}
+                                </span>
+                              )}
+                              <span className="text-2xl font-extrabold text-yellow-600">
+                                ฿{effective.toLocaleString()}
+                              </span>
+                            </>
+                          )
+                        })()}
                       </div>
 
                    
