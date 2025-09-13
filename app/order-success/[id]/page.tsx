@@ -293,11 +293,10 @@ export default function OrderSuccessPage() {
     return <Badge variant="secondary">{status}</Badge>
   }
 
-  const isPending = ["PENDING", "PENDING_VERIFICATION"].includes((order?.status || "").toUpperCase())
-  const isCompleted =
-    isPaidLikeStatus(order?.status) || isPaidLikeStatus(order?.payment?.status)
-
+  // Prefer payment status when present
   const paymentStatus = (order?.payment?.status || order?.status || "").toUpperCase()
+  const isPending = ["PENDING", "PENDING_VERIFICATION"].includes(paymentStatus)
+  const isCompleted = isPaidLikeStatus(paymentStatus) || isPaidLikeStatus(order?.status)
   const courseId = order?.orderType === "COURSE" ? order?.course?.id : undefined
   const ebookFileUrl =
     order?.orderType === "EBOOK" && order?.ebook
@@ -308,7 +307,7 @@ export default function OrderSuccessPage() {
   const needsShipping = useMemo(() => {
     if (!order) return false
     if ((order as any)?.shipping) return true
-    if ((order as any)?.shippingFee > 0) return true
+    // Do not infer from shipping fee; rely on item physical flags only
     if (order.orderType === "EBOOK") return order.ebook?.isPhysical === true
     if (order.orderType === "COURSE") return (order as any)?.course?.isPhysical === true
     return false
@@ -381,10 +380,11 @@ export default function OrderSuccessPage() {
           <div className="bg-white/60 rounded-lg border p-4">
             {(() => {
               const s = (order?.status || "").toUpperCase()
-              const step2Done = isPaidLikeStatus(s)
-              const step2Active = ["PENDING", "PENDING_VERIFICATION", "COMPLETED", "PAID", "APPROVED", "SUCCESS"].includes(s)
+              const ps = (order?.payment?.status || "").toUpperCase()
+              const step2Done = isPaidLikeStatus(s) || isPaidLikeStatus(ps)
+              const step2Active = ["PENDING", "PENDING_VERIFICATION"].includes(s) || step2Done
               const step3Done = step2Done
-              const step2Label = s === "PENDING_VERIFICATION" ? "ตรวจสอบ" : "ชำระเงิน"
+              const step2Label = (!step2Done && (s === "PENDING_VERIFICATION" || ps === "PENDING_VERIFICATION")) ? "ตรวจสอบ" : "ชำระเงิน"
               return (
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2 min-w-max">
@@ -438,7 +438,7 @@ export default function OrderSuccessPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-gray-600">สถานะ:</span>
-                      {statusBadge(order?.status)}
+                      {statusBadge(paymentStatus)}
                     </div>
                   </div>
                 </CardHeader>

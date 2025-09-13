@@ -27,6 +27,25 @@ export async function GET(
       cache: "no-store",
     })
     const data = await res.json().catch(() => ({}))
+
+    // Frontend normalization: remove shipping fee and adjust totals for display only.
+    const normalize = (o: any) => {
+      if (!o || typeof o !== 'object') return o
+      const subtotal = Number(o.subtotal || 0)
+      const couponDiscount = Number(o.couponDiscount || 0)
+      const tax = Number(o.tax || 0)
+      o.shippingFee = 0
+      o.total = Math.max(0, subtotal + tax - couponDiscount)
+      if (o.shipping && typeof o.shipping === 'object') {
+        o.shipping.shippingFee = 0
+      }
+      return o
+    }
+
+    if (data && typeof data === 'object' && data.data) {
+      data.data = normalize(data.data)
+    }
+
     return NextResponse.json(data, { status: res.status })
   } catch (err) {
     return NextResponse.json(

@@ -101,8 +101,12 @@ export default function Orders() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orders])
 
-  const orderStatusText = (status?: string) => {
+  const orderStatusText = (status?: string, paymentStatus?: string) => {
     const s = (status || "").toUpperCase()
+    const ps = (paymentStatus || "").toUpperCase()
+    // Prefer payment status when present
+    if (ps === "COMPLETED") return "ชำระเงินแล้ว"
+    if (ps === "PENDING_VERIFICATION") return "รอตรวจสอบสลิป"
     if (s === "COMPLETED") return "ชำระเงินแล้ว"
     if (s === "PENDING_VERIFICATION") return "รอตรวจสอบสลิป"
     if (s === "PENDING") return "รอการชำระ"
@@ -112,8 +116,11 @@ export default function Orders() {
   }
 
  
-  const statusTone = (status?: string) => {
+  const statusTone = (status?: string, paymentStatus?: string) => {
     const s = (status || "").toUpperCase()
+    const ps = (paymentStatus || "").toUpperCase()
+    if (ps === "COMPLETED") return "bg-green-50 text-green-700 border border-green-200"
+    if (ps === "PENDING_VERIFICATION") return "bg-blue-50 text-blue-700 border border-blue-200"
     if (s === "COMPLETED") return "bg-green-50 text-green-700 border border-green-200"
     if (s === "PENDING_VERIFICATION") return "bg-blue-50 text-blue-700 border border-blue-200"
     if (s === "PENDING") return "bg-amber-50 text-amber-700 border border-amber-200"
@@ -217,9 +224,10 @@ export default function Orders() {
 
             const aspectClass = isEbook ? "aspect-[2/3]" : "aspect-video"
 
-            const statusLabel = orderStatusText(o.status)
+            const statusLabel = orderStatusText(o.status, o.payment?.status)
             const payStatus = o.payment?.status
-            const isPending = ["PENDING", "PENDING_VERIFICATION"].includes(o.status)
+            const eff = (payStatus || o.status || "").toUpperCase()
+            const isPending = ["PENDING", "PENDING_VERIFICATION"].includes(eff)
 
             return (
               <Card key={o.id} className="shadow-sm">
@@ -243,7 +251,7 @@ export default function Orders() {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <div className="font-medium text-gray-900 truncate mr-2">{title}</div>
-                        <Badge className={`whitespace-nowrap ${statusTone(o.status)}`}>{statusLabel}</Badge>
+                        <Badge className={`whitespace-nowrap ${statusTone(o.status, o.payment?.status)}`}>{statusLabel}</Badge>
                       </div>
 
                       <div className="text-sm text-gray-600 mt-1">

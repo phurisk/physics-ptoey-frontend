@@ -18,6 +18,28 @@ export async function GET(req: Request) {
       cache: "no-store",
     })
     const data = await res.json().catch(() => ({}))
+
+    // Frontend normalization: remove shipping fee and adjust totals for display only.
+    const normalize = (o: any) => {
+      if (!o || typeof o !== 'object') return o
+      const subtotal = Number(o.subtotal || 0)
+      const couponDiscount = Number(o.couponDiscount || 0)
+      const tax = Number(o.tax || 0)
+      // Ignore shippingFee completely on frontend
+      o.shippingFee = 0
+      o.total = Math.max(0, subtotal + tax - couponDiscount)
+      if (o.shipping && typeof o.shipping === 'object') {
+        o.shipping.shippingFee = 0
+      }
+      return o
+    }
+
+    if (Array.isArray(data?.data)) {
+      data.data = data.data.map(normalize)
+    } else if (data && typeof data === 'object' && data.data && !Array.isArray(data.data)) {
+      data.data = normalize(data.data)
+    }
+
     return NextResponse.json(data, { status: res.status })
   } catch (err) {
     return NextResponse.json(
@@ -46,6 +68,19 @@ export async function POST(req: Request) {
       cache: "no-store",
     })
     const data = await res.json().catch(() => ({}))
+    // When creating, the backend returns a minimal payload; recalc total if present
+    if (data && typeof data === 'object' && data.data) {
+      const d = data.data
+      if (typeof d === 'object') {
+        // If backend included subtotal/discount, recompute total for consistency
+        const subtotal = Number(d.subtotal || 0)
+        const couponDiscount = Number(d.couponDiscount || 0)
+        const tax = Number(d.tax || 0)
+        if (!isNaN(subtotal) || !isNaN(couponDiscount) || !isNaN(tax)) {
+          d.total = Math.max(0, subtotal + tax - couponDiscount)
+        }
+      }
+    }
     return NextResponse.json(data, { status: res.status })
   } catch (err) {
     return NextResponse.json(
@@ -54,4 +89,3 @@ export async function POST(req: Request) {
     )
   }
 }
-

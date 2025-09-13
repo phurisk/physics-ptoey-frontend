@@ -14,6 +14,7 @@ type Order = {
   status: string
   total: number
   ebook?: { id: string; title: string; author?: string | null; coverImageUrl?: string | null; fileUrl?: string | null; previewUrl?: string | null }
+  payment?: { status?: string | null }
 }
 
 type OrdersResponse = { success: boolean; data: Order[] }
@@ -26,6 +27,28 @@ export default function MyBooksPage() {
   const [links, setLinks] = useState<Record<string, string>>({})
   const [linksLoading, setLinksLoading] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
+
+
+  const fetchOrderLink = async (orderId: string) => {
+    try {
+      const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}`, { cache: 'no-store' })
+      const json: any = await res.json().catch(() => ({}))
+      let url = json?.data?.ebook?.fileUrl || json?.data?.ebook?.previewUrl || ''
+      if (!url) {
+        const eid = json?.data?.ebook?.id
+        if (eid) {
+          try {
+            const res2 = await fetch(`/api/ebooks/${encodeURIComponent(String(eid))}`, { cache: 'no-store' })
+            const json2: any = await res2.json().catch(() => ({}))
+            url = json2?.data?.fileUrl || json2?.data?.previewUrl || ''
+          } catch {}
+        }
+      }
+      setLinks((prev) => ({ ...prev, [orderId]: url }))
+    } catch {
+      setLinks((prev) => ({ ...prev, [orderId]: '' }))
+    }
+  }
 
   useEffect(() => {
     let active = true
@@ -50,16 +73,30 @@ export default function MyBooksPage() {
   useEffect(() => {
     let cancelled = false
     const loadLinks = async () => {
-      const paid = orders.filter((o) => o.orderType === 'EBOOK' && String(o.status).toUpperCase() === 'COMPLETED')
+      const paid = orders.filter((o) => {
+        if (o.orderType !== 'EBOOK') return false
+        const os = String(o.status || '').toUpperCase()
+        const ps = String(o.payment?.status || '').toUpperCase()
+        return os === 'COMPLETED' || ps === 'COMPLETED'
+      })
       const missing = paid.filter((o) => !links[o.id])
       if (!missing.length) { setLinksLoading(false); return }
       try {
         setLinksLoading(true)
         const results = await Promise.all(missing.map(async (o) => {
           try {
-            const res = await fetch(`/api/orders/${encodeURIComponent(o.id)}`, { cache: 'no-store' })
-            const json: any = await res.json().catch(() => ({}))
-            const url = json?.data?.ebook?.fileUrl || json?.data?.ebook?.previewUrl || ''
+            let url = ''
+            try {
+              const res = await fetch(`/api/orders/${encodeURIComponent(o.id)}`, { cache: 'no-store' })
+              const json: any = await res.json().catch(() => ({}))
+              url = json?.data?.ebook?.fileUrl || json?.data?.ebook?.previewUrl || ''
+              if (!url && json?.data?.ebook?.id) {
+                const eid = String(json.data.ebook.id)
+                const res2 = await fetch(`/api/ebooks/${encodeURIComponent(eid)}`, { cache: 'no-store' })
+                const json2: any = await res2.json().catch(() => ({}))
+                url = json2?.data?.fileUrl || json2?.data?.previewUrl || ''
+              }
+            } catch {}
             return [o.id, url] as const
           } catch { return [o.id, ''] as const }
         }))
@@ -75,10 +112,15 @@ export default function MyBooksPage() {
     }
     if (orders.length) loadLinks()
     return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  
   }, [orders])
 
-  const paidEbooks = orders.filter((o) => o.orderType === "EBOOK" && String(o.status).toUpperCase() === "COMPLETED")
+  const paidEbooks = orders.filter((o) => {
+    if (o.orderType !== 'EBOOK') return false
+    const os = String(o.status || '').toUpperCase()
+    const ps = String(o.payment?.status || '').toUpperCase()
+    return os === 'COMPLETED' || ps === 'COMPLETED'
+  })
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12 space-y-6">
@@ -120,14 +162,16 @@ export default function MyBooksPage() {
             <div className="text-gray-600">ยังไม่มี eBook ที่ชำระเงินแล้ว</div>
           )}
 
-          {!loading && !linksLoading && !error && paidEbooks.length > 0 && (
+          {!loading && !error && paidEbooks.length > 0 && (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {paidEbooks.map((o) => {
                 const title = o.ebook?.title || "eBook"
                 const cover = o.ebook?.coverImageUrl || "/placeholder.svg"
                 const inlineFile = (o.ebook as any)?.fileUrl || (o.ebook as any)?.previewUrl || null
                 const fileUrl = links[o.id] || inlineFile || null
-                const resolved = Object.prototype.hasOwnProperty.call(links, o.id) || !!inlineFile
+                const hasKey = Object.prototype.hasOwnProperty.call(links, o.id)
+                const resolved = hasKey || !!inlineFile
+                const isResolving = linksLoading && !resolved
                 const filename = `${title}.pdf`
                 return (
                   <Card key={o.id} className="overflow-hidden">
@@ -139,12 +183,12 @@ export default function MyBooksPage() {
                         <div className="font-semibold text-gray-900 line-clamp-2">{title}</div>
                         <div className="text-sm text-gray-600">{o.ebook?.author || "ไม่ระบุผู้เขียน"}</div>
                         <div className="flex gap-2">
-                          {!resolved ? (
+                          {isResolving ? (
                             <>
                               <Button disabled className="bg-gray-200 text-gray-500">กำลังโหลด…</Button>
                               <Button disabled variant="outline">กำลังโหลด…</Button>
                             </>
-                          ) : fileUrl ? (
+                          ) : resolved && fileUrl ? (
                             <>
                               <Button
                                 onClick={() => {
@@ -166,7 +210,15 @@ export default function MyBooksPage() {
                               </Button>
                             </>
                           ) : (
-                            <Button disabled variant="outline">ไม่มีไฟล์ดาวน์โหลด</Button>
+                            <>
+                              <Button
+                                variant="outline"
+                                onClick={() => fetchOrderLink(o.id)}
+                              >
+                                ลองดึงลิงก์อีกครั้ง
+                              </Button>
+                              <Button disabled className="hidden sm:inline-flex">ไม่มีไฟล์ดาวน์โหลด</Button>
+                            </>
                           )}
                         </div>
                       </div>

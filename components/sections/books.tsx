@@ -141,7 +141,9 @@ export default function Books() {
           })
           if (exists) {
             const status = String(exists?.status || "").toUpperCase()
-            const isPending = ["PENDING", "PENDING_VERIFICATION"].includes(status)
+            const payStatus = String(exists?.payment?.status || "").toUpperCase()
+            const eff = (payStatus || status)
+            const isPending = ["PENDING", "PENDING_VERIFICATION"].includes(eff)
             setPurchaseOpen(false)
             if (isPending) {
               setOrderInfo({ orderId: String(exists.id), total: Number(exists.total || 0) })

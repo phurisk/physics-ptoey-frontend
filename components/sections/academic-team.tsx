@@ -4,6 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
 type Teacher = {
   name: string
@@ -83,7 +86,23 @@ const defaultTeachers: Teacher[] = [
 ]
 
 export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?: Teacher[] }) {
-  const data = teachers.length ? teachers : defaultTeachers
+  // จัดเรียงตามลำดับที่ต้องการ: ฟิสิกส์, เคมี, ชีววิทยา, คณิต, อังกฤษ, จีน
+  const subjectOrder: Record<string, number> = useMemo(() => ({
+    "ฟิสิกส์": 1,
+    "เคมี": 2,
+    "ชีววิทยา": 3,
+    "ชีวะ": 3,
+    "คณิตศาสตร์": 4,
+    "คณิต": 4,
+    "ภาษาอังกฤษ": 5,
+    "ภาษาจีน": 6,
+  }), [])
+
+  const data = useMemo(() => {
+    const raw = (teachers && teachers.length ? teachers : defaultTeachers).slice()
+    raw.sort((a, b) => (subjectOrder[a.subject] ?? 99) - (subjectOrder[b.subject] ?? 99))
+    return raw
+  }, [teachers, subjectOrder])
 
   // กำหนดจำนวนการ์ดต่อหน้า ตามเบรกพอยท์: 1 / 2 / 3
   const [perView, setPerView] = useState(1)
@@ -138,23 +157,65 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
     return () => el.removeEventListener("scroll", onScroll)
   }, [pages.length])
 
+  // Modal แสดงประวัติแบบเด้ง ไม่ทำให้การ์ดยาว
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [selected, setSelected] = useState<Teacher | null>(null)
+  const openDetail = (t: Teacher) => { setSelected(t); setDetailOpen(true) }
+
   return (
     <section className="py-8 md:py-12 lg:py-14 px-4 md:px-6 lg:px-8 bg-white">
       <div className="max-w-7xl mx-auto">
-      
+
         <div className="text-center mb-6 md:mb-8 lg:mb-10">
-          <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900">ทีมวิชาการ</h2>
-      
+          <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-3 bg-[#ffbf00] px-8 py-4 w-fit mx-auto rounded-full shadow-sm">
+            ทีมวิชาการ
+          </h2>
+
         </div>
 
-     
-        <div
-          ref={viewportRef}
-          className="hide-scrollbar flex overflow-x-auto snap-x snap-mandatory scroll-smooth"
-          style={{ scrollPaddingLeft: 16, scrollPaddingRight: 16 }}
-          role="region"
-          aria-label="สไลด์ทีมวิชาการ"
-        >
+
+        <div className="relative">
+          {/* ปุ่มเลื่อนซ้าย/ขวา */}
+          {pages.length > 1 && (
+            <>
+              <button
+                type="button"
+                aria-label="ก่อนหน้า"
+                className={`absolute left-1 md:left-2 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow ring-1 ring-black/5 rounded-full p-2 disabled:opacity-40`}
+                onClick={() => {
+                  const el = viewportRef.current
+                  if (!el) return
+                  const target = Math.max(0, activePage - 1)
+                  el.scrollTo({ left: target * el.clientWidth, behavior: "smooth" })
+                }}
+                disabled={activePage <= 0}
+              >
+                <ChevronLeft className="h-5 w-5 text-gray-700" />
+              </button>
+              <button
+                type="button"
+                aria-label="ถัดไป"
+                className={`absolute right-1 md:right-2 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow ring-1 ring-black/5 rounded-full p-2 disabled:opacity-40`}
+                onClick={() => {
+                  const el = viewportRef.current
+                  if (!el) return
+                  const target = Math.min(pages.length - 1, activePage + 1)
+                  el.scrollTo({ left: target * el.clientWidth, behavior: "smooth" })
+                }}
+                disabled={activePage >= pages.length - 1}
+              >
+                <ChevronRight className="h-5 w-5 text-gray-700" />
+              </button>
+            </>
+          )}
+
+          <div
+            ref={viewportRef}
+            className="hide-scrollbar flex overflow-x-auto snap-x snap-mandatory scroll-smooth"
+            style={{ scrollPaddingLeft: 16, scrollPaddingRight: 16 }}
+            role="region"
+            aria-label="สไลด์ทีมวิชาการ"
+          >
           {pages.map((group, gi) => (
             <div key={gi} className="w-full shrink-0 snap-start px-2 md:px-3 lg:px-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
@@ -164,7 +225,7 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
                     className="border-none shadow-md hover:shadow-lg transition-shadow rounded-2xl h-full"
                   >
                     <CardContent className="p-4 md:p-5 flex flex-col h-full">
-                     
+
                       <div className="flex justify-center mb-3 md:mb-4">
                         <Badge
                           variant="outline"
@@ -174,8 +235,13 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
                         </Badge>
                       </div>
 
-                     
-                      <div className="rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm">
+
+                      <button
+                        type="button"
+                        onClick={() => openDetail(t)}
+                        className="rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                        aria-label={`ดูประวัติ ${t.name}`}
+                      >
                         <div className="aspect-[3/4] w-full">
                           <Image
                             src={t.image || "/placeholder.svg"}
@@ -186,25 +252,18 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
                             priority={gi === 0 && i < 3}
                           />
                         </div>
-                      </div>
+                      </button>
 
-                     
-                      <div className="mt-4 md:mt-5 flex-1 flex flex-col min-h-0">
+
+                      <div className="mt-4 md:mt-5 flex-1 flex flex-col items-center">
                         <h3 className="text-lg md:text-xl font-semibold text-gray-900 text-center">{t.name}</h3>
-                        {t.highlights?.length ? (
-                          <div className="flex-1 min-h-0 mt-3">
-                            <div className="max-h-36 md:max-h-40 overflow-y-auto pr-1 custom-scrollbar">
-                              <ul className="space-y-2 text-sm md:text-base text-gray-700">
-                                {t.highlights.map((h, k) => (
-                                  <li key={k} className="flex gap-2 leading-relaxed">
-                                    <span className="mt-2 inline-block h-1.5 w-1.5 rounded-full bg-yellow-500 flex-shrink-0" />
-                                    <span className="flex-1">{h}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          </div>
-                        ) : null}
+                        <Button
+                          variant="outline"
+                          className="mt-3 rounded-xl border-gray-200 hover:border-yellow-400 hover:bg-yellow-50"
+                          onClick={() => openDetail(t)}
+                        >
+                          ดูประวัติ
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -212,9 +271,10 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
               </div>
             </div>
           ))}
+          </div>
         </div>
 
-    
+
         {pages.length > 1 && (
           <div className="flex justify-center gap-2 mt-4 md:mt-6">
             {pages.map((_, i) => (
@@ -260,6 +320,45 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
           }
         `}</style>
       </div>
+
+      {/* Dialog แสดงรายละเอียดครู */}
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl md:text-2xl">
+              {selected?.name}
+              {selected?.subject && (
+                <span className="ml-2 align-middle">
+                  <Badge className="bg-yellow-400 text-white rounded-full">{selected.subject}</Badge>
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-1">
+              {selected?.image && (
+                <div className="rounded-xl overflow-hidden ring-1 ring-black/5">
+                  <Image src={selected.image} alt={selected.name} width={600} height={800} className="w-full h-auto object-cover" />
+                </div>
+              )}
+            </div>
+            <div className="md:col-span-2">
+              {selected?.highlights?.length ? (
+                <ul className="space-y-2 text-sm md:text-base text-gray-700 max-h-80 overflow-y-auto pr-1 custom-scrollbar">
+                  {selected.highlights.map((h, i) => (
+                    <li key={i} className="flex gap-2 leading-relaxed">
+                      <span className="mt-2 inline-block h-1.5 w-1.5 rounded-full bg-yellow-500 flex-shrink-0" />
+                      <span className="flex-1">{h}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="text-gray-500">ไม่มีข้อมูลประวัติ</div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }

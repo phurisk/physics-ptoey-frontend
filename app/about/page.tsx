@@ -101,6 +101,37 @@ const members: Member[] = [
       "รับเชิญเข้าร่วมประชุมอาจารย์ฟิสิกส์ศึกษาระดับชาติ",
     ],
   },
+
+  {
+    name: "ครูพี่แซน",
+    subject: "เคมี",
+    image: "/teacher-3.png",
+    highlights: [
+      "อดีตนักเรียนโอลิมปิกวิชาเคมี ในความควบคุมของมหาวิทยาลัยศิลปากร",
+      "ชนะเลิศเหรียญทองฟิสิกส์สัประยุทธ์ของภาคกลางตอนล่าง",
+      "ผ่านการคัดเลือกเข้าร่วม Thai Science Camp ครั้งที่ 10",
+      "ผู้ช่วยจัดกิจกรรมการแข่งขันการตอบปัญหาวิชาการเคมี คณะวิทยาศาสตร์",
+      "ฝึกงานด้านพิษวิทยา สถาบันนิติวิทยาศาสตร์ โรงพยาบาลตำรวจ",
+      "ผู้ช่วยวิจัยศึกษาองค์ประกอบสารสกัดจากกัญชา ตีพิมพ์ในวารสารวิชาการ",
+    ],
+  },
+  {
+    name: "ครูพี่อู๋",
+    subject: "ชีววิทยา",
+    image: "/teacher-5.png",
+    highlights: ["เกียรตินิยมอันดับ 1 สาขาชีววิทยาโดยตรง คณะวิทยาศาสตร์ ม.ศิลปากร"],
+  },
+  {
+    name: "ครูพี่ยุ้ย",
+    subject: "คณิตศาสตร์",
+    image: "/teacher-4.png",
+    highlights: [
+      "ปริญญาตรี เอกคณิตศาสตร์ คณะครุศาสตร์ จุฬาลงกรณ์มหาวิทยาลัย",
+      "นักเรียนทุนวิทยาศาสตร์จุฬาภรณราชวิทยาลัย จ.เพชรบุรี",
+      "กำลังศึกษาปริญญาโท คณะวิทยาศาสตร์ สาขาคณิตศาสตร์ศึกษา ม.ศิลปากร",
+    ],
+  },
+
   {
     name: "ครูพี่ปลื้ม",
     subject: "ภาษาอังกฤษ",
@@ -120,35 +151,6 @@ const members: Member[] = [
       "ปริญญาตรี เอกจีน นักเรียนทุนแลกเปลี่ยน มหาวิทยาลัยชินโจว ประเทศจีน เกียรตินิยมอันดับ 1",
       "ประสบการณ์สอนและพานักเรียนแข่งขันภาษาจีน รางวัลระดับประเทศ",
     ],
-  },
-  {
-    name: "ครูพี่แซน",
-    subject: "เคมี",
-    image: "/teacher-3.png",
-    highlights: [
-      "อดีตนักเรียนโอลิมปิกวิชาเคมี ในความควบคุมของมหาวิทยาลัยศิลปากร",
-      "ชนะเลิศเหรียญทองฟิสิกส์สัประยุทธ์ของภาคกลางตอนล่าง",
-      "ผ่านการคัดเลือกเข้าร่วม Thai Science Camp ครั้งที่ 10",
-      "ผู้ช่วยจัดกิจกรรมการแข่งขันการตอบปัญหาวิชาการเคมี คณะวิทยาศาสตร์",
-      "ฝึกงานด้านพิษวิทยา สถาบันนิติวิทยาศาสตร์ โรงพยาบาลตำรวจ",
-      "ผู้ช่วยวิจัยศึกษาองค์ประกอบสารสกัดจากกัญชา ตีพิมพ์ในวารสารวิชาการ",
-    ],
-  },
-  {
-    name: "ครูพี่ยุ้ย",
-    subject: "คณิตศาสตร์",
-    image: "/teacher-4.png",
-    highlights: [
-      "ปริญญาตรี เอกคณิตศาสตร์ คณะครุศาสตร์ จุฬาลงกรณ์มหาวิทยาลัย",
-      "นักเรียนทุนวิทยาศาสตร์จุฬาภรณราชวิทยาลัย จ.เพชรบุรี",
-      "กำลังศึกษาปริญญาโท คณะวิทยาศาสตร์ สาขาคณิตศาสตร์ศึกษา ม.ศิลปากร",
-    ],
-  },
-  {
-    name: "ครูพี่อู๋",
-    subject: "ชีววิทยา",
-    image: "/teacher-5.png",
-    highlights: ["เกียรตินิยมอันดับ 1 สาขาชีววิทยาโดยตรง คณะวิทยาศาสตร์ ม.ศิลปากร"],
   },
 ]
 
@@ -416,9 +418,9 @@ export default function AboutPage() {
                   {members.map((m, i) => (
                     <motion.div key={m.name} variants={fadeIn} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.15 }}>
                       <article className="relative overflow-hidden rounded-3xl ring-1 ring-black/5 bg-gradient-to-br from-white to-yellow-50/30 p-6 h-full flex flex-col">
-                        <div className="flex flex-col items-center text-center">
+                        <div className=" flex-col items-center text-center">
                         <h3 className="mb-3 relative bg-white text-gray-900 border-0 rounded-none px-5 md:px-6 py-2 text-xl md:text-2xl font-bold tracking-wide before:content-[''] before:absolute before:left-3 before:right-3 before:bottom-0 before:h-[3px] before:bg-yellow-500 after:content-[''] after:absolute after:left-2 after:right-2 after:bottom-[6px] after:h-2 after:bg-yellow-100 after:-z-10">
-                              <span className="relative z-[1] text-xl">{m.subject}</span>
+                              <span className="relative z-[1] text-xl ">{m.subject}</span>
                             </h3>
                           <div className="relative w-full max-w-[260px] aspect-[3/4] rounded-2xl overflow-hidden bg-blue-50 ring-1 ring-black/5 shadow-sm">
                             <Image
