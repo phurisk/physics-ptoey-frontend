@@ -59,7 +59,7 @@ export default function CourseStripes() {
     <section className="pt-0 pb-10 lg:pt-20 lg:pb-5 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">
-          <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-2 text-balance bg-[#ffbf00] px-8 py-4 w-fit mx-auto rounded-full shadow-sm">
+          <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-2 text-balance bg-[#ffbf00] px-8 py-4 w-fit mx-auto rounded-full shadow-sm mb-4">
             คอร์สเรียนรอบสด และออนไลน์
           </h2>
           <p className="text-base lg:text-lg text-gray-600 max-w-2xl mx-auto text-pretty">

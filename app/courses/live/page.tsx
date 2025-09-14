@@ -157,11 +157,11 @@ export default function LiveSchedulePage() {
 
         <div className="mb-12">
           {loadingSummaries ? (
-            <div className="relative w-full aspect-[21/9] bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl animate-pulse border border-gray-200" />
+            <div className="relative w-full aspect-[283/400] bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl animate-pulse border border-gray-200" />
           ) : summaries.length ? (
-            <Card className="overflow-hidden border-2 border-gray-100 hover:border-yellow-500/50 transition-all duration-300 hover:shadow-xl">
+            <Card className="overflow-hidden border-2 border-gray-100 hover:border-yellow-500/50 transition-all duration-300 hover:shadow-xl py-0">
               <CardContent className="p-0">
-                <div className="relative w-full aspect-[21/9] bg-white">
+                <div className="relative w-full aspect-[283/400] bg-white">
                   {summaryBanner?.imageUrl && (
                     <Image
                       src={summaryBanner.imageUrl || "/placeholder.svg"}

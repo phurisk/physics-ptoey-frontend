@@ -163,54 +163,54 @@ export default function AboutPage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [images, setImages] = useState(teachingEnvironmentImages)
 
- 
+
   useEffect(() => {
     let mounted = true
-    ;(async () => {
-      try {
-        const params = new URLSearchParams({ postType: "บรรยากาศการเรียน" })
-        const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
-        if (res.ok) {
-          console.log("[About] Fetch /api/posts: OK", res.status)
-        } else {
-          console.warn("[About] Fetch /api/posts: NOT OK", res.status, res.statusText)
+      ; (async () => {
+        try {
+          const params = new URLSearchParams({ postType: "บรรยากาศการเรียน" })
+          const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
+          if (res.ok) {
+            console.log("[About] Fetch /api/posts: OK", res.status)
+          } else {
+            console.warn("[About] Fetch /api/posts: NOT OK", res.status, res.statusText)
+          }
+          const json: any = await res.json().catch(() => null)
+
+          const list = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
+          if (!list.length) {
+            console.warn(
+              `[About] API ไม่มีข้อมูลโพสต์ ใช้รูป dummy แทน (${teachingEnvironmentImages.length} ภาพ)`
+            )
+            return
+          } else {
+            console.log(`[About] Posts loaded: ${list.length}`)
+          }
+
+          const mapped = list
+            .map((p: any, idx: number) => ({
+              id: p?.id ?? idx,
+              src: p?.imageUrl || p?.imageUrlMobileMode || "",
+              alt: p?.title || "บรรยากาศการเรียน",
+              title: p?.title || "บรรยากาศการเรียน",
+            }))
+            .filter((s: { id: string | number; src: string }) => !!s.src)
+
+          console.log(`[About] Slides mapped: ${mapped.length}`)
+
+          if (mounted && mapped.length) {
+            setImages(mapped as any)
+            setCurrentImageIndex(0)
+            console.log(`[About] ใช้รูปจาก API จำนวน ${mapped.length} ภาพ`)
+          } else if (mounted) {
+            console.warn(
+              `[About] API ไม่มีรูป (imageUrl/imageUrlMobileMode) ใช้รูป dummy แทน (${teachingEnvironmentImages.length} ภาพ)`
+            )
+          }
+        } catch (err) {
+          console.error("[About] Failed to load posts", err)
         }
-        const json: any = await res.json().catch(() => null)
-
-        const list = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
-        if (!list.length) {
-          console.warn(
-            `[About] API ไม่มีข้อมูลโพสต์ ใช้รูป dummy แทน (${teachingEnvironmentImages.length} ภาพ)`
-          )
-          return
-        } else {
-          console.log(`[About] Posts loaded: ${list.length}`)
-        }
-
-        const mapped = list
-          .map((p: any, idx: number) => ({
-            id: p?.id ?? idx,
-            src: p?.imageUrl || p?.imageUrlMobileMode || "",
-            alt: p?.title || "บรรยากาศการเรียน",
-            title: p?.title || "บรรยากาศการเรียน",
-          }))
-          .filter((s: { id: string | number; src: string }) => !!s.src)
-
-        console.log(`[About] Slides mapped: ${mapped.length}`)
-
-        if (mounted && mapped.length) {
-          setImages(mapped as any)
-          setCurrentImageIndex(0)
-          console.log(`[About] ใช้รูปจาก API จำนวน ${mapped.length} ภาพ`)
-        } else if (mounted) {
-          console.warn(
-            `[About] API ไม่มีรูป (imageUrl/imageUrlMobileMode) ใช้รูป dummy แทน (${teachingEnvironmentImages.length} ภาพ)`
-          )
-        }
-      } catch (err) {
-        console.error("[About] Failed to load posts", err)
-      }
-    })()
+      })()
     return () => {
       mounted = false
     }
@@ -403,60 +403,66 @@ export default function AboutPage() {
 
 
 
-            <section className="py-16 lg:py-24 bg-white">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center mb-12">
-                  <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-3 bg-[#ffbf00] px-8 py-4 w-fit mx-auto rounded-full shadow-sm">
-                    ทีมวิชาการ
-                  </h2>
-                  <p className="text-base lg:text-lg text-gray-600 max-w-2xl mx-auto">
-                    ครูผู้เชี่ยวชาญหลายสาขา ร่วมออกแบบหลักสูตรและดูแลเนื้อหาอย่างเข้มข้น
-                  </p>
-                </div>
-        
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-                  {members.map((m, i) => (
-                    <motion.div key={m.name} variants={fadeIn} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.15 }}>
-                      <article className="relative overflow-hidden rounded-3xl ring-1 ring-black/5 bg-gradient-to-br from-white to-yellow-50/30 p-6 h-full flex flex-col">
-                        <div className=" flex-col items-center text-center">
-                        <h3 className="mb-3 relative bg-white text-gray-900 border-0 rounded-none px-5 md:px-6 py-2 text-xl md:text-2xl font-bold tracking-wide before:content-[''] before:absolute before:left-3 before:right-3 before:bottom-0 before:h-[3px] before:bg-yellow-500 after:content-[''] after:absolute after:left-2 after:right-2 after:bottom-[6px] after:h-2 after:bg-yellow-100 after:-z-10">
-                              <span className="relative z-[1] text-xl ">{m.subject}</span>
-                            </h3>
-                          <div className="relative w-full max-w-[260px] aspect-[3/4] rounded-2xl overflow-hidden bg-blue-50 ring-1 ring-black/5 shadow-sm">
-                            <Image
-                              src={m.image || "/placeholder.svg"}
-                              alt={m.name}
-                              fill
-                              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                              className="object-cover"
-                            />
-                          </div>
-                          <div className="mt-5">
-                            <h3 className="text-xl md:text-2xl font-bold text-gray-900">
-                              {m.name}
-                            </h3>
-                          </div>
-                        </div>
-        
-                        <ul className="mt-4 space-y-2 text-gray-700 text-sm md:text-[15px] leading-relaxed list-none">
-                          {m.highlights.map((h, idx) => (
-                            <li key={idx} className="flex items-start gap-2">
-                              <span className="mt-1 inline-block h-1.5 w-1.5 rounded-full bg-[#FEBE01] flex-shrink-0" />
-                              <span className="text-pretty">{h}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </article>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            </section>
+        <section className="py-16 lg:py-24 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-3 bg-[#ffbf00] px-8 py-4 w-fit mx-auto rounded-full shadow-sm">
+                ทีมวิชาการ
+              </h2>
+              <p className="text-base lg:text-lg text-gray-600 max-w-2xl mx-auto">
+                ครูผู้เชี่ยวชาญหลายสาขา ร่วมออกแบบหลักสูตรและดูแลเนื้อหาอย่างเข้มข้น
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+              {members.map((m, i) => (
+                <motion.div key={m.name} variants={fadeIn} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.15 }}>
+                  <article className="relative overflow-hidden rounded-3xl ring-1 ring-black/5 bg-gradient-to-br from-white to-yellow-50/30 p-6 h-full flex flex-col">
+                    <div className=" flex-col items-center text-center ทิ">
+                      <h3 className="mb-3 bg-white text-gray-900 px-0 py-2 text-xl md:text-2xl font-bold tracking-wide">
+                        <span className="relative inline-block px-2 pb-1">
+                          <span className="relative z-10">{m.subject}</span>
+                          <span className="absolute left-0 right-0 bottom-[-2px] h-[3px] bg-yellow-500 z-0"></span>
+                          <span className="absolute left-0 right-0 bottom-[-6px] h-2 bg-yellow-100 -z-10"></span>
+                        </span>
+                      </h3>
+
+
+                      <div className="relative w-full max-w-[260px] aspect-[3/4] rounded-2xl overflow-hidden bg-blue-50 ring-1 ring-black/5 shadow-sm">
+                        <Image
+                          src={m.image || "/placeholder.svg"}
+                          alt={m.name}
+                          fill
+                          sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="mt-5">
+                        <h3 className="text-xl md:text-2xl font-bold text-gray-900">
+                          {m.name}
+                        </h3>
+                      </div>
+                    </div>
+
+                    <ul className="mt-4 space-y-2 text-gray-700 text-sm md:text-[15px] leading-relaxed list-none">
+                      {m.highlights.map((h, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <span className="mt-1 inline-block h-1.5 w-1.5 rounded-full bg-[#FEBE01] flex-shrink-0" />
+                          <span className="text-pretty">{h}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </article>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
 
 
 
 
-        
+
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
