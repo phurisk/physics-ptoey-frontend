@@ -14,3 +14,9 @@
 - [Framer Motion](https://www.framer.com/motion/) – Animation
 - [Lucide React](https://lucide.dev/) – Icon set
 - [Radix UI](https://www.radix-ui.com/) – Accessible primitives
+
+
+
+## License
+Proprietary (All rights reserved). See [LICENSE](./LICENSE).
+© 2025 Phuris Kruacharee.
