@@ -87,11 +87,11 @@ export default function HighCompetitionCoursesPage(){
 
         <div className="mb-16">
           {ls ? (
-            <div className="relative w-full aspect-[21/9] bg-gray-100 rounded-2xl animate-pulse border border-gray-200" />
+            <div className="relative w-full aspect-[283/400] bg-gray-100 rounded-2xl animate-pulse border border-gray-200" />
           ) : sums.length ? (
-            <Card className="overflow-hidden border-2 border-gray-100 hover:border-yellow-500/50 transition-all duration-300 hover:shadow-xl">
+            <Card className="overflow-hidden border-2 border-gray-100 hover:border-yellow-500/50 transition-all duration-300 hover:shadow-xl py-0">
               <CardContent className="p-0">
-                <div className="relative w-full aspect-[21/9] bg-white">
+                <div className="relative w-full aspect-[283/400] bg-white">
                   {summaryBanner?.desktop && (
                     <Image src={summaryBanner.desktop} alt={summaryBanner.title || 'summary'} fill className="object-contain hidden md:block" />
                   )}

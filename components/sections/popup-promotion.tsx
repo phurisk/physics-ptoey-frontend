@@ -12,6 +12,7 @@ type PromotionPost = {
   title?: string | null
   description?: string | null
   imageUrl?: string | null
+  imageUrlMobileMode?: string | null  
   linkUrl?: string | null
 }
 
@@ -28,6 +29,15 @@ export default function PopupPromotion() {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<PromotionPost | null>(null)
   const [imgSrc, setImgSrc] = useState<string>("/promotion.png")
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px)")
+    const onChange = (e: MediaQueryListEvent | MediaQueryList) => setIsMobile('matches' in e ? e.matches : (e as MediaQueryList).matches)
+    onChange(mq)
+    mq.addEventListener?.("change", onChange as any)
+    return () => mq.removeEventListener?.("change", onChange as any)
+  }, [])
 
   useEffect(() => {
     const hiddenDate = localStorage.getItem(STORAGE_KEY)
@@ -44,26 +54,19 @@ export default function PopupPromotion() {
         const res = await http.get(`/api/posts?${params.toString()}`)
         if (res.status >= 200 && res.status < 300) {
           const json = res.data || {}
-          const list: any[] = Array.isArray(json)
-            ? json
-            : Array.isArray(json?.data)
-            ? json.data
-            : []
+          const list: any[] = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
           const promo: PromotionPost | null = list.length ? list[0] : null
           if (!cancelled) {
             setData(promo)
-            setImgSrc((promo as any)?.imageUrl || "/promotion.png")
             setOpen(true)
           }
         } else {
           if (!cancelled) {
-            setImgSrc("/promotion.png")
             setOpen(true)
           }
         }
       } catch {
         if (!cancelled) {
-          setImgSrc("/promotion.png")
           setOpen(true)
         }
       } finally {
@@ -75,6 +78,14 @@ export default function PopupPromotion() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (!data) return
+    const preferred =
+      (isMobile ? (data.imageUrlMobileMode || data.imageUrl) : (data.imageUrl || data.imageUrlMobileMode))
+      || "/promotion.png"
+    setImgSrc(preferred)
+  }, [data, isMobile])
 
   const onClose = (nextOpen: boolean) => {
     if (!nextOpen && dontShowToday) {
@@ -88,12 +99,10 @@ export default function PopupPromotion() {
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden rounded-2xl border-0 shadow-2xl">
-
         <VisuallyHidden>
           <DialogTitle>{data?.title || "โปรโมชั่น"}</DialogTitle>
         </VisuallyHidden>
 
-        
         <div className="relative w-full">
           <div className="aspect-square relative">
             <Image
@@ -103,11 +112,11 @@ export default function PopupPromotion() {
               className="object-cover"
               onError={() => setImgSrc("/promotion.png")}
               priority
+              sizes="(max-width: 640px) 100vw, 400px"
             />
           </div>
         </div>
 
-       
         <div className="p-5 space-y-4">
           {data?.description && (
             <p className="text-sm text-gray-600 leading-relaxed">{data.description}</p>
@@ -126,7 +135,7 @@ export default function PopupPromotion() {
 
             <div className="ml-auto flex items-center gap-2">
               {data?.linkUrl && (
-                <a href={data.linkUrl}>
+                <a href={data.linkUrl} target="_blank" rel="noopener noreferrer">
                   <Button className="bg-yellow-400 hover:bg-yellow-500 text-white">
                     ดูรายละเอียด
                   </Button>
