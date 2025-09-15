@@ -246,17 +246,36 @@ export default function ExamBankPage() {
     router.push(`/exam-bank/view/${encodeURIComponent(examId)}`)
   }
 
-  const handleDownload = (downloadUrl: string, filename?: string) => {
+
+
+  const handleDownload = async (downloadUrl: string, filename?: string) => {
     if (!downloadUrl) return
     if (!isAuthenticated) {
       setLoginOpen(true)
       return
     }
+  
     const url = `/api/proxy-download?url=${encodeURIComponent(downloadUrl)}${filename ? `&filename=${encodeURIComponent(filename)}` : ""}`
+  
     try {
-      window.open(url, "_blank", "noopener,noreferrer")
-    } catch {}
+      const res = await fetch(url, { method: "GET", cache: "no-store" })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const blob = await res.blob()
+  
+      const objectUrl = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = objectUrl
+      a.download = filename || "file"
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(objectUrl)
+    } catch (e) {
+
+      try { window.location.href = url } catch {}
+    }
   }
+  
 
   // จำนวนการ์ดสเกเลตันตอนโหลด
   const SKELETON_COUNT = 8
