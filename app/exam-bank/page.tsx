@@ -255,7 +255,7 @@ export default function ExamBankPage() {
       return
     }
   
-    const url = `/api/proxy-download?url=${encodeURIComponent(downloadUrl)}${filename ? `&filename=${encodeURIComponent(filename)}` : ""}`
+    const url = `/api/proxy-download-pdf?url=${encodeURIComponent(downloadUrl)}${filename ? `&filename=${encodeURIComponent(filename)}` : ""}`
   
     try {
       const res = await fetch(url, { method: "GET", cache: "no-store" })
