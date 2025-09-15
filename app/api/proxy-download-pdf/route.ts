@@ -1,99 +1,91 @@
-import { NextRequest } from "next/server"
+import { NextResponse } from "next/server"
 
-function sanitizeFilename(name: string) {
+export const dynamic = "force-dynamic"   
+export const runtime = "nodejs"          
 
-  return name.replace(/[\\\/\0\r\n"]/g, "_").slice(0, 180) || "download"
-}
-
-export async function GET(req: NextRequest) {
+export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
-    const fileUrl = searchParams.get("url")
-    const rawName = searchParams.get("filename") || "download"
-    const filename = sanitizeFilename(rawName)
+    const target = searchParams.get("url")
+    const rawFilename = searchParams.get("filename") || "file.pdf"
 
-    if (!fileUrl) {
-      return new Response("Missing url", { status: 400 })
+    if (!target) {
+      return NextResponse.json(
+        { success: false, message: "Missing url parameter" },
+        { status: 400 }
+      )
     }
+
+
+    const ua = req.headers.get("user-agent") || ""
+    const isiOS = /\b(iPad|iPhone|iPod)\b/i.test(ua)
+    const isSafari = /Safari/i.test(ua) && !/(Chrome|CriOS|FxiOS|EdgiOS)/i.test(ua)
+    const isIOSSafari = isiOS && isSafari
 
     const range = req.headers.get("range") || undefined
-    const upstream = await fetch(fileUrl, {
+    const upstream = await fetch(target, {
+      headers: range ? { range } : undefined,
       cache: "no-store",
-      redirect: "follow",
-      headers: range ? { Range: range } : undefined,
     })
 
-    if (!upstream.ok || !upstream.body) {
-      return new Response("Upstream error", { status: upstream.status || 502 })
+    if (!upstream.ok && upstream.status !== 206) {
+      return NextResponse.json(
+        { success: false, message: `Upstream error: ${upstream.status}` },
+        { status: 502 }
+      )
     }
 
-    const headers = new Headers()
 
-    headers.set(
-      "Content-Disposition",
-      `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`
-    )
+    let body: ReadableStream | ArrayBuffer | null = upstream.body
+    let contentLength = upstream.headers.get("content-length")
+    if (!body || (isIOSSafari && !contentLength)) {
+      const buf = await upstream.arrayBuffer()
+      body = buf
+      contentLength = String(buf.byteLength)
+    }
 
-    headers.set("Content-Type", "application/octet-stream")
-    headers.set("X-Content-Type-Options", "nosniff")
-    headers.set("Cache-Control", "no-store, max-age=0, must-revalidate")
-    const acceptRanges = upstream.headers.get("accept-ranges") || "bytes"
-    headers.set("Accept-Ranges", acceptRanges)
+ 
+    const asciiFallback = rawFilename.replace(/[^\x20-\x7E]+/g, "_")
+    const encoded = encodeURIComponent(rawFilename)
 
-    const contentRange = upstream.headers.get("content-range")
-    if (contentRange) headers.set("Content-Range", contentRange)
+    const upstreamCT = upstream.headers.get("content-type") || "application/octet-stream"
+    const effectiveCT = isIOSSafari ? "application/octet-stream" : upstreamCT
 
-    const contentLength = upstream.headers.get("content-length")
-    if (contentLength) headers.set("Content-Length", contentLength)
+    const headers: Record<string, string> = {
+      "content-type": effectiveCT,
+      "content-disposition": `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encoded}`,
+      "cache-control": "private, no-store",
+      "x-content-type-options": "nosniff",
+      "vary": "User-Agent",
+    }
+
+    
+    for (const h of ["content-range", "accept-ranges", "etag", "last-modified"]) {
+      const v = upstream.headers.get(h)
+      if (v) headers[h] = v
+    }
+    if (contentLength) headers["content-length"] = contentLength
 
     const status = upstream.status === 206 ? 206 : 200
 
-    return new Response(upstream.body, { status, headers })
-  } catch {
-    return new Response("Proxy error", { status: 500 })
-  }
-}
-
-export async function HEAD(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url)
-    const fileUrl = searchParams.get("url")
-    const rawName = searchParams.get("filename") || "download"
-    const filename = sanitizeFilename(rawName)
-
-    if (!fileUrl) {
-      return new Response(null, { status: 400 })
+  
+    if (searchParams.get("debug") === "1") {
+      return NextResponse.json({
+        ua, isiOS, isSafari, isIOSSafari,
+        upstream: {
+          status: upstream.status,
+          contentType: upstreamCT,
+          contentLength: upstream.headers.get("content-length"),
+        },
+        effectiveResponse: { status, headers },
+      })
     }
 
-    const range = req.headers.get("range") || undefined
-    const upstream = await fetch(fileUrl, {
-      method: "HEAD",
-      cache: "no-store",
-      redirect: "follow",
-      headers: range ? { Range: range } : undefined,
-    })
-
-    const headers = new Headers()
-    headers.set(
-      "Content-Disposition",
-      `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`
+    return new NextResponse(body as any, { status, headers })
+  } catch (err: any) {
+    return NextResponse.json(
+      { success: false, message: err?.message || "Failed to proxy download" },
+      { status: 500 }
     )
-    headers.set("Content-Type", "application/octet-stream")
-    headers.set("X-Content-Type-Options", "nosniff")
-    headers.set("Cache-Control", "no-store, max-age=0, must-revalidate")
-
-    const acceptRanges = upstream.headers.get("accept-ranges") || "bytes"
-    headers.set("Accept-Ranges", acceptRanges)
-
-    const contentRange = upstream.headers.get("content-range")
-    if (contentRange) headers.set("Content-Range", contentRange)
-
-    const contentLength = upstream.headers.get("content-length")
-    if (contentLength) headers.set("Content-Length", contentLength)
-
-    const status = upstream.status === 206 ? 206 : upstream.ok ? 200 : upstream.status || 502
-    return new Response(null, { status, headers })
-  } catch {
-    return new Response(null, { status: 500 })
   }
 }
