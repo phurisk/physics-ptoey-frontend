@@ -42,7 +42,6 @@ export default function ExamViewer({ params }: { params: Promise<{ id: string }>
         if (!detail) throw new Error("ไม่พบข้อมูลข้อสอบ")
         if (!cancelled) setExam(detail)
 
-
         const files = (detail.files || []).map((f) => ({
           id: f.id,
           name: f.fileName || "ไฟล์ข้อสอบ",
@@ -100,12 +99,17 @@ export default function ExamViewer({ params }: { params: Promise<{ id: string }>
                     <div className="text-center text-gray-500 py-12">ไม่พบไฟล์สำหรับข้อสอบนี้</div>
                   ) : (
                     <div className="w-full bg-gray-100">
-                      {/* Inline viewer: responsive heights for phone/tablet/desktop */}
-                      <iframe
-                        src={`/api/proxy-view?url=${encodeURIComponent(activeFile.url)}&filename=${encodeURIComponent(activeFile.name || (exam?.title || 'exam.pdf'))}`}
-                        className="w-full h-[70vh] sm:h-[75vh] md:h-[80vh] lg:h-[83vh]"
-                        title={activeFile.name}
-                      />
+                      {(() => {
+                        const rawPdfUrl = `/api/proxy-view?url=${encodeURIComponent(activeFile.url)}&filename=${encodeURIComponent(activeFile.name || (exam?.title || 'exam.pdf'))}`
+                        const pdfWithZoom = `${rawPdfUrl}#page=1&zoom=page-width`
+                        return (
+                          <iframe
+                            src={pdfWithZoom}
+                            className="w-full h-[70vh] sm:h-[75vh] md:h-[80vh] lg:h-[83vh]"
+                            title={activeFile.name}
+                          />
+                        )
+                      })()}
                     </div>
                   )}
                 </CardContent>
@@ -116,7 +120,6 @@ export default function ExamViewer({ params }: { params: Promise<{ id: string }>
       </div>
       <Footer />
 
-      {/* Login modal for gated download */}
       <LoginModal isOpen={loginOpen} onClose={() => setLoginOpen(false)} />
     </>
   )

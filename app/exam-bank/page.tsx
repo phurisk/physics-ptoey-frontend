@@ -528,15 +528,6 @@ export default function ExamBankPage() {
                         <FileText className="h-5 w-5 text-gray-600 shrink-0" />
                         <div className="truncate">
                           <p className="text-sm font-medium text-gray-900 truncate">{f.name || "ไฟล์ PDF"}</p>
-                          <p className="text-xs text-gray-500 truncate">
-                            {(() => {
-                              try {
-                                return new URL(f.url).hostname
-                              } catch {
-                                return f.url
-                              }
-                            })()}
-                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
