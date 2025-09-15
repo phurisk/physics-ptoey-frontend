@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Download, ArrowLeft } from "lucide-react"
+import { ArrowLeft, Maximize2 } from "lucide-react"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/sections/footer"
 import { Button } from "@/components/ui/button"
@@ -61,10 +61,11 @@ export default function ExamViewer({ params }: { params: Promise<{ id: string }>
     return () => { cancelled = true }
   }, [id])
 
-  const handleDownload = () => {
+  const openFullscreen = () => {
     if (!activeFile) return
-    const url = `/api/proxy-download?url=${encodeURIComponent(activeFile.url)}&filename=${encodeURIComponent(activeFile.name || exam?.title || "exam.pdf")}`
-    try { window.open(url, "_blank", "noopener,noreferrer") } catch {}
+    const rawPdfUrl = `/api/proxy-view?url=${encodeURIComponent(activeFile.url)}&filename=${encodeURIComponent(activeFile.name || (exam?.title || 'exam.pdf'))}`
+    const fullUrl = `${rawPdfUrl}#page=1`
+    try { window.open(fullUrl, "_blank", "noopener,noreferrer") } catch {}
   }
 
   return (
@@ -72,10 +73,25 @@ export default function ExamViewer({ params }: { params: Promise<{ id: string }>
       <Navigation />
       <div className="min-h-screen bg-gradient-to-br from-white to-yellow-50 pt-20">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Button variant="outline" onClick={() => router.back()} className="cursor-pointer"><ArrowLeft className="h-4 w-4 mr-1" /> กลับ</Button>
-            <Badge variant="secondary" className="bg-yellow-400 text-white">ดูข้อสอบ</Badge>
-          </div>
+<div className="mb-4">
+  <div className="flex items-center gap-2 w-full">
+    <Button variant="outline" onClick={() => router.back()} className="cursor-pointer">
+      <ArrowLeft className="h-4 w-4 mr-1" /> กลับ
+    </Button>
+
+    <Badge variant="secondary" className="bg-yellow-400 text-white hidden sm:inline-flex">
+      ดูข้อสอบ
+    </Badge>
+
+    <Button
+      onClick={openFullscreen}
+      className="ml-auto cursor-pointer px-3 py-2 text-sm sm:text-base whitespace-nowrap"
+    >
+      <Maximize2 className="h-4 w-4 mr-1" /> ดูเต็มหน้าจอ
+    </Button>
+  </div>
+</div>
+
 
           <div className="mb-4">
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{exam?.title || "กำลังโหลด..."}</h1>
