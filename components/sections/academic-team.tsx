@@ -21,17 +21,13 @@ const defaultTeachers: Teacher[] = [
     subject: "ฟิสิกส์",
     image: "/profile_about.png",
     highlights: [
-      "คณะวิทยาศาสตร์ สาขาฟิสิกส์ จุฬาลงกรณ์มหาวิทยาลัย (Pure Physics)",
-      "ที่ 1 ประเทศ ฟิสิกส์สามัญ 100/100",
-      "ที่ 1 ประเทศตอบปัญหาวิศวกรรม ม.เกษตร",
-      "ที่ 1 คะแนนรวมฟิสิกส์",
-      "ที่ 1 กลุ่มจุฬาภรณ์ทั่วประเทศ",
-      "อดีตนักเรียนโอลิมปิกฟิสิกส์ ศูนย์ศิลปากร",
-      "นักเรียนทุนวิทยาศาสตร์จุฬาภรณราชวิทยาลัย จ.เพชรบุรี",
-      "อาจารย์พิเศษของห้องเรียนพิเศษทั่วประเทศ",
-      "อาจารย์ดูแลเนื้อหาวิชาการของสถาบันชื่อดัง",
-      "รับมอบหมายดูแลผู้แทนประเทศฟิสิกส์สัประยุทธ์ระดับนานาชาติ สสวท.",
-      "รับเชิญเข้าร่วมประชุมอาจารย์ฟิสิกส์ศึกษาระดับชาติ",
+      "ที่ 1 ฟิสิกส์สามัญ ประเทศไทย",
+      "ชนะเลิศการแข่งขันฟิสิกส์สัประยุทธ์ กลุ่มภาคกลางและภาคตะวันออก(จุฬาลงกรณ์ฯ)",
+      "ชนะเลิศการตอบปัญหาวิศวกรรมศาสตร์ (มหาวิทยาลัยเกษตรศาสตร์)",
+      "นักเรียนฟิสิกส์โอลิมปิค มหาวิทยาลัยศิลปากร (สนามจันทร์)",
+      "นักเรียนทุนส่งเสริมความเป็นเลิศทางวิทยาศาสตร์และเทคโนโลยี JSTP ของสวทช",
+      "รับเชิญเข้าร่วมประชุมสัมนาฟิสิกส์ศึกษา เกี่ยวกับการเรียนการสอนและงานวิจัยด้านฟิสิกส์ศึกษาของประเทศไทย",
+      "ผู้ช่วยดูแลการทดลองผู้แทนฟิสิกส์ประยุกต์ระดับนานาชาติ ของจุฬาลงกรณ์มหาวิทยาลัย",
     ],
   },
   {
@@ -313,13 +309,13 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
         `}</style>
       </div>
 
-      {/* Dialog แสดงรายละเอียดครู */}
+  
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent
           showCloseButton={false}
           className="p-0 bg-white rounded-none sm:rounded-2xl w-full h-[100dvh] sm:h-auto sm:max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl top-0 left-0 translate-x-0 translate-y-0 sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] overflow-hidden sm:max-h-[90vh] max-h-[100dvh]"
         >
-          {/* ปุ่มปิด */}
+       
           <button
             type="button"
             aria-label="ปิด"
@@ -330,9 +326,9 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
           </button>
 
           <div className="flex h-full w-full flex-col overflow-hidden">
-            {/* *** MOBILE: ปรับปรุง layout ให้ scroll ได้ *** */}
+        
             <div className="sm:hidden h-full flex flex-col overflow-hidden">
-              {/* Hero รูป - ลดขนาดลงเพื่อให้เนื้อหามีพื้นที่มากขึ้น */}
+         
               <div className="relative w-full h-[25vh] bg-gradient-to-br from-gray-50 to-gray-100 flex-shrink-0">
                 {selected?.image && (
                   <Image
@@ -344,9 +340,9 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
                     priority
                   />
                 )}
-                {/* ไล่เงาด้านล่าง */}
+            
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                {/* ชื่อ + แท็กวิชา */}
+              
                 <div className="absolute bottom-3 left-4 right-16">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     {selected?.subject && (
@@ -382,7 +378,7 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
               </div>
             </div>
 
-            {/* *** DESKTOP/TABLET: ปรับปรุง layout ให้สวยขึ้น *** */}
+      
             <DialogHeader className="hidden sm:flex px-8 pt-8 pb-4 border-b border-gray-100">
               <DialogTitle className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
                 {selected?.name}
@@ -395,7 +391,7 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
             </DialogHeader>
 
             <div className="hidden sm:grid grid-cols-1 lg:grid-cols-5 gap-8 p-8 bg-white overflow-hidden">
-              {/* รูปภาพ */}
+             
               <div className="lg:col-span-2">
                 {selected?.image && (
                   <div className="relative w-full aspect-[3/4] bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl overflow-hidden shadow-lg ring-1 ring-black/5">
@@ -411,7 +407,7 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
                 )}
               </div>
 
-              {/* เนื้อหา */}
+           
               <div className="lg:col-span-3 flex flex-col overflow-hidden">
                 <h4 className="text-xl font-semibold text-gray-900 mb-6 pb-3 border-b-2 border-yellow-500 flex-shrink-0">
                   ประวัติและผลงาน

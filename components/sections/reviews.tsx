@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import { useState, useEffect } from "react"
-import type React from "react" 
+import type React from "react"
 import { X } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { reviews as fallbackReviews } from "@/lib/dummy-data"
@@ -50,9 +50,9 @@ function ImageModal({
 
 export default function Reviews() {
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [visible, setVisible] = useState(3) 
-  const [slides, setSlides] = useState<{ id: string | number; image: string }[]>([]) 
-  const [loading, setLoading] = useState(true) 
+  const [visible, setVisible] = useState(3) // desktop = 3
+  const [slides, setSlides] = useState<{ id: string | number; image: string }[]>([])
+  const [loading, setLoading] = useState(true)
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedImage, setSelectedImage] = useState<{ src: string; alt: string } | null>(null)
@@ -68,20 +68,18 @@ export default function Reviews() {
     if (typeof document !== "undefined") document.body.style.overflow = "auto"
   }
 
-  
   useEffect(() => {
     const updateVisible = () => {
       const w = window.innerWidth
       if (w < 768) setVisible(1)
       else if (w < 1024) setVisible(2)
-      else setVisible(4)
+      else setVisible(3) // 3 รูปบนเดสก์ท็อป
     }
     updateVisible()
     window.addEventListener("resize", updateVisible)
     return () => window.removeEventListener("resize", updateVisible)
   }, [])
 
-  
   useEffect(() => {
     let mounted = true
     ;(async () => {
@@ -102,17 +100,14 @@ export default function Reviews() {
 
         if (!mounted) return
 
-        if ((res.status >= 200 && res.status < 300) && mapped.length > 0) {
+        if (res.status >= 200 && res.status < 300 && mapped.length > 0) {
           setSlides(mapped)
           setCurrentIndex(0)
-          
         } else {
           setSlides(fallbackReviews)
           setCurrentIndex(0)
-         
         }
-      } catch (err) {
-      
+      } catch {
         if (mounted) {
           setSlides(fallbackReviews)
           setCurrentIndex(0)
@@ -133,14 +128,12 @@ export default function Reviews() {
   const [dragStartX, setDragStartX] = useState(0)
   const [dragOffset, setDragOffset] = useState(0)
 
-
   useEffect(() => {
     setCurrentIndex((prev) => Math.min(prev, maxIndex))
   }, [visible, maxIndex])
 
   const nextSlide = () => setCurrentIndex((prev) => (prev >= maxIndex ? 0 : prev + 1))
   const prevSlide = () => setCurrentIndex((prev) => (prev <= 0 ? maxIndex : prev - 1))
-
 
   useEffect(() => {
     if (loading || length <= visible || isInteracting) return
@@ -187,12 +180,27 @@ export default function Reviews() {
           </p>
         </div>
 
-      
         {loading ? (
           <div className="overflow-hidden mx-4 sm:mx-8">
-            <div className="flex">
+            <div
+              className="flex"
+              style={
+                {
+                  gap: "12px",
+                  // ทำให้ความกว้างต่อชิ้นคำนวณรวมช่องว่างแล้วพอดีเป๊ะ
+                  "--gap": "12px",
+                  "--visible": visible,
+                } as React.CSSProperties
+              }
+            >
               {Array.from({ length: visible }).map((_, i) => (
-                <div key={i} className="w-full md:w-1/2 lg:w-1/4 flex-shrink-0 px-2 sm:px-3">
+                <div
+                  key={i}
+                  className="flex-shrink-0"
+                  style={{
+                    flex: "0 0 calc((100% - (var(--visible) - 1) * var(--gap)) / var(--visible))",
+                  }}
+                >
                   <div className="aspect-square rounded-lg shimmer" />
                 </div>
               ))}
@@ -203,11 +211,17 @@ export default function Reviews() {
             <div className="overflow-hidden mx-4 sm:mx-8">
               <div
                 className={`flex ${isDragging ? "" : "transition-transform duration-300 ease-in-out"}`}
-                style={{
-                  transform: `translateX(calc(-${currentIndex * (100 / visible)}% + ${dragOffset}px))`,
-                  touchAction: "pan-y",
-                  cursor: isDragging ? "grabbing" : "grab",
-                }}
+                style={
+                  {
+                    gap: "12px",
+                    "--gap": "12px",
+                    "--visible": visible,
+                    // เลื่อนตาม "ความกว้างการ์ด + ช่องว่าง" ต่อหนึ่งสเต็ป
+                    transform: `translateX(calc(-${currentIndex} * ( (100% - (var(--visible) - 1) * var(--gap)) / var(--visible) + var(--gap) ) + ${dragOffset}px))`,
+                    touchAction: "pan-y",
+                    cursor: isDragging ? "grabbing" : "grab",
+                  } as React.CSSProperties
+                }
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={endDrag}
@@ -215,7 +229,13 @@ export default function Reviews() {
                 onPointerLeave={endDrag}
               >
                 {slides.map((review) => (
-                  <div key={review.id} className="w-full md:w-1/2 lg:w-1/4 flex-shrink-0 px-2 sm:px-3">
+                  <div
+                    key={review.id}
+                    className="flex-shrink-0"
+                    style={{
+                      flex: "0 0 calc((100% - (var(--visible) - 1) * var(--gap)) / var(--visible))",
+                    }}
+                  >
                     <Card className="h-full border-none shadow-none">
                       <CardContent className="p-0">
                         <div
@@ -281,7 +301,6 @@ export default function Reviews() {
 
       <ImageModal isOpen={isModalOpen} onClose={closeModal} image={selectedImage} />
 
-    
       <style jsx>{`
         .shimmer {
           position: relative;

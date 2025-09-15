@@ -126,7 +126,7 @@ export default function Books() {
     try {
       setCreating(true)
       setPurchaseError(null)
-      // Frontend-only duplicate order guard (prevent duplicate orders when one exists and not canceled/rejected)
+     
       if (user?.id && selectedBook?.id) {
         try {
           const res0 = await http.get(`/api/orders`, { params: { userId: user.id } })
@@ -211,7 +211,7 @@ export default function Books() {
     }
   }
 
-  // Build/cleanup preview for selected slip
+  
   useEffect(() => {
     if (!slip) {
       if (slipPreview) {
@@ -324,9 +324,9 @@ export default function Books() {
                  
                   <Badge
                     className="
-                      absolute top-2 right-2 lg:top-4 lg:right-4  /* MOBILE-ONLY: ขยับ badge ชิดขอบน้อยลง */
-                      bg-red-500 text-white text-[10px] lg:text-xs /* MOBILE-ONLY: ย่อฟอนต์ */
-                      px-1.5 py-0.5 lg:px-2 lg:py-0.5              /* MOBILE-ONLY: ย่อ padding */
+                      absolute top-2 right-2 lg:top-4 lg:right-4
+                      bg-red-500 text-white text-[10px] lg:text-xs
+                      px-1.5 py-0.5 lg:px-2 lg:py-0.5 
                     "
                   >
                     -{calculateDiscount(book.price, book.discountPrice)}%

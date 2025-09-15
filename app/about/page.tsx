@@ -88,17 +88,13 @@ const members: Member[] = [
     subject: "ฟิสิกส์",
     image: "/profile_about.png",
     highlights: [
-      "คณะวิทยาศาสตร์ สาขาฟิสิกส์ จุฬาลงกรณ์มหาวิทยาลัย (Pure Physics)",
-      "ที่ 1 ประเทศ ฟิสิกส์สามัญ 100/100",
-      "ที่ 1 ประเทศตอบปัญหาวิศวกรรม ม.เกษตร",
-      "ที่ 1 คะแนนรวมฟิสิกส์",
-      "ที่ 1 กลุ่มจุฬาภรณ์ทั่วประเทศ",
-      "อดีตนักเรียนโอลิมปิกฟิสิกส์ ศูนย์ศิลปากร",
-      "นักเรียนทุนวิทยาศาสตร์จุฬาภรณราชวิทยาลัย จ.เพชรบุรี",
-      "อาจารย์พิเศษของห้องเรียนพิเศษทั่วประเทศ",
-      "อาจารย์ดูแลเนื้อหาวิชาการของสถาบันชื่อดัง",
-      "รับมอบหมายดูแลผู้แทนประเทศฟิสิกส์สัประยุทธ์ระดับนานาชาติ สสวท.",
-      "รับเชิญเข้าร่วมประชุมอาจารย์ฟิสิกส์ศึกษาระดับชาติ",
+      "ที่ 1 ฟิสิกส์สามัญ ประเทศไทย",
+      "ชนะเลิศการแข่งขันฟิสิกส์สัประยุทธ์ กลุ่มภาคกลางและภาคตะวันออก(จุฬาลงกรณ์ฯ)",
+      "ชนะเลิศการตอบปัญหาวิศวกรรมศาสตร์ (มหาวิทยาลัยเกษตรศาสตร์)",
+      "นักเรียนฟิสิกส์โอลิมปิค มหาวิทยาลัยศิลปากร \n(สนามจันทร์)",
+      "นักเรียนทุนส่งเสริมความเป็นเลิศทางวิทยาศาสตร์และเทคโนโลยี JSTP ของสวทช",
+      "รับเชิญเข้าร่วมประชุมสัมนาฟิสิกส์ศึกษา เกี่ยวกับการเรียนการสอนและงานวิจัยด้านฟิสิกส์ศึกษาของประเทศไทย",
+      "ผู้ช่วยดูแลการทดลองผู้แทนฟิสิกส์ประยุกต์ระดับนานาชาติ ของจุฬาลงกรณ์มหาวิทยาลัย",
     ],
   },
 
@@ -109,9 +105,9 @@ const members: Member[] = [
     highlights: [
       "อดีตนักเรียนโอลิมปิกวิชาเคมี ในความควบคุมของมหาวิทยาลัยศิลปากร",
       "ชนะเลิศเหรียญทองฟิสิกส์สัประยุทธ์ของภาคกลางตอนล่าง",
-      "ผ่านการคัดเลือกเข้าร่วม Thai Science Camp ครั้งที่ 10",
+      "ผ่านการคัดเลือกเข้าร่วม Thai Science Camp \nครั้งที่ 10",
       "ผู้ช่วยจัดกิจกรรมการแข่งขันการตอบปัญหาวิชาการเคมี คณะวิทยาศาสตร์",
-      "ฝึกงานด้านพิษวิทยา สถาบันนิติวิทยาศาสตร์ โรงพยาบาลตำรวจ",
+      "ฝึกงานด้านพิษวิทยา สถาบันนิติวิทยาศาสตร์ \nโรงพยาบาลตำรวจ",
       "ผู้ช่วยวิจัยศึกษาองค์ประกอบสารสกัดจากกัญชา ตีพิมพ์ในวารสารวิชาการ",
     ],
   },
@@ -119,7 +115,7 @@ const members: Member[] = [
     name: "ครูพี่อู๋",
     subject: "ชีววิทยา",
     image: "/teacher-5.png",
-    highlights: ["เกียรตินิยมอันดับ 1 สาขาชีววิทยาโดยตรง คณะวิทยาศาสตร์ ม.ศิลปากร"],
+    highlights: ["เกียรตินิยมอันดับ 1 สาขาชีววิทยาโดยตรง \nคณะวิทยาศาสตร์ ม.ศิลปากร"],
   },
   {
     name: "ครูพี่ยุ้ย",
@@ -139,7 +135,7 @@ const members: Member[] = [
     highlights: [
       "สอน ม.ปลาย มากกว่า 10 ปี พาน้องๆ สอบเข้ามหาลัยนับพันคน",
       "ปริญญาตรี อักษรศาสตร์ เอกภาษาอังกฤษ ม.ศิลปากร เกียรตินิยมอันดับ 2",
-      "เจ้าของเพจ Engaholic ให้ความรู้ภาษาอังกฤษ ผู้ติดตาม 50,000+",
+      "เจ้าของเพจ Engaholic ให้ความรู้ภาษาอังกฤษ \nผู้ติดตาม 50,000+",
     ],
   },
   {
@@ -418,7 +414,7 @@ export default function AboutPage() {
               {members.map((m, i) => (
                 <motion.div key={m.name} variants={fadeIn} initial="hidden" whileInView="show" viewport={{ once: true, amount: 0.15 }}>
                   <article className="relative overflow-hidden rounded-3xl ring-1 ring-black/5 bg-gradient-to-br from-white to-yellow-50/30 p-6 h-full flex flex-col">
-                    <div className=" flex-col items-center text-center ทิ">
+                    <div className="flex flex-col items-center text-center">
                       <h3 className="mb-3 bg-white text-gray-900 px-0 py-2 text-xl md:text-2xl font-bold tracking-wide">
                         <span className="relative inline-block px-2 pb-1">
                           <span className="relative z-10">{m.subject}</span>
@@ -428,7 +424,7 @@ export default function AboutPage() {
                       </h3>
 
 
-                      <div className="relative w-full max-w-[260px] aspect-[3/4] rounded-2xl overflow-hidden bg-blue-50 ring-1 ring-black/5 shadow-sm">
+                      <div className="relative w-full max-w-[260px] mx-auto aspect-[3/4] rounded-2xl overflow-hidden bg-blue-50 ring-1 ring-black/5 shadow-sm">
                         <Image
                           src={m.image || "/placeholder.svg"}
                           alt={m.name}
@@ -448,7 +444,7 @@ export default function AboutPage() {
                       {m.highlights.map((h, idx) => (
                         <li key={idx} className="flex items-start gap-2">
                           <span className="mt-1 inline-block h-1.5 w-1.5 rounded-full bg-[#FEBE01] flex-shrink-0" />
-                          <span className="text-pretty">{h}</span>
+                          <span className="text-pretty whitespace-pre-line">{h}</span>
                         </li>
                       ))}
                     </ul>
