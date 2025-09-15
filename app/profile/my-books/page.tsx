@@ -202,7 +202,7 @@ export default function MyBooksPage() {
                               <Button
                                 variant="outline"
                                 onClick={() => {
-                                  const url = `/api/proxy-download?url=${encodeURIComponent(fileUrl)}&filename=${encodeURIComponent(filename)}`
+                                  const url = `/api/proxy-download-pdf?url=${encodeURIComponent(fileUrl)}&filename=${encodeURIComponent(filename)}`
                                   window.open(url, "_blank")
                                 }}
                               >

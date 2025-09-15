@@ -544,7 +544,7 @@ export default function OrderSuccessPage() {
                           variant="outline"
                           onClick={() => {
                             const name = `${order.ebook?.title || "ebook"}.pdf`
-                            const url = `/api/proxy-download?url=${encodeURIComponent(ebookFileUrl || ebookLink || "")}&filename=${encodeURIComponent(name)}`
+                            const url = `/api/proxy-download-pdf?url=${encodeURIComponent(ebookFileUrl || ebookLink || "")}&filename=${encodeURIComponent(name)}`
                             window.open(url, "_blank")
                           }}
                         >
