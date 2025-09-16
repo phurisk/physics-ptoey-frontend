@@ -5,7 +5,7 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Download, Eye, FileText, Search, Calendar } from "lucide-react"
+import { Download, Eye, FileText, Search, Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -46,6 +46,7 @@ type UiExam = {
 }
 
 const EXAMS_API = "/api/exams"
+const ITEMS_PER_PAGE = 12
 
 export default function ExamBankPage() {
   const router = useRouter()
@@ -65,6 +66,9 @@ export default function ExamBankPage() {
   const [filesLoading, setFilesLoading] = useState(false)
   const [filesError, setFilesError] = useState<string | null>(null)
   const [files, setFiles] = useState<{ id?: string; name?: string; url: string; mime?: string }[]>([])
+
+  // pagination (client-side)
+  const [currentPage, setCurrentPage] = useState<number>(1)
 
   useEffect(() => {
     let active = true
@@ -119,7 +123,10 @@ export default function ExamBankPage() {
     return () => { cancelled = true }
   }, [])
 
-  // โหลดไฟล์เมื่อเปิด Dialog
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [selectedCategory, selectedYear, searchTerm])
+
   useEffect(() => {
     let cancelled = false
     async function loadFiles(examId: string) {
@@ -147,7 +154,6 @@ export default function ExamBankPage() {
         normalized = pdfs.length > 0 ? pdfs : normalized
         if (!cancelled) setFiles(normalized)
 
-      
         if (!cancelled && normalized.length === 0) {
           try {
             const res2 = await fetch(`${EXAMS_API}/${encodeURIComponent(examId)}/files`, { cache: "no-store" })
@@ -241,12 +247,31 @@ export default function ExamBankPage() {
     })
   }, [uiExams, selectedCategory, selectedCategoryName, selectedYear, searchTerm])
 
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredExams.length / ITEMS_PER_PAGE))
+    if (currentPage > totalPages) setCurrentPage(totalPages)
+  }, [filteredExams.length, currentPage])
+
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredExams.length / ITEMS_PER_PAGE)), [filteredExams.length])
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+  const pagedExams = useMemo(() => filteredExams.slice(startIndex, startIndex + ITEMS_PER_PAGE), [filteredExams, startIndex])
+
+  const buildPageList = useMemo<(number | "...")[]>(() => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
+    const pages: (number | "...")[] = [1]
+    const middleStart = Math.max(2, currentPage - 2)
+    const middleEnd = Math.min(totalPages - 1, currentPage + 2)
+    if (middleStart > 2) pages.push("...")
+    for (let p = middleStart; p <= middleEnd; p++) pages.push(p)
+    if (middleEnd < totalPages - 1) pages.push("...")
+    pages.push(totalPages)
+    return pages
+  }, [currentPage, totalPages])
+
   const handleViewPDF = (examId: string) => {
     if (!examId) return
     router.push(`/exam-bank/view/${encodeURIComponent(examId)}`)
   }
-
-
 
   const handleDownload = async (downloadUrl: string, filename?: string) => {
     if (!downloadUrl) return
@@ -254,14 +279,11 @@ export default function ExamBankPage() {
       setLoginOpen(true)
       return
     }
-  
     const url = `/api/proxy-download-pdf?url=${encodeURIComponent(downloadUrl)}${filename ? `&filename=${encodeURIComponent(filename)}` : ""}`
-  
     try {
       const res = await fetch(url, { method: "GET", cache: "no-store" })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const blob = await res.blob()
-  
       const objectUrl = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = objectUrl
@@ -271,13 +293,10 @@ export default function ExamBankPage() {
       a.remove()
       URL.revokeObjectURL(objectUrl)
     } catch (e) {
-
       try { window.location.href = url } catch {}
     }
   }
-  
 
-  // จำนวนการ์ดสเกเลตันตอนโหลด
   const SKELETON_COUNT = 8
 
   return (
@@ -285,7 +304,6 @@ export default function ExamBankPage() {
       <Navigation />
       <div className="min-h-screen bg-gradient-to-br from-white to-yellow-50 pt-20">
         <div className="container mx-auto px-4 py-8">
-         
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -298,7 +316,6 @@ export default function ExamBankPage() {
             </p>
           </motion.div>
 
-       
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -335,7 +352,6 @@ export default function ExamBankPage() {
             </div>
           </motion.div>
 
-     
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -372,17 +388,19 @@ export default function ExamBankPage() {
             )}
           </motion.div>
 
-        
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.3 }}
             className="text-center mb-6"
           >
-            {!loading && <p className="text-gray-600">พบข้อสอบ {filteredExams.length} รายการ</p>}
+            {!loading && (
+              <p className="text-gray-600">
+                พบข้อสอบ {filteredExams.length} รายการ • หน้า {Math.min(currentPage, totalPages)} / {totalPages}
+              </p>
+            )}
           </motion.div>
 
-         
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -413,7 +431,7 @@ export default function ExamBankPage() {
 
             {!loading &&
               !error &&
-              filteredExams.map((exam, index) => {
+              pagedExams.map((exam, index) => {
                 return (
                   <motion.div
                     key={exam.id}
@@ -463,7 +481,69 @@ export default function ExamBankPage() {
               })}
           </motion.div>
 
-        
+          {!loading && !error && filteredExams.length > ITEMS_PER_PAGE && (
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="rounded-full"
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="rounded-full"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              {buildPageList.map((p, idx) =>
+                p === "..." ? (
+                  <span key={`dots-${idx}`} className="px-2 text-gray-400 select-none">…</span>
+                ) : (
+                  <Button
+                    key={p}
+                    variant={currentPage === p ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(p as number)}
+                    className={`rounded-full ${currentPage === p ? "text-white" : ""}`}
+                    style={{
+                      backgroundColor: currentPage === p ? "rgb(250 202 21)" : "transparent",
+                      borderColor: "rgb(250 202 21)",
+                      color: currentPage === p ? "white" : "rgb(250 202 21)",
+                    }}
+                  >
+                    {p}
+                  </Button>
+                )
+              )}
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="rounded-full"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="rounded-full"
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
           {!loading && !error && filteredExams.length === 0 && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -477,7 +557,6 @@ export default function ExamBankPage() {
             </motion.div>
           )}
 
-  
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -576,12 +655,10 @@ export default function ExamBankPage() {
         </DialogContent>
       </Dialog>
 
-  
       <LoginModal isOpen={loginOpen} onClose={() => setLoginOpen(false)} />
 
       <Footer />
 
-     
       <style jsx>{`
         .shimmer {
           position: relative;

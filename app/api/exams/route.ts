@@ -11,7 +11,7 @@ export async function GET(req: Request) {
 
   try {
     const cookie = req.headers.get("cookie") ?? ""
-    const res = await fetch(`${baseUrl}/api/exams`, {
+    const res = await fetch(`${baseUrl}/api/exams/?limit=100`, {
       next: { revalidate: 60 },
       headers: { cookie },
     })
