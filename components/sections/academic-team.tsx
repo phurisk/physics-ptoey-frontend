@@ -10,6 +10,7 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react"
 
 type Teacher = {
   name: string
+  role: string
   subject: string
   image: string
   highlights?: string[]
@@ -18,20 +19,73 @@ type Teacher = {
 const defaultTeachers: Teacher[] = [
   {
     name: "ครูพี่เต้ย",
+    role: "ม.ปลาย",
     subject: "ฟิสิกส์",
     image: "/profile_about.png",
     highlights: [
       "ที่ 1 ฟิสิกส์สามัญ ประเทศไทย",
       "ชนะเลิศการแข่งขันฟิสิกส์สัประยุทธ์ กลุ่มภาคกลางและภาคตะวันออก(จุฬาลงกรณ์ฯ)",
       "ชนะเลิศการตอบปัญหาวิศวกรรมศาสตร์ (มหาวิทยาลัยเกษตรศาสตร์)",
-      "นักเรียนฟิสิกส์โอลิมปิค มหาวิทยาลัยศิลปากร (สนามจันทร์)",
+      "นักเรียนฟิสิกส์โอลิมปิค มหาวิทยาลัยศิลปากร \n(สนามจันทร์)",
       "นักเรียนทุนส่งเสริมความเป็นเลิศทางวิทยาศาสตร์และเทคโนโลยี JSTP ของสวทช",
       "รับเชิญเข้าร่วมประชุมสัมนาฟิสิกส์ศึกษา เกี่ยวกับการเรียนการสอนและงานวิจัยด้านฟิสิกส์ศึกษาของประเทศไทย",
       "ผู้ช่วยดูแลการทดลองผู้แทนฟิสิกส์ประยุกต์ระดับนานาชาติ ของจุฬาลงกรณ์มหาวิทยาลัย",
     ],
   },
   {
+    name: "ครูพี่แซน",
+    role: "ม.ปลาย",
+    subject: "เคมี",
+    image: "/teacher-3.png",
+    highlights: [
+      "อดีตนักเรียนโอลิมปิกวิชาเคมี ในความควบคุมของมหาวิทยาลัยศิลปากร",
+      "ชนะเลิศเหรียญทองฟิสิกส์สัประยุทธ์ของภาคกลางตอนล่าง",
+      "ผ่านการคัดเลือกเข้าร่วม Thai Science Camp \nครั้งที่ 10",
+      "ผู้ช่วยจัดกิจกรรมการแข่งขันการตอบปัญหาวิชาการเคมี คณะวิทยาศาสตร์",
+      "ฝึกงานด้านพิษวิทยา สถาบันนิติวิทยาศาสตร์ \nโรงพยาบาลตำรวจ",
+      "ผู้ช่วยวิจัยศึกษาองค์ประกอบสารสกัดจากกัญชา ตีพิมพ์ในวารสารวิชาการ",
+    ],
+  },
+  {
+    name: "ครูพี่อู๋",
+    role: "ม.ต้น",
+    subject: "ชีววิทยา",
+    image: "/teacher-5.png",
+    highlights: ["เกียรตินิยมอันดับ 1 สาขาชีววิทยาโดยตรง \nคณะวิทยาศาสตร์ ม.ศิลปากร"],
+  },
+  {
+    name: "ครูพี่แจม",
+    role: "ม.ปลาย",
+    subject: "ชีววิทยา",
+    image: "/teacher-6.jpg",
+    highlights: [
+      "เกียรตินิยมอันดับ 2 วท.บ. ชีววิทยา คณะวิทยาศาสตร์ จุฬาฯ (2559–2562)",
+      "กำลังศึกษาระดับมหาบัณฑิต คณะครุศาสตร์ จุฬาฯ (2567–ปัจจุบัน)",
+      "ผู้ช่วยนักวิจัย คณะแพทยศาสตร์ จุฬาฯ (2563)",
+      "ประสบการณ์สอนชีววิทยา 10 ปี (ม.4–6/เตรียมสอบเข้ามหาวิทยาลัย)",
+      "ผ่านการคัดเลือกโครงการ สอวน. ชีววิทยา (2558)",
+      "เข้าร่วม/สอบโอลิมปิกวิชาการชีววิทยา ต่อเนื่อง 3 ปี",
+      "ทีมออกข้อสอบชีววิทยา TCASter (ร่วมกับจุฬาลงกรณ์มหาวิทยาลัย)",
+      "ชนะเลิศงานตอบปัญหาสุขภาพและพระราชประวัติพระบิดา (คณะแพทยศาสตร์ จุฬาฯ)",
+      "Outstanding student (Top score) ในวิชา Invertebrate Zoology ปีการศึกษา 2018",
+      "สอนทั้งเดี่ยวและกลุ่ม ในโรงเรียนชั้นนำ (เตรียมอุดมฯ, MWIT, สาธิตจุฬาฯ, สาธิต มศว, สตรีวิยา, กรุงเทพคริสเตียนฯ ฯลฯ)",
+      "เจ้าของเพจ “Biosensor” คอร์สชีววิทยาออนไลน์"
+    ],
+  },
+  {
+    name: "ครูพี่ยุ้ย",
+    role: "ม.ปลาย",
+    subject: "คณิตศาสตร์",
+    image: "/teacher-4.png",
+    highlights: [
+      "ปริญญาตรี เอกคณิตศาสตร์ คณะครุศาสตร์ จุฬาลงกรณ์มหาวิทยาลัย",
+      "นักเรียนทุนวิทยาศาสตร์จุฬาภรณราชวิทยาลัย จ.เพชรบุรี",
+      "กำลังศึกษาปริญญาโท คณะวิทยาศาสตร์ สาขาคณิตศาสตร์ศึกษา ม.ศิลปากร",
+    ],
+  },
+  {
     name: "ครูพี่ปลื้ม",
+    role: "ม.ปลาย",
     subject: "ภาษาอังกฤษ",
     image: "/teacher-1.png",
     highlights: [
@@ -42,6 +96,7 @@ const defaultTeachers: Teacher[] = [
   },
   {
     name: "ครูพี่นัท",
+    role: "ม.ปลาย",
     subject: "ภาษาจีน",
     image: "/teacher-2.png",
     highlights: [
@@ -50,35 +105,7 @@ const defaultTeachers: Teacher[] = [
       "ประสบการณ์สอนและพานักเรียนแข่งขันภาษาจีน รางวัลระดับประเทศ",
     ],
   },
-  {
-    name: "ครูพี่แซน",
-    subject: "เคมี",
-    image: "/teacher-3.png",
-    highlights: [
-      "อดีตนักเรียนโอลิมปิกวิชาเคมี ในความควบคุมของมหาวิทยาลัยศิลปากร",
-      "ชนะเลิศเหรียญทองฟิสิกส์สัประยุทธ์ของภาคกลางตอนล่าง",
-      "ผ่านการคัดเลือกเข้าร่วม Thai Science Camp ครั้งที่ 10",
-      "ผู้ช่วยจัดกิจกรรมการแข่งขันการตอบปัญหาวิชาการเคมี คณะวิทยาศาสตร์",
-      "ฝึกงานด้านพิษวิทยา สถาบันนิติวิทยาศาสตร์ โรงพยาบาลตำรวจ",
-      "ผู้ช่วยวิจัยศึกษาองค์ประกอบสารสกัดจากกัญชา ตีพิมพ์ในวารสารวิชาการ",
-    ],
-  },
-  {
-    name: "ครูพี่ยุ้ย",
-    subject: "คณิตศาสตร์",
-    image: "/teacher-4.png",
-    highlights: [
-      "ปริญญาตรี เอกคณิตศาสตร์ คณะครุศาสตร์ จุฬาลงกรณ์มหาวิทยาลัย",
-      "นักเรียนทุนวิทยาศาสตร์จุฬาภรณราชวิทยาลัย จ.เพชรบุรี",
-      "กำลังศึกษาปริญญาโท คณะวิทยาศาสตร์ สาขาคณิตศาสตร์ศึกษา ม.ศิลปากร",
-    ],
-  },
-  {
-    name: "ครูพี่อู๋",
-    subject: "ชีววิทยา",
-    image: "/teacher-5.png",
-    highlights: ["เกียรตินิยมอันดับ 1 สาขาชีววิทยาโดยตรง คณะวิทยาศาสตร์ ม.ศิลปากร"],
-  },
+
 ]
 
 export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?: Teacher[] }) {
@@ -124,33 +151,40 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
     }
   }, [])
 
-  const pages = useMemo(() => {
-    const chunks: Teacher[][] = []
-    for (let i = 0; i < data.length; i += perView) {
-      chunks.push(data.slice(i, i + perView))
-    }
-    return chunks
-  }, [data, perView])
-
   const viewportRef = useRef<HTMLDivElement>(null)
-  const [activePage, setActivePage] = useState(0)
+  const [step, setStep] = useState(0)
+  const [activeIndex, setActiveIndex] = useState(0)
+
   useEffect(() => {
     const el = viewportRef.current
     if (!el) return
-    let ticking = false
+    const measure = () => {
+      const first = el.querySelector<HTMLElement>(".carousel-item")
+      const gap = parseFloat(getComputedStyle(el).columnGap || getComputedStyle(el).gap || "0")
+      if (first) setStep(first.getBoundingClientRect().width + gap)
+    }
+    measure()
     const onScroll = () => {
-      if (ticking) return
-      ticking = true
-      requestAnimationFrame(() => {
-        const pageWidth = el.clientWidth
-        const idx = Math.round(el.scrollLeft / pageWidth)
-        setActivePage(Math.min(Math.max(idx, 0), Math.max(0, pages.length - 1)))
-        ticking = false
-      })
+      if (!step) return
+      const idx = Math.round(el.scrollLeft / step)
+      setActiveIndex(Math.min(Math.max(idx, 0), data.length - 1))
     }
     el.addEventListener("scroll", onScroll, { passive: true })
-    return () => el.removeEventListener("scroll", onScroll)
-  }, [pages.length])
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => {
+      el.removeEventListener("scroll", onScroll)
+      ro.disconnect()
+    }
+  }, [data.length, step])
+
+  const scrollToIndex = (i: number) => {
+    const el = viewportRef.current
+    if (!el || !step) return
+    const maxLeft = el.scrollWidth - el.clientWidth
+    const left = Math.min(Math.max(i * step, 0), maxLeft)
+    el.scrollTo({ left, behavior: "smooth" })
+  }
 
   const [detailOpen, setDetailOpen] = useState(false)
   const [selected, setSelected] = useState<Teacher | null>(null)
@@ -169,19 +203,14 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
         </div>
 
         <div className="relative">
-          {pages.length > 1 && (
+          {data.length > 1 && (
             <>
               <button
                 type="button"
                 aria-label="ก่อนหน้า"
                 className="absolute left-1 md:left-2 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow ring-1 ring-black/5 rounded-full p-2 disabled:opacity-40"
-                onClick={() => {
-                  const el = viewportRef.current
-                  if (!el) return
-                  const target = Math.max(0, activePage - 1)
-                  el.scrollTo({ left: target * el.clientWidth, behavior: "smooth" })
-                }}
-                disabled={activePage <= 0}
+                onClick={() => scrollToIndex(activeIndex - 1)}
+                disabled={activeIndex <= 0}
               >
                 <ChevronLeft className="h-5 w-5 text-gray-700" />
               </button>
@@ -189,13 +218,8 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
                 type="button"
                 aria-label="ถัดไป"
                 className="absolute right-1 md:right-2 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow ring-1 ring-black/5 rounded-full p-2 disabled:opacity-40"
-                onClick={() => {
-                  const el = viewportRef.current
-                  if (!el) return
-                  const target = Math.min(pages.length - 1, activePage + 1)
-                  el.scrollTo({ left: target * el.clientWidth, behavior: "smooth" })
-                }}
-                disabled={activePage >= pages.length - 1}
+                onClick={() => scrollToIndex(activeIndex + 1)}
+                disabled={activeIndex >= data.length - 1}
               >
                 <ChevronRight className="h-5 w-5 text-gray-700" />
               </button>
@@ -204,78 +228,70 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
 
           <div
             ref={viewportRef}
-            className="hide-scrollbar flex overflow-x-auto snap-x snap-mandatory scroll-smooth"
-            style={{ scrollPaddingLeft: 16, scrollPaddingRight: 16 }}
+            className="hide-scrollbar flex overflow-x-auto snap-x snap-mandatory scroll-smooth gap-4 md:gap-6 lg:gap-8 px-2 md:px-3 lg:px-4"
             role="region"
             aria-label="สไลด์ทีมวิชาการ"
           >
-            {pages.map((group, gi) => (
-              <div key={gi} className="w-full shrink-0 snap-start px-2 md:px-3 lg:px-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
-                  {group.map((t, i) => (
-                    <Card
-                      key={`${t.name}-${i}`}
-                      className="border-none shadow-md hover:shadow-lg transition-shadow rounded-2xl h-full"
+            {data.map((t, i) => (
+              <div
+                key={`${t.name}-${i}`}
+                className="carousel-item snap-start shrink-0 basis-full md:basis-1/2 lg:basis-1/3"
+              >
+                <Card className="border-none shadow-md hover:shadow-lg transition-shadow rounded-2xl h-full">
+                  <CardContent className="p-4 md:p-5 flex flex-col h-full">
+                    <div className="flex justify-center mb-3 md:mb-4">
+                      <Badge
+                        variant="outline"
+                        className="relative bg-white text-gray-900 border-0 rounded-none px-5 md:px-6 py-2 text-xl md:text-2xl font-bold tracking-wide before:content-[''] before:absolute before:left-3 before:right-3 before:bottom-0 before:h-[3px] before:bg-yellow-500 after:content-[''] after:absolute after:left-2 after:right-2 after:bottom-[6px] after:h-2 after:bg-yellow-100 after:-z-10"
+                      >
+                        <span className="relative z-[1]">{t.subject}</span>
+                      </Badge>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => openDetail(t)}
+                      className="rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      aria-label={`ดูประวัติ ${t.name}`}
                     >
-                      <CardContent className="p-4 md:p-5 flex flex-col h-full">
-                        <div className="flex justify-center mb-3 md:mb-4">
-                          <Badge
-                            variant="outline"
-                            className="relative bg-white text-gray-900 border-0 rounded-none px-5 md:px-6 py-2 text-xl md:text-2xl font-bold tracking-wide before:content-[''] before:absolute before:left-3 before:right-3 before:bottom-0 before:h-[3px] before:bg-yellow-500 after:content-[''] after:absolute after:left-2 after:right-2 after:bottom-[6px] after:h-2 after:bg-yellow-100 after:-z-10"
-                          >
-                            <span className="relative z-[1]">{t.subject}</span>
-                          </Badge>
-                        </div>
+                      <div className="aspect-[3/4] w-full">
+                        <Image
+                          src={t.image || "/placeholder.svg"}
+                          alt={t.name}
+                          width={900}
+                          height={1200}
+                          className="h-full w-full object-cover"
+                          priority={i < 3}
+                        />
+                      </div>
+                    </button>
 
-                        <button
-                          type="button"
-                          onClick={() => openDetail(t)}
-                          className="rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                          aria-label={`ดูประวัติ ${t.name}`}
-                        >
-                          <div className="aspect-[3/4] w-full">
-                            <Image
-                              src={t.image || "/placeholder.svg"}
-                              alt={t.name}
-                              width={900}
-                              height={1200}
-                              className="h-full w-full object-cover"
-                              priority={gi === 0 && i < 3}
-                            />
-                          </div>
-                        </button>
-
-                        <div className="mt-4 md:mt-5 flex-1 flex flex-col items-center">
-                          <h3 className="text-lg md:text-xl font-semibold text-gray-900 text-center">{t.name}</h3>
-                          <Button
-                            variant="outline"
-                            className="mt-3 rounded-xl border-gray-200 hover:border-yellow-400 hover:bg-yellow-50 bg-transparent"
-                            onClick={() => openDetail(t)}
-                          >
-                            ดูประวัติ
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                    <div className="mt-4 md:mt-5 flex-1 flex flex-col items-center">
+                      <h3 className="text-lg md:text-xl font-semibold text-gray-900 text-center">{t.name}</h3>
+                      <p className="text-sm text-yellow-600 relative top-[4px]">{t.role}</p>
+                      <Button
+                        variant="outline"
+                        className="mt-3 rounded-xl border-gray-200 hover:border-yellow-400 hover:bg-yellow-50 bg-transparent"
+                        onClick={() => openDetail(t)}
+                      >
+                        ดูประวัติ
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             ))}
           </div>
         </div>
 
-        {pages.length > 1 && (
+        {data.length > 1 && (
           <div className="flex justify-center gap-2 mt-4 md:mt-6">
-            {pages.map((_, i) => (
+            {data.map((_, i) => (
               <button
                 key={i}
-                aria-label={`ไปหน้า ${i + 1}`}
-                className={`h-2.5 w-2.5 rounded-full transition-all ${i === activePage ? "bg-yellow-500 scale-110" : "bg-gray-300 hover:bg-gray-400"}`}
-                onClick={() => {
-                  const el = viewportRef.current
-                  if (!el) return
-                  el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" })
-                }}
+                aria-label={`ไปการ์ดที่ ${i + 1}`}
+                className={`h-2.5 w-2.5 rounded-full transition-all ${i === activeIndex ? "bg-yellow-500 scale-110" : "bg-gray-300 hover:bg-gray-400"}`}
+                onClick={() => scrollToIndex(i)}
               />
             ))}
           </div>
@@ -309,13 +325,11 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
         `}</style>
       </div>
 
-  
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent
           showCloseButton={false}
-          className="p-0 bg-white rounded-none sm:rounded-2xl w-full h-[100dvh] sm:h-auto sm:max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl top-0 left-0 translate-x-0 translate-y-0 sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] overflow-hidden sm:max-h-[90vh] max-h-[100dvh]"
+          className=" p-0 bg-white rounded-none sm:rounded-2xl w-full h-[100dvh] sm:h-[90vh] sm:max-h-[90vh] sm:max-w-2xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl top-0 left-0 translate-x-0 translate-y-0 sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] overflow-hidden"
         >
-       
           <button
             type="button"
             aria-label="ปิด"
@@ -325,10 +339,8 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
             <X className="h-5 w-5" />
           </button>
 
-          <div className="flex h-full w-full flex-col overflow-hidden">
-        
+          <div className="flex h-full w-full flex-col overflow-hidden min-h-0 ">
             <div className="sm:hidden h-full flex flex-col overflow-hidden">
-         
               <div className="relative w-full h-[25vh] bg-gradient-to-br from-gray-50 to-gray-100 flex-shrink-0">
                 {selected?.image && (
                   <Image
@@ -340,9 +352,7 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
                     priority
                   />
                 )}
-            
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-              
                 <div className="absolute bottom-3 left-4 right-16">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     {selected?.subject && (
@@ -356,7 +366,7 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
               </div>
 
               <div className="flex-1 min-h-0 bg-white">
-                <div className="h-full overflow-y-auto custom-scrollbar">
+                <div className="h-full overflow-y-auto custom-scrollbar snap-y snap-mandatory scroll-pt-16">
                   <div className="p-4 pb-8">
                     <div className="sticky top-0 bg-white z-10 pb-3 mb-4 border-b border-gray-100">
                       <h4 className="text-lg font-semibold text-gray-900">ประวัติและผลงาน</h4>
@@ -364,7 +374,7 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
                     {selected?.highlights?.length ? (
                       <ul className="space-y-3 text-sm leading-relaxed text-gray-700">
                         {selected.highlights.map((h, i) => (
-                          <li key={i} className="flex gap-3 p-3 bg-gray-50/50 rounded-lg">
+                          <li key={i} className="flex gap-3 p-3 bg-gray-50/50 rounded-lg snap-start">
                             <span className="mt-1.5 inline-block h-2 w-2 rounded-full bg-yellow-500 flex-shrink-0" />
                             <span className="flex-1">{h}</span>
                           </li>
@@ -378,7 +388,6 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
               </div>
             </div>
 
-      
             <DialogHeader className="hidden sm:flex px-8 pt-8 pb-4 border-b border-gray-100">
               <DialogTitle className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
                 {selected?.name}
@@ -390,8 +399,7 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
               </DialogTitle>
             </DialogHeader>
 
-            <div className="hidden sm:grid grid-cols-1 lg:grid-cols-5 gap-8 p-8 bg-white overflow-hidden">
-             
+            <div className="hidden sm:grid grid-cols-1 lg:grid-cols-5 gap-8 p-8 bg-white overflow-hidden flex-1 min-h-0">
               <div className="lg:col-span-2">
                 {selected?.image && (
                   <div className="relative w-full aspect-[3/4] bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl overflow-hidden shadow-lg ring-1 ring-black/5">
@@ -407,18 +415,17 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
                 )}
               </div>
 
-           
-              <div className="lg:col-span-3 flex flex-col overflow-hidden">
+              <div className="lg:col-span-3 flex flex-col overflow-hidden min-h-0">
                 <h4 className="text-xl font-semibold text-gray-900 mb-6 pb-3 border-b-2 border-yellow-500 flex-shrink-0">
                   ประวัติและผลงาน
                 </h4>
                 {selected?.highlights?.length ? (
-                  <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar snap-y snap-mandatory scroll-pt-20 min-h-0">
                     <ul className="space-y-4 text-base md:text-lg text-gray-700">
                       {selected.highlights.map((h, i) => (
                         <li
                           key={i}
-                          className="flex gap-4 p-4 bg-gray-50/80 rounded-xl hover:bg-gray-50 transition-colors duration-200"
+                          className="flex gap-4 p-4 bg-gray-50/80 rounded-xl hover:bg-gray-50 transition-colors duration-200 snap-start"
                         >
                           <span className="mt-2.5 inline-block h-2.5 w-2.5 rounded-full bg-yellow-500 flex-shrink-0" />
                           <span className="flex-1 leading-relaxed">{h}</span>
