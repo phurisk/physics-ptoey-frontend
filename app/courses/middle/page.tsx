@@ -27,7 +27,7 @@ function getYouTubeEmbed(url: string) {
   return id ? `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1` : null
 }
 function getVimeoEmbed(url: string) {
-  const id = url.match(/(?:vimeo\.com|player\.vimeo\.com)\/(?:video\/)?(d+)/)?.[1]
+  const id = url.match(/(?:vimeo\.com|player\.vimeo\.com)\/(?:video\/)?(\d+)/)?.[1]
   return id ? `https://player.vimeo.com/video/${id}?dnt=1&title=0&byline=0&portrait=0` : null
 }
 function extractFirstUrl(text?: string | null) {
@@ -73,17 +73,34 @@ export default function MiddleCoursesPage() {
     ;(async () => {
       try {
         setLoadingSummaries(true)
-        const params = new URLSearchParams({ postType: "ภาพสรุป-ม.ต้น" })
-        const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
-        const json = await res.json().catch(() => ({}))
-        const list: any[] = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : []
-        const mapped = list.map((p: any) => ({
-          id: String(p?.id),
-          desktop: p?.imageUrl || null,
-          mobile: p?.imageUrlMobileMode || null,
-          title: p?.title || "",
-        }))
-        if (!cancelled) setSummaries(mapped)
+        const pageSize = 100
+        const seen = new Set<string>()
+        const all: { id: string; desktop?: string | null; mobile?: string | null; title?: string }[] = []
+        let page = 1
+        let loops = 0
+        while (!cancelled && loops < 20) {
+          const params = new URLSearchParams({ postType: "ภาพสรุป-ม.ต้น", limit: String(pageSize), page: String(page) })
+          const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
+          const json = await res.json().catch(() => ({}))
+          const list: any[] = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : []
+          const mapped = list.map((p: any) => ({
+            id: String(p?.id),
+            desktop: p?.imageUrl || null,
+            mobile: p?.imageUrlMobileMode || null,
+            title: p?.title || "",
+          }))
+          const before = all.length
+          for (const item of mapped) {
+            if (item.id && !seen.has(item.id)) {
+              seen.add(item.id)
+              all.push(item)
+            }
+          }
+          if (!list.length || list.length < pageSize || all.length === before) break
+          page += 1
+          loops += 1
+        }
+        if (!cancelled) setSummaries(all)
       } finally {
         if (!cancelled) setLoadingSummaries(false)
       }
@@ -113,7 +130,6 @@ export default function MiddleCoursesPage() {
   }, [])
 
   const lineUrl = "https://line.me/ti/p/@csw9917j"
-  const summaryBanner = summaries[0] || null
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-white via-yellow-50/30 to-white">
@@ -142,12 +158,7 @@ export default function MiddleCoursesPage() {
                 <div className="text-center">
                   <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                      />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
                   </div>
                   <p className="text-lg">ไม่พบวิดีโอแนะนำ</p>
@@ -166,41 +177,39 @@ export default function MiddleCoursesPage() {
           {loadingSummaries ? (
             <div className="relative w-full aspect-[283/400] bg-gray-100 rounded-2xl animate-pulse border border-gray-200" />
           ) : summaries.length ? (
-            <Card className="overflow-hidden border-2 border-gray-100 hover:border-yellow-500/50 transition-all duration-300 hover:shadow-xl py-0">
-              <CardContent className="p-0">
-                <div className="relative w-full aspect-[283/400] bg-white">
-                  {summaryBanner?.desktop && (
-                    <Image
-                      src={summaryBanner.desktop || "/placeholder.svg"}
-                      alt={summaryBanner.title || "summary"}
-                      fill
-                      className="object-contain hidden md:block"
-                    />
-                  )}
-                  {summaryBanner?.mobile && (
-                    <Image
-                      src={summaryBanner.mobile || "/placeholder.svg"}
-                      alt={summaryBanner.title || "summary"}
-                      fill
-                      className="object-contain md:hidden"
-                    />
-                  )}
-                  {!summaryBanner?.desktop && !summaryBanner?.mobile && (
-                    <Image src="/placeholder.svg" alt="summary" fill className="object-contain" />
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 gap-6">
+              {summaries.map((item) => (
+                <Card key={item.id} className="overflow-hidden border-2 border-gray-100 hover:border-yellow-500/50 transition-all duration-300 hover:shadow-xl py-0">
+                  <CardContent className="p-0">
+                    <div className="relative w-full aspect-[283/400] bg-white">
+                      {item.desktop && (
+                        <Image
+                          src={item.desktop}
+                          alt={item.title || "summary"}
+                          fill
+                          className="object-contain hidden md:block"
+                        />
+                      )}
+                      {item.mobile ? (
+                        <Image
+                          src={item.mobile}
+                          alt={item.title || "summary"}
+                          fill
+                          className="object-contain md:hidden"
+                        />
+                      ) : !item.desktop ? (
+                        <Image src="/placeholder.svg" alt="summary" fill className="object-contain" />
+                      ) : null}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           ) : (
             <div className="text-center py-12 text-gray-500">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
               ไม่มีภาพสรุป
@@ -212,21 +221,13 @@ export default function MiddleCoursesPage() {
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
             </div>
             <h2 className="text-2xl font-bold text-gray-900">คอร์สแนะนำ</h2>
           </div>
           <Link href="/courses">
-            <Button
-              variant="outline"
-              className="border-2 border-yellow-500 text-yellow-600 hover:bg-yellow-500 hover:text-white transition-colors duration-300 bg-transparent"
-            >
+            <Button variant="outline" className="border-2 border-yellow-500 text-yellow-600 hover:bg-yellow-500 hover:text-white transition-colors duration-300 bg-transparent">
               ดูคอร์สทั้งหมด
             </Button>
           </Link>
@@ -284,23 +285,19 @@ export default function MiddleCoursesPage() {
                       {course.isFree || (course.price || 0) === 0 ? (
                         <span className="text-2xl font-bold text-green-600">ฟรี</span>
                       ) : (() => {
-                        const original = Number(course.price || 0)
-                        const d = course.discountPrice as number | null | undefined
-                        const hasDiscount = d != null && d < original
-                        const effective = hasDiscount ? Number(d) : original
-                        return (
-                          <>
-                            {hasDiscount && (
-                              <span className="text-sm text-gray-400 line-through mr-1">
-                                ฿{original.toLocaleString()}
-                              </span>
-                            )}
-                            <span className="text-2xl font-extrabold text-yellow-600">
-                              ฿{effective.toLocaleString()}
-                            </span>
-                          </>
-                        )
-                      })()}
+                          const original = Number(course.price || 0)
+                          const d = course.discountPrice as number | null | undefined
+                          const hasDiscount = d != null && d < original
+                          const effective = hasDiscount ? Number(d) : original
+                          return (
+                            <>
+                              {hasDiscount && (
+                                <span className="text-sm text-gray-400 line-through mr-1">฿{original.toLocaleString()}</span>
+                              )}
+                              <span className="text-2xl font-extrabold text-yellow-600">฿{effective.toLocaleString()}</span>
+                            </>
+                          )
+                        })()}
                     </div>
                     <Link href={`/courses/${course.id}`}>
                       <Button className="w-full bg-yellow-400 hover:bg-yellow-500 text-white">ดูรายละเอียด</Button>
@@ -314,12 +311,7 @@ export default function MiddleCoursesPage() {
           <div className="text-center py-16 text-gray-500">
             <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
             </div>
             <p className="text-lg">ยังไม่มีคอร์สแนะนำ</p>
