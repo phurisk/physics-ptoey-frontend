@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import * as AvatarPrimitive from "@radix-ui/react-avatar"
-
 import { cn } from "@/lib/utils"
 
 function Avatar({
@@ -14,6 +13,11 @@ function Avatar({
       data-slot="avatar"
       className={cn(
         "relative flex size-8 shrink-0 overflow-hidden rounded-full",
+        "ring-2 ring-yellow-500 ring-offset-2 ring-offset-white",
+        "transition-all duration-200 cursor-pointer",
+        "hover:shadow-lg hover:ring-[3px] hover:scale-[1.02]",
+        "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-yellow-500 focus-visible:ring-offset-2",
+        "active:scale-95",
         className
       )}
       {...props}
@@ -28,7 +32,7 @@ function AvatarImage({
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
-      className={cn("aspect-square size-full", className)}
+      className={cn("aspect-square size-full object-cover", className)}
       {...props}
     />
   )

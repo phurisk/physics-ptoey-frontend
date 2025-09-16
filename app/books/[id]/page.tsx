@@ -82,7 +82,6 @@ function StarRating({
   )
 }
 
-// helper
 const fmtMoney = (n?: number | null) =>
   typeof n === "number" ? `฿${n.toLocaleString()}` : "-"
 
@@ -103,11 +102,9 @@ export default function BookDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // coupon 
   const [couponCode, setCouponCode] = useState("")
   const [creating, setCreating] = useState(false)
 
-  // reviews
   const [reviews, setReviews] = useState<ApiReview[]>([])
   const [reviewsLoading, setReviewsLoading] = useState(false)
   const [reviewsError, setReviewsError] = useState<string | null>(null)
@@ -116,7 +113,6 @@ export default function BookDetailPage() {
   const [hasMoreReviews, setHasMoreReviews] = useState(true)
   const [reviewsStats, setReviewsStats] = useState<{ totalReviews?: number; averageRating?: number } | null>(null)
 
-  // post review modal
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false)
   const [reviewRating, setReviewRating] = useState<number>(5)
   const [reviewTitle, setReviewTitle] = useState("")
@@ -125,7 +121,6 @@ export default function BookDetailPage() {
 
   const [loginOpen, setLoginOpen] = useState(false)
 
-  // load book
   useEffect(() => {
     let active = true
     const load = async () => {
@@ -145,7 +140,6 @@ export default function BookDetailPage() {
     return () => { active = false }
   }, [id])
 
-  // load reviews
   useEffect(() => {
     setReviews([])
     setReviewsPage(1)
@@ -240,7 +234,6 @@ export default function BookDetailPage() {
       })
       const json = await res.json().catch(() => ({ success: false }))
       if (!res.ok || json?.success === false) throw new Error(json?.error || "ส่งรีวิวไม่สำเร็จ")
-      // add to list (optimistic)
       const newItem: ApiReview = json?.data ?? {
         id: `temp_${Date.now()}`,
         userId: user.id,
@@ -257,7 +250,6 @@ export default function BookDetailPage() {
       setReviewComment("")
       setReviewRating(5)
     } catch (e) {
-      // keep dialog open, could show toast/err
     } finally {
       setPostingReview(false)
     }
@@ -282,8 +274,7 @@ export default function BookDetailPage() {
 
           {!loading && !error && book && (
             <div className="grid lg:grid-cols-3 gap-10">
-         
-              <section className="lg:col-span-2 space-y-6">
+              <section className="order-1 lg:order-1 lg:col-span-2 space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="relative aspect-[3/4] rounded-2xl overflow-hidden ring-1 ring-black/5 bg-white">
                     <Image
@@ -337,61 +328,9 @@ export default function BookDetailPage() {
                     </div>
                   </div>
                 </div>
-
-                {/* Reviews */}
-                <Card className="rounded-2xl border-gray-200 shadow-sm">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-2xl">รีวิวจากผู้อ่าน</CardTitle>
-                      <Button variant="outline" className="rounded-xl" onClick={openReviewDialog}>
-                        เขียนรีวิว
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-2">
-                    {reviewsError && <div className="text-red-600 text-sm mb-3">{reviewsError}</div>}
-
-                    {reviews.length === 0 && !reviewsLoading && (
-                      <div className="text-gray-500">ยังไม่มีรีวิว</div>
-                    )}
-
-                    <div className="space-y-4">
-                      {reviews.map((r) => (
-                        <div key={r.id} className="rounded-xl border border-gray-200 p-4 bg-white/90 shadow-sm">
-                          <div className="flex items-start gap-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <StarRating value={r.rating} readOnly size="h-4 w-4" />
-                                <div className="text-sm text-gray-500">{new Date(r.createdAt).toLocaleDateString("th-TH")}</div>
-                              </div>
-                              {r.title && <div className="font-medium mt-1">{r.title}</div>}
-                              {r.comment && <div className="text-gray-700 mt-1">{r.comment}</div>}
-                              <div className="text-xs text-gray-500 mt-2">โดย {r.user?.name || "ผู้ใช้"}</div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="flex justify-center mt-4">
-                      {hasMoreReviews ? (
-                        <Button
-                          variant="outline"
-                          className="rounded-xl"
-                          disabled={reviewsLoading}
-                          onClick={() => setReviewsPage((p) => p + 1)}
-                        >
-                          {reviewsLoading ? (<><Loader2 className="h-4 w-4 animate-spin mr-2" /> กำลังโหลด...</>) : "โหลดเพิ่มเติม"}
-                        </Button>
-                      ) : (
-                        <div className="text-sm text-gray-500">ไม่มีรีวิวเพิ่มเติม</div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
               </section>
 
-              <aside className="lg:col-span-1">
+              <aside className="order-2 lg:order-2 lg:col-span-1">
                 <Card className="rounded-2xl shadow-lg ring-1 ring-black/5">
                   <CardContent className="p-6 space-y-6">
                     <div className="text-center">
@@ -446,6 +385,56 @@ export default function BookDetailPage() {
                   </CardContent>
                 </Card>
               </aside>
+
+              <div className="order-3 lg:order-3 lg:col-span-2">
+                <Card className="rounded-2xl border-gray-200 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-2xl">รีวิวจากผู้อ่าน</CardTitle>
+                      <Button variant="outline" className="rounded-xl" onClick={openReviewDialog}>
+                        เขียนรีวิว
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    {reviewsError && <div className="text-red-600 text-sm mb-3">{reviewsError}</div>}
+                    {reviews.length === 0 && !reviewsLoading && (
+                      <div className="text-gray-500">ยังไม่มีรีวิว</div>
+                    )}
+                    <div className="space-y-4">
+                      {reviews.map((r) => (
+                        <div key={r.id} className="rounded-xl border border-gray-200 p-4 bg-white/90 shadow-sm">
+                          <div className="flex items-start gap-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <StarRating value={r.rating} readOnly size="h-4 w-4" />
+                                <div className="text-sm text-gray-500">{new Date(r.createdAt).toLocaleDateString("th-TH")}</div>
+                              </div>
+                              {r.title && <div className="font-medium mt-1">{r.title}</div>}
+                              {r.comment && <div className="text-gray-700 mt-1">{r.comment}</div>}
+                              <div className="text-xs text-gray-500 mt-2">โดย {r.user?.name || "ผู้ใช้"}</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-center mt-4">
+                      {hasMoreReviews ? (
+                        <Button
+                          variant="outline"
+                          className="rounded-xl"
+                          disabled={reviewsLoading}
+                          onClick={() => setReviewsPage((p) => p + 1)}
+                        >
+                          {reviewsLoading ? (<><Loader2 className="h-4 w-4 animate-spin mr-2" /> กำลังโหลด...</>) : "โหลดเพิ่มเติม"}
+                        </Button>
+                      ) : (
+                        <div className="text-sm text-gray-500">ไม่มีรีวิวเพิ่มเติม</div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           )}
         </div>
@@ -453,7 +442,6 @@ export default function BookDetailPage() {
 
       <LoginModal isOpen={loginOpen} onClose={() => setLoginOpen(false)} />
 
-      {/* Review*/}
       <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>

@@ -22,7 +22,7 @@ export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
-  const pathname = usePathname() 
+  const pathname = usePathname()
   const { isAuthenticated, user, logout, loading } = useAuth()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
@@ -34,7 +34,6 @@ export function Navigation() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // Prevent background scroll when mobile menu is open
   useEffect(() => {
     if (isOpen) {
       const original = document.body.style.overflow
@@ -48,11 +47,42 @@ export function Navigation() {
     setIsOpen(false)
   }
 
-  const avatarUrl = (user as any)?.image || (user as any)?.avatarUrl || (user as any)?.picture || (user as any)?.profileImageUrl || null
-  const displayName = (user as any)?.name || (user as any)?.displayName || (user as any)?.email || "ผู้ใช้"
+  const rawAvatarUrl =
+    (user as any)?.image ||
+    (user as any)?.avatarUrl ||
+    (user as any)?.picture ||
+    (user as any)?.profileImageUrl ||
+    null
+
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(null)
+  const [avatarChecked, setAvatarChecked] = useState(false)
+
+  useEffect(() => {
+    setAvatarChecked(false)
+    if (!rawAvatarUrl || typeof rawAvatarUrl !== "string") {
+      setAvatarSrc(null)
+      setAvatarChecked(true)
+      return
+    }
+    const img = new Image()
+    img.onload = () => {
+      setAvatarSrc(rawAvatarUrl)
+      setAvatarChecked(true)
+    }
+    img.onerror = () => {
+      setAvatarSrc(null)
+      setAvatarChecked(true)
+    }
+    img.src = rawAvatarUrl
+  }, [rawAvatarUrl])
+
+  const displayName =
+    (user as any)?.name ||
+    (user as any)?.displayName ||
+    (user as any)?.email ||
+    "ผู้ใช้"
   const initial = String(displayName || "").trim().charAt(0).toUpperCase() || "U"
 
- 
   const menuItems = [
     { href: "/", label: "หน้าแรก" },
     { href: "/courses", label: "คอร์สเรียน" },
@@ -65,29 +95,20 @@ export function Navigation() {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          isScrolled ? "bg-white/95 backdrop-blur-md shadow-lg" : "bg-white/90 backdrop-blur-sm"
-        }`}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? "bg-white/95 backdrop-blur-md shadow-lg" : "bg-white/90 backdrop-blur-sm"}`}
       >
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 lg:h-20">
-      
             <Link href="/" className="flex items-center pl-2">
               <img src="/new-logo.png" alt="Logo" className="h-16 lg:h-20" />
             </Link>
 
-      
             <div className="hidden lg:flex items-center space-x-1 pr-10">
               {menuItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`px-4 py-2 text-lg md:text-sm xl:text-lg font-medium transition-colors duration-200 
-                    ${
-                      pathname === item.href
-                        ? "text-[#004B7D] border-b-2 border-[#004B7D]"
-                        : "text-gray-700 hover:text-[#004B7D] "
-                    }`}
+                  className={`px-4 py-2 text-lg md:text-sm xl:text-lg font-medium transition-colors duration-200 ${pathname === item.href ? "text-[#004B7D] border-b-2 border-[#004B7D]" : "text-gray-700 hover:text-[#004B7D] "}`}
                 >
                   {item.label}
                 </Link>
@@ -98,7 +119,7 @@ export function Navigation() {
                   disabled
                   className="ml-5 px-4 py-6 bg-gray-200 text-gray-600 rounded-lg text-base font-semibold cursor-not-allowed"
                 >
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isLoggingOut ? 'กำลังออกจากระบบ…' : 'กำลังเข้าสู่ระบบ…'}
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isLoggingOut ? "กำลังออกจากระบบ…" : "กำลังเข้าสู่ระบบ…"}
                 </Button>
               ) : !isAuthenticated ? (
                 <Button
@@ -110,12 +131,20 @@ export function Navigation() {
               ) : (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="ml-4 inline-flex items-center gap-2 focus:outline-none ">
-                      <Avatar>
-                        {avatarUrl ? (
-                          <AvatarImage src={avatarUrl} alt={displayName} />
+                    <button className="ml-4 inline-flex items-center gap-2 focus:outline-none">
+                      <Avatar key={avatarSrc || "fallback"}>
+                        {avatarSrc && avatarChecked ? (
+                          <AvatarImage
+                            src={avatarSrc}
+                            alt={displayName}
+                            onLoadingStatusChange={(s) => {
+                              if (s === "error") setAvatarSrc(null)
+                            }}
+                          />
                         ) : (
-                          <AvatarFallback className="bg-yellow-500 text-white">{initial}</AvatarFallback>
+                          <AvatarFallback className="bg-yellow-500 text-white">
+                            {initial}
+                          </AvatarFallback>
                         )}
                       </Avatar>
                     </button>
@@ -135,8 +164,12 @@ export function Navigation() {
                     ) : (
                       <DropdownMenuItem
                         onClick={async () => {
-                          try { setIsLoggingOut(true); await logout() } catch {}
-                          finally { setIsLoggingOut(false) }
+                          try {
+                            setIsLoggingOut(true)
+                            await logout()
+                          } catch {} finally {
+                            setIsLoggingOut(false)
+                          }
                         }}
                         variant="destructive"
                       >
@@ -148,13 +181,11 @@ export function Navigation() {
               )}
             </div>
 
-         
             <Button variant="ghost" size="sm" className="lg:hidden h-14 w-14 p-0" onClick={() => setIsOpen(!isOpen)}>
               {isOpen ? <X className="h-8 w-8" /> : <Menu className="h-8 w-8" />}
             </Button>
           </div>
 
-        
           <AnimatePresence initial={false}>
             {isOpen && (
               <motion.div
@@ -171,12 +202,7 @@ export function Navigation() {
                       key={item.href}
                       href={item.href}
                       onClick={() => setIsOpen(false)}
-                      className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200
-                        ${
-                          pathname === item.href
-                            ? "text-[#004B7D] border-l-4 border-[#004B7D] bg-[#004B7D1A]"
-                            : "text-gray-700 hover:text-[#004B7D] hover:bg-[#004B7D1A]"
-                        }`}
+                      className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${pathname === item.href ? "text-[#004B7D] border-l-4 border-[#004B7D] bg-[#004B7D1A]" : "text-gray-700 hover:text-[#004B7D] hover:bg-[#004B7D1A]"}`}
                     >
                       {item.label}
                     </Link>
@@ -184,7 +210,7 @@ export function Navigation() {
 
                   {loading || isLoggingOut ? (
                     <Button disabled className="block w-full text-left px-3 py-0 rounded-md text-base font-medium bg-gray-200 text-gray-600">
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isLoggingOut ? 'กำลังออกจากระบบ…' : 'กำลังเข้าสู่ระบบ…'}
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isLoggingOut ? "กำลังออกจากระบบ…" : "กำลังเข้าสู่ระบบ…"}
                     </Button>
                   ) : !isAuthenticated ? (
                     <Button
@@ -196,11 +222,19 @@ export function Navigation() {
                   ) : (
                     <div className="pt-2 space-y-2">
                       <div className="flex items-center gap-3 px-3 py-2">
-                        <Avatar>
-                          {avatarUrl ? (
-                            <AvatarImage src={avatarUrl} alt={displayName} />
+                        <Avatar key={`m-${avatarSrc || "fallback"}`}>
+                          {avatarSrc && avatarChecked ? (
+                            <AvatarImage
+                              src={avatarSrc}
+                              alt={displayName}
+                              onLoadingStatusChange={(s) => {
+                                if (s === "error") setAvatarSrc(null)
+                              }}
+                            />
                           ) : (
-                            <AvatarFallback className="bg-yellow-500 text-white">{initial}</AvatarFallback>
+                            <AvatarFallback className="bg-yellow-500 text-white">
+                              {initial}
+                            </AvatarFallback>
                           )}
                         </Avatar>
                         <div className="text-sm font-medium text-gray-800">{displayName}</div>
@@ -214,14 +248,25 @@ export function Navigation() {
                       </Link>
                       <Button
                         onClick={async () => {
-                          try { setIsLoggingOut(true); await logout() } catch {}
-                          finally { setIsLoggingOut(false); setIsOpen(false) }
+                          try {
+                            setIsLoggingOut(true)
+                            await logout()
+                          } catch {} finally {
+                            setIsLoggingOut(false)
+                            setIsOpen(false)
+                          }
                         }}
                         variant="outline"
                         className="block w-full text-left"
                         disabled={isLoggingOut}
                       >
-                        {isLoggingOut ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> กำลังออกจากระบบ…</>) : 'ออกจากระบบ'}
+                        {isLoggingOut ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> กำลังออกจากระบบ…
+                          </>
+                        ) : (
+                          "ออกจากระบบ"
+                        )}
                       </Button>
                     </div>
                   )}
@@ -232,7 +277,6 @@ export function Navigation() {
         </div>
       </nav>
 
-      {/* Backdrop for mobile menu */}
       <AnimatePresence>
         {isOpen && (
           <motion.button
