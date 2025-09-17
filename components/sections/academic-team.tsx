@@ -47,13 +47,6 @@ const defaultTeachers: Teacher[] = [
     ],
   },
   {
-    name: "ครูพี่อู๋",
-    role: "ม.ต้น",
-    subject: "ชีววิทยา",
-    image: "/teacher-5.png",
-    highlights: ["เกียรตินิยมอันดับ 1 สาขาชีววิทยาโดยตรง \nคณะวิทยาศาสตร์ ม.ศิลปากร"],
-  },
-  {
     name: "ครูพี่แจม",
     role: "ม.ปลาย",
     subject: "ชีววิทยา",
@@ -72,6 +65,14 @@ const defaultTeachers: Teacher[] = [
       "เจ้าของเพจ “Biosensor” คอร์สชีววิทยาออนไลน์"
     ],
   },
+  {
+    name: "ครูพี่อู๋",
+    role: "ม.ต้น",
+    subject: "ชีววิทยา",
+    image: "/teacher-5.png",
+    highlights: ["เกียรตินิยมอันดับ 1 สาขาชีววิทยาโดยตรง \nคณะวิทยาศาสตร์ ม.ศิลปากร"],
+  },
+
   {
     name: "ครูพี่ยุ้ย",
     role: "ม.ปลาย",
