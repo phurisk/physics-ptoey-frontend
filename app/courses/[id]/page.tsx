@@ -1029,9 +1029,6 @@ export default function CourseDetailPage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-500">
-                          ราคานี้รวมภาษีมูลค่าเพิ่ม
-                        </p>
                       </div>
 
                       <Separator className="mb-6" />
@@ -1124,10 +1121,6 @@ export default function CourseDetailPage() {
 
                       <Separator className="my-6" />
 
-                      <div className="text-center text-sm text-gray-600">
-                        <p>รับประกันความพึงพอใจ 30 วัน</p>
-                        <p>หรือคืนเงิน 100%</p>
-                      </div>
                     </CardContent>
                   </Card>
                 </motion.div>

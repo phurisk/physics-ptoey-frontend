@@ -378,10 +378,6 @@ export default function BookDetailPage() {
 
                     <Separator />
 
-                    <div className="text-center text-sm text-gray-600">
-                      <p>รับประกันความพึงพอใจ 30 วัน</p>
-                      <p>ดาวน์โหลดไฟล์ได้หลังชำระเงินสำเร็จ</p>
-                    </div>
                   </CardContent>
                 </Card>
               </aside>

@@ -1,10 +1,18 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
-import { Star, Users, BookOpen, Clock } from "lucide-react"
+import {
+  Users,
+  BookOpen,
+  Clock,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { GraduationCap, BookOpen as BookIcon } from "lucide-react"
@@ -55,6 +63,7 @@ type ApiResponse = {
 }
 
 const COURSES_API = "/api/courses"
+const PAGE_SIZE = 9
 
 export default function CoursesPage() {
   const [selectedLevel, setSelectedLevel] = useState<string>("all")
@@ -62,6 +71,8 @@ export default function CoursesPage() {
   const [data, setData] = useState<ApiCourse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [isCompactPagination, setIsCompactPagination] = useState(false)
   const searchParams = useSearchParams()
 
   useEffect(() => {
@@ -165,12 +176,165 @@ export default function CoursesPage() {
     return null
   }
 
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [selectedLevel, selectedSubject])
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return
+    const mq = window.matchMedia("(max-width: 480px)")
+    const handleChange = (event: MediaQueryListEvent | MediaQueryList) => {
+      setIsCompactPagination(event.matches)
+    }
+    setIsCompactPagination(mq.matches)
+    if (typeof mq.addEventListener === "function") {
+      mq.addEventListener("change", handleChange)
+    } else if (typeof mq.addListener === "function") {
+      mq.addListener(handleChange)
+    }
+    return () => {
+      if (typeof mq.removeEventListener === "function") {
+        mq.removeEventListener("change", handleChange)
+      } else if (typeof mq.removeListener === "function") {
+        mq.removeListener(handleChange)
+      }
+    }
+  }, [])
+
   const filteredCourses = useMemo(() => {
     let list = data || []
     if (selectedLevel !== "all") list = list.filter((c) => detectLevel(c) === selectedLevel)
     if (selectedSubject !== "all") list = list.filter((c) => detectSubject(c) === selectedSubject)
     return list
   }, [data, selectedLevel, selectedSubject])
+
+  const totalPages = useMemo(() => {
+    return Math.max(1, Math.ceil((filteredCourses.length || 0) / PAGE_SIZE))
+  }, [filteredCourses.length])
+
+  const buildPageList = useMemo<(number | "...")[]>(() => {
+    if (totalPages <= 1) return [1]
+    if (isCompactPagination) {
+      const visible = 3
+      if (totalPages <= visible) {
+        return Array.from({ length: totalPages }, (_, idx) => idx + 1)
+      }
+      let start = currentPage - Math.floor(visible / 2)
+      start = Math.max(1, start)
+      let end = start + visible - 1
+      if (end > totalPages) {
+        end = totalPages
+        start = Math.max(1, end - visible + 1)
+      }
+      return Array.from({ length: visible }, (_, idx) => start + idx)
+    }
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, idx) => idx + 1)
+    }
+    const pages: Array<number | "..."> = [1]
+    const middleStart = Math.max(2, currentPage - 2)
+    const middleEnd = Math.min(totalPages - 1, currentPage + 2)
+    if (middleStart > 2) pages.push("...")
+    for (let p = middleStart; p <= middleEnd; p += 1) pages.push(p)
+    if (middleEnd < totalPages - 1) pages.push("...")
+    pages.push(totalPages)
+    return pages
+  }, [currentPage, totalPages, isCompactPagination])
+
+  const paginationControls = useMemo<ReactNode[]>(() => {
+    const createButton = (
+      key: string,
+      icon: ReactNode,
+      onClick: () => void,
+      disabled: boolean,
+    ) => (
+      <Button
+        key={key}
+        variant="outline"
+        size="sm"
+        onClick={onClick}
+        disabled={disabled}
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full p-0 hover:bg-yellow-50 hover:border-yellow-400"
+      >
+        {icon}
+      </Button>
+    )
+
+    const items: ReactNode[] = []
+    items.push(createButton("first", <ChevronsLeft className="h-4 w-4" />, () => setCurrentPage(1), currentPage === 1))
+    items.push(
+      createButton(
+        "prev",
+        <ChevronLeft className="h-4 w-4" />,
+        () => setCurrentPage((prev) => Math.max(1, prev - 1)),
+        currentPage === 1,
+      ),
+    )
+
+    const pageItems = buildPageList.map((page, idx) => {
+        if (page === "...") {
+          return (
+            <span
+              key={`dots-${idx}`}
+              className="flex h-9 w-9 shrink-0 items-center justify-center text-gray-400"
+            >
+              &#8230;
+            </span>
+          )
+        }
+        const isActive = currentPage === page
+        const className = [
+          "flex h-9 min-w-[2.5rem] shrink-0 items-center justify-center rounded-full px-0",
+          isActive
+            ? "bg-yellow-400 hover:bg-yellow-500 text-white"
+            : "hover:bg-yellow-50 hover:border-yellow-400",
+        ].join(" ")
+        return (
+          <Button
+            key={`page-${page}`}
+            variant={isActive ? "default" : "outline"}
+            size="sm"
+            onClick={() => setCurrentPage(page as number)}
+            className={className}
+          >
+            {page}
+          </Button>
+        )
+      })
+    items.push(...pageItems)
+
+    items.push(
+      createButton(
+        "next",
+        <ChevronRight className="h-4 w-4" />,
+        () => setCurrentPage((prev) => Math.min(totalPages, prev + 1)),
+        currentPage === totalPages,
+      ),
+    )
+    items.push(
+      createButton(
+        "last",
+        <ChevronsRight className="h-4 w-4" />,
+        () => setCurrentPage(totalPages),
+        currentPage === totalPages,
+      ),
+    )
+
+    return items
+  }, [buildPageList, currentPage, totalPages])
+
+  useEffect(() => {
+    setCurrentPage((prev) => {
+      if (!Number.isFinite(prev) || prev < 1) return 1
+      return Math.min(prev, totalPages)
+    })
+  }, [totalPages])
+
+  const paginatedCourses = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    const end = start + PAGE_SIZE
+    return filteredCourses.slice(start, end)
+  }, [currentPage, filteredCourses])
 
   return (
     <>
@@ -297,7 +461,7 @@ export default function CoursesPage() {
             {!loading && error && (
               <div className="col-span-full text-center text-red-600">เกิดข้อผิดพลาด: {error}</div>
             )}
-            {!loading && !error && filteredCourses.map((course) => (
+            {!loading && !error && paginatedCourses.map((course) => (
               <motion.div key={course.id} variants={fadeInUp}>
                 <Card className="h-full hover:shadow-xl transition-shadow duration-300 group pt-0">
                   <CardContent className="p-0">
@@ -371,6 +535,12 @@ export default function CoursesPage() {
               </motion.div>
             ))}
           </motion.div>
+
+          {!loading && !error && filteredCourses.length > 0 && (
+            <div className="mt-10 flex w-full flex-wrap items-center justify-center gap-2">
+              {paginationControls}
+            </div>
+          )}
 
       
           {!loading && !error && filteredCourses.length === 0 && (
