@@ -363,10 +363,10 @@ const summaryContent = exam ? (
       {error && <div className="text-red-600">{error}</div>}
 
       {!loading && !error && exam && (
-        <Card>
+        <Card className="border-none shadow-none">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>{title}</span>
+              <span className="text-xl font-bold">{title}</span>
               <div className="flex items-center gap-2">
                 {statusBadge(exam.status)}
                 {typeBadge(exam.examType)}
@@ -393,7 +393,7 @@ const summaryContent = exam ? (
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-2">
                           {q.image && (
-                            <div className="relative w-full overflow-hidden rounded-md border bg-gray-50">
+                            <div className="aspect-[16/9] max-w-[830px]  relative w-full overflow-hidden rounded-md border bg-gray-50">
                               <Image
                                 src={q.image}
                                 alt={q.text || `Question ${idx + 1}`}
@@ -410,7 +410,7 @@ const summaryContent = exam ? (
                         </div>
                         {typeof q.marks === "number" && (
                           <Badge className="bg-yellow-100 text-yellow-700 px-2 py-1 text-[11px] font-medium">
-                            +{q.marks} คะแนน
+                            {q.marks} คะแนน
                           </Badge>
                         )}
                       </div>
@@ -512,7 +512,7 @@ const summaryContent = exam ? (
             onClick={() => setSummaryOpen(false)}
           />
           <div
-            className={`fixed top-0 bottom-0 right-0 z-40 w-full max-w-[90vw] sm:max-w-sm border border-yellow-100 bg-white p-5 shadow-xl transition-transform duration-300 ${summaryOpen ? "translate-x-0" : "translate-x-full"}`}
+            className={`fixed top-16 lg:top-20 bottom-0 right-0 z-40 w-full max-w-[90vw] sm:max-w-sm border border-yellow-100 bg-white p-5 shadow-xl transition-transform duration-300 ${summaryOpen ? "translate-x-0" : "translate-x-full"}`}
           >
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-base font-semibold text-gray-900">สรุปข้อสอบ</h3>
@@ -520,7 +520,7 @@ const summaryContent = exam ? (
                 <PanelRightClose className="h-4 w-4" />
               </Button>
             </div>
-            <div className="overflow-y-auto pr-1" style={{ maxHeight: "calc(100vh - 5rem)" }}>
+            <div className="overflow-y-auto pr-1 max-h-[calc(100vh-9rem)] lg:max-h-[calc(100vh-10rem)]">
               {summaryContent}
               {typeof exam.canRetake === "boolean" && (
                 <div className="mt-4 rounded-xl border bg-white/80 p-4 text-xs text-gray-600">
