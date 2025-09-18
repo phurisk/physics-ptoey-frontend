@@ -1,8 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,6 +11,7 @@ import { Progress } from "@/components/ui/progress"
 import Image from "next/image"
 import { PanelRightClose, PanelRightOpen } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { useToast } from "@/components/ui/use-toast"
 
 type ExamDetail = {
   id: string
@@ -62,6 +62,8 @@ export default function ExamAttemptPage() {
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [viewportWidth, setViewportWidth] = useState<number | null>(null)
+  const autoSubmitTriggered = useRef(false)
+  const { toast } = useToast()
 
   useEffect(() => {
     let active = true
@@ -283,6 +285,9 @@ const summaryContent = exam ? (
     const x = (t || "").toUpperCase()
     if (x === "PRETEST") return <Badge className="bg-blue-600 text-white">แบบทดสอบก่อนเรียน</Badge>
     if (x === "POSTTEST") return <Badge className="bg-green-600 text-white">แบบทดสอบหลังเรียน</Badge>
+    if (x === "PRACTICE") return <Badge className="bg-purple-500 text-white">แบบฝึกหัด</Badge>
+    if (x === "MIDTERM") return <Badge className="bg-sky-600 text-white">สอบกลางภาค</Badge>
+    if (x === "FINAL") return <Badge className="bg-red-500 text-white">สอบปลายภาค</Badge>
     return <Badge className="bg-amber-500 text-white">แบบทดสอบ</Badge>
   }
 
@@ -303,7 +308,7 @@ const summaryContent = exam ? (
     setAnswers((prev) => ({ ...prev, [qid]: { textAnswer } }))
   }
 
-  const submit = async () => {
+  const submit = useCallback(async () => {
     if (!user?.id || !courseId || !examId) return
     try {
       setSubmitting(true)
@@ -336,7 +341,23 @@ const summaryContent = exam ? (
     } finally {
       setSubmitting(false)
     }
-  }
+  }, [answers, courseId, examId, qList, router, user?.id])
+
+  useEffect(() => {
+    autoSubmitTriggered.current = false
+  }, [exam?.id])
+
+  useEffect(() => {
+    if (remainingSeconds !== 0) return
+    if (submitting || autoSubmitTriggered.current) return
+    autoSubmitTriggered.current = true
+    toast({
+      title: "หมดเวลาทำข้อสอบ",
+      description: "ระบบได้ส่งคำตอบของคุณโดยอัตโนมัติ",
+      duration: 6000,
+    })
+    void submit()
+  }, [remainingSeconds, submitting, submit, toast])
 
   if (!isAuthenticated) {
     return (
@@ -347,7 +368,7 @@ const summaryContent = exam ? (
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-xl font-bold sm:text-2xl">ทำข้อสอบ</h1>
         <Button variant="outline" onClick={() => history.back()}>ย้อนกลับ</Button>
@@ -408,12 +429,13 @@ const summaryContent = exam ? (
                             {idx + 1}. {q.text || "คำถาม"}
                           </p>
                         </div>
-                        {typeof q.marks === "number" && (
-                          <Badge className="bg-yellow-100 text-yellow-700 px-2 py-1 text-[11px] font-medium">
+
+                      </div>
+                      {typeof q.marks === "number" && (
+                          <Badge className="bg-yellow-100 text-yellow-700 px-2 py-1 text-[11px] font-medium ">
                             {q.marks} คะแนน
                           </Badge>
                         )}
-                      </div>
 
                       {qType === "SHORT_ANSWER" ? (
                         <Input

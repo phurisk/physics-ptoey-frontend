@@ -11,14 +11,19 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 type Attempt = {
   id: string
-  examId?: string
-  examTitle?: string
-  courseId?: string
-  courseTitle?: string
-  score?: number | null
-  total?: number | null
-  status?: string
-  attemptedAt?: string
+  examId: string | null
+  examTitle: string | null
+  courseId: string | null
+  courseTitle: string | null
+  score: number | null
+  total: number | null
+  status: string | null
+  attemptedAt: string | null
+  percentage: number | null
+  passed: boolean | null
+  totalQuestions: number | null
+  correctAnswers: number | null
+  durationMinutes: number | null
 }
 
 type ResultsResponse = {
@@ -47,12 +52,34 @@ export default function ExamResultsPage() {
         if (!res.ok || json.success === false) throw new Error(json?.error || `HTTP ${res.status}`)
         const list = Array.isArray(json.attempts)
           ? json.attempts
-          : Array.isArray(json?.data as any)
-            ? (json.data as any)
-            : Array.isArray((json?.data as any)?.attempts)
-              ? (json?.data as any)?.attempts
+          : Array.isArray((json?.data as any)?.attempts)
+            ? (json?.data as any)?.attempts
+            : Array.isArray(json?.data as any)
+              ? (json.data as any)
               : []
-        if (active) setAttempts(list)
+
+        const normalized: Attempt[] = list.map((item: any) => {
+          const exam = item.exam ?? {}
+          const course = exam.course ?? {}
+          return {
+            id: String(item.id ?? ""),
+            examId: exam?.id ?? null,
+            examTitle: exam?.title ?? null,
+            courseId: course?.id ?? null,
+            courseTitle: course?.title ?? null,
+            score: typeof item.obtainedMarks === "number" ? item.obtainedMarks : null,
+            total: typeof item.totalMarks === "number" ? item.totalMarks : null,
+            status: item.status ?? null,
+            attemptedAt: item.completedAt ?? item.startedAt ?? null,
+            percentage: typeof item.percentage === "number" ? item.percentage : null,
+            passed: typeof item.passed === "boolean" ? item.passed : null,
+            totalQuestions: typeof item.totalQuestions === "number" ? item.totalQuestions : null,
+            correctAnswers: typeof item.correctAnswers === "number" ? item.correctAnswers : null,
+            durationMinutes: typeof item.duration === "number" ? item.duration : null,
+          }
+        })
+
+        if (active) setAttempts(normalized)
       } catch (e: any) {
         if (active) setError(e?.message || "โหลดประวัติไม่สำเร็จ")
       } finally {
@@ -96,13 +123,24 @@ export default function ExamResultsPage() {
               <div className="space-y-1">
                 <div className="font-semibold">{a.examTitle || "ข้อสอบ"}</div>
                 <div className="text-sm text-gray-600">คอร์ส: {a.courseTitle || a.courseId}</div>
-                <div className="text-xs text-gray-500">{a.attemptedAt ? new Date(a.attemptedAt).toLocaleString("th-TH") : null}</div>
+                <div className="text-xs text-gray-500">
+                  {a.attemptedAt ? new Date(a.attemptedAt).toLocaleString("th-TH") : null}
+                  {typeof a.durationMinutes === "number" && a.durationMinutes >= 0 && (
+                    <span className="ml-2 text-[11px] text-gray-400">ใช้เวลา {a.durationMinutes} นาที</span>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 {a.status && <Badge variant="secondary">{a.status}</Badge>}
-                {a.total != null && (
-                  <div className="text-sm font-medium">คะแนน: {a.score ?? 0}/{a.total}</div>
-                )}
+                <div className="text-sm font-medium text-gray-700 text-right">
+                  <div>คะแนน: {a.score ?? 0}{a.total != null ? `/${a.total}` : ""}</div>
+                  {typeof a.percentage === "number" && !Number.isNaN(a.percentage) && (
+                    <div className="text-xs text-gray-500">{Math.round(a.percentage)}%</div>
+                  )}
+                  {a.totalQuestions != null && a.correctAnswers != null && (
+                    <div className="text-xs text-gray-500">ถูก {a.correctAnswers}/{a.totalQuestions} ข้อ</div>
+                  )}
+                </div>
                 <Link href={`/profile/my-courses/exam-results/${encodeURIComponent(String(a.id))}`}>
                   <Button className="bg-yellow-400 hover:bg-yellow-500 text-white">ดูรายละเอียด</Button>
                 </Link>
@@ -114,4 +152,3 @@ export default function ExamResultsPage() {
     </div>
   )
 }
-

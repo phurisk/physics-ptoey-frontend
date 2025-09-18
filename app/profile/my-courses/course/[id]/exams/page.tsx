@@ -82,8 +82,11 @@ export default function CourseExamsPage() {
 
   const badgeForType = (type?: string) => {
     const t = (type || "").toUpperCase()
-    if (t === "PRETEST") return <Badge className="bg-blue-600 text-white">Pre-test</Badge>
-    if (t === "POSTTEST") return <Badge className="bg-green-600 text-white">Post-test</Badge>
+    if (t === "PRETEST") return <Badge className="bg-blue-600 text-white">แบบทดสอบก่อนเรียน</Badge>
+    if (t === "POSTTEST") return <Badge className="bg-green-600 text-white">แบบทดสอบหลังเรียน</Badge>
+    if (t === "PRACTICE") return <Badge className="bg-purple-500 text-white">แบบฝึกหัด</Badge>
+    if (t === "MIDTERM") return <Badge className="bg-sky-600 text-white">สอบกลางภาค</Badge>
+    if (t === "FINAL") return <Badge className="bg-red-500 text-white">สอบปลายภาค</Badge>
     return <Badge className="bg-amber-500 text-white">แบบทดสอบ</Badge>
   }
 
