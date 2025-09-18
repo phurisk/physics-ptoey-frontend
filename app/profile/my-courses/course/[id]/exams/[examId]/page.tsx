@@ -8,6 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Progress } from "@/components/ui/progress"
+import Image from "next/image"
+import { PanelRightClose, PanelRightOpen } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 
 type ExamDetail = {
@@ -18,6 +21,12 @@ type ExamDetail = {
   duration?: number | null
   timeLimit?: number | null
   totalQuestions: number
+  totalMarks?: number | null
+  passingMarks?: number | null
+  attemptsAllowed?: number | null
+  showResults?: boolean
+  showAnswers?: boolean
+  courseTitle?: string | null
   questions: Question[]
   status?: string | null
   canRetake?: boolean
@@ -28,7 +37,9 @@ type ExamDetail = {
 type Question = {
   id: string
   text?: string
-  type?: string // MULTIPLE_CHOICE | TRUE_FALSE | SHORT_ANSWER
+  image?: string | null
+  marks?: number | null
+  type?: string 
   options?: { id: string; text?: string }[]
 }
 
@@ -48,6 +59,9 @@ export default function ExamAttemptPage() {
   const [exam, setExam] = useState<ExamDetail | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [answers, setAnswers] = useState<Record<string, { optionId?: string; textAnswer?: string }>>({})
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null)
+  const [summaryOpen, setSummaryOpen] = useState(false)
+  const [viewportWidth, setViewportWidth] = useState<number | null>(null)
 
   useEffect(() => {
     let active = true
@@ -70,6 +84,8 @@ export default function ExamAttemptPage() {
           const questions: Question[] = rawQuestions.map((q) => ({
             id: q.id,
             text: q.questionText ?? q.text ?? "",
+            image: q.questionImage ?? q.image ?? null,
+            marks: typeof q.marks === "number" ? q.marks : null,
             type: q.questionType ?? q.type,
             options: Array.isArray(q.options)
               ? q.options.map((opt: any) => ({
@@ -91,6 +107,24 @@ export default function ExamAttemptPage() {
               typeof (payload as any).totalQuestions === "number"
                 ? (payload as any).totalQuestions
                 : questions.length,
+            totalMarks:
+              typeof (payload as any).totalMarks === "number"
+                ? (payload as any).totalMarks
+                : examInfo?.totalMarks ?? null,
+            passingMarks:
+              typeof (payload as any).passingMarks === "number"
+                ? (payload as any).passingMarks
+                : examInfo?.passingMarks ?? null,
+            attemptsAllowed:
+              typeof (payload as any).attemptsAllowed === "number"
+                ? (payload as any).attemptsAllowed
+                : examInfo?.attemptsAllowed ?? null,
+            showResults:
+              (payload as any).showResults ?? examInfo?.showResults ?? undefined,
+            showAnswers:
+              (payload as any).showAnswers ?? examInfo?.showAnswers ?? undefined,
+            courseTitle:
+              (examInfo as any)?.course?.title ?? (payload as any)?.course?.title ?? null,
             questions,
             status: (payload as any).status ?? examInfo?.status ?? null,
             canRetake: (payload as any).canRetake,
@@ -111,11 +145,144 @@ export default function ExamAttemptPage() {
   }, [courseId, examId, user?.id])
 
   const qList = useMemo(() => exam?.questions ?? [], [exam?.questions])
+  const totalQuestions = exam?.totalQuestions ?? qList.length
+  const answeredCount = useMemo(
+    () =>
+      qList.reduce((count, q) => {
+        const answer = answers[q.id]
+        if (!answer) return count
+        if (answer.optionId || (answer.textAnswer && answer.textAnswer.trim().length > 0)) {
+          return count + 1
+        }
+        return count
+      }, 0),
+    [answers, qList]
+  )
+  const completionPercent = totalQuestions > 0 ? Math.round((answeredCount / totalQuestions) * 100) : 0
+  const timeLimitMinutes = exam?.timeLimit ?? exam?.duration ?? null
+  const startedAtDisplay = useMemo(
+    () => (exam?.startedAt ? new Date(exam.startedAt).toLocaleString("th-TH") : null),
+    [exam?.startedAt]
+  )
+  const finishAtDisplay = useMemo(() => {
+    if (!timeLimitMinutes) return null
+    const base = exam?.startedAt ? new Date(exam.startedAt).getTime() : Date.now()
+    return new Date(base + timeLimitMinutes * 60_000).toLocaleString("th-TH")
+  }, [exam?.startedAt, timeLimitMinutes])
+
+useEffect(() => {
+  if (typeof window === "undefined") return
+  const updateWidth = () => setViewportWidth(window.innerWidth)
+  updateWidth()
+  window.addEventListener("resize", updateWidth)
+  return () => window.removeEventListener("resize", updateWidth)
+}, [])
+
+  useEffect(() => {
+    if (!timeLimitMinutes || timeLimitMinutes <= 0) {
+      setRemainingSeconds(null)
+      return
+    }
+    const startMs = exam?.startedAt ? new Date(exam.startedAt).getTime() : Date.now()
+    const deadline = startMs + timeLimitMinutes * 60_000
+
+    const tick = () => {
+      const diff = Math.max(0, Math.round((deadline - Date.now()) / 1000))
+      setRemainingSeconds(diff)
+      return diff
+    }
+
+    let current = tick()
+    if (current === 0) return
+
+    const timer = window.setInterval(() => {
+      current = tick()
+      if (current === 0) window.clearInterval(timer)
+    }, 1_000)
+
+    return () => window.clearInterval(timer)
+  }, [exam?.startedAt, timeLimitMinutes])
+
+  const formatCountdown = (seconds: number | null) => {
+    if (seconds == null) return "-"
+    const hrs = Math.floor(seconds / 3600)
+    const mins = Math.floor((seconds % 3600) / 60)
+    const secs = seconds % 60
+    if (hrs > 0) return `${hrs}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
+  }
+
+const summaryContent = exam ? (
+  <div className="mt-3 space-y-3 text-sm text-gray-700">
+      {exam.courseTitle && (
+        <div>
+          คอร์ส: <span className="font-medium text-gray-900">{exam.courseTitle}</span>
+        </div>
+      )}
+      <div>
+        จำนวนข้อ: <span className="font-medium text-gray-900">{totalQuestions}</span>
+      </div>
+      {typeof exam.totalMarks === "number" && (
+        <div>
+          คะแนนรวม: <span className="font-medium text-gray-900">{exam.totalMarks}</span>
+        </div>
+      )}
+      {typeof exam.passingMarks === "number" && (
+        <div>
+          ผ่านเมื่อได้: <span className="font-medium text-gray-900">{exam.passingMarks}</span>
+        </div>
+      )}
+      {typeof exam.attemptsAllowed === "number" && (
+        <div>
+          จำนวนครั้งที่ทำได้: <span className="font-medium text-gray-900">{exam.attemptsAllowed}</span>
+        </div>
+      )}
+      {timeLimitMinutes != null && timeLimitMinutes > 0 && (
+        <div>
+          เวลาที่กำหนด: <span className="font-medium text-gray-900">{timeLimitMinutes} นาที</span>
+        </div>
+      )}
+
+      <div className="rounded-lg border bg-white px-3 py-2 text-sm text-gray-800">
+        <div className="flex items-center justify-between font-semibold text-gray-900">
+          <span>เวลาคงเหลือ</span>
+          <span className={remainingSeconds !== null && remainingSeconds <= 60 ? "text-red-600" : ""}>
+            {formatCountdown(remainingSeconds)}
+          </span>
+        </div>
+        {finishAtDisplay && (
+          <div className="mt-1 text-xs text-gray-500">สิ้นสุด: {finishAtDisplay}</div>
+        )}
+        {startedAtDisplay && (
+          <div className="text-xs text-gray-500">เริ่มทำเมื่อ: {startedAtDisplay}</div>
+        )}
+      </div>
+
+      <div className="space-y-2 pt-1">
+        <div className="flex items-center justify-between text-xs font-medium text-gray-600">
+          <span>ความคืบหน้า</span>
+          <span>
+            {answeredCount}/{totalQuestions}
+          </span>
+        </div>
+        <Progress value={completionPercent} className="h-2" />
+        <div className="text-right text-xs text-gray-500">{completionPercent}%</div>
+      </div>
+    </div>
+  ) : null
+  const isDesktop = (viewportWidth ?? 0) >= 1440
+
+  useEffect(() => {
+    if (isDesktop) {
+      setSummaryOpen(true)
+    }
+  }, [isDesktop])
+
   const title = exam?.title || "ข้อสอบ"
   const typeBadge = (t?: string) => {
     const x = (t || "").toUpperCase()
-    if (x === "PRETEST") return <Badge className="bg-blue-600 text-white">Pre-test</Badge>
-    if (x === "POSTTEST") return <Badge className="bg-green-600 text-white">Post-test</Badge>
+    if (x === "PRETEST") return <Badge className="bg-blue-600 text-white">แบบทดสอบก่อนเรียน</Badge>
+    if (x === "POSTTEST") return <Badge className="bg-green-600 text-white">แบบทดสอบหลังเรียน</Badge>
     return <Badge className="bg-amber-500 text-white">แบบทดสอบ</Badge>
   }
 
@@ -181,8 +348,8 @@ export default function ExamAttemptPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">ทำข้อสอบ</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold sm:text-2xl">ทำข้อสอบ</h1>
         <Button variant="outline" onClick={() => history.back()}>ย้อนกลับ</Button>
       </div>
 
@@ -208,74 +375,162 @@ export default function ExamAttemptPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             {exam.description && (
-              <div className="text-sm text-gray-700">{exam.description}</div>
+              <div className="rounded-lg bg-yellow-50/60 px-4 py-3 text-sm text-gray-700">
+                {exam.description}
+              </div>
             )}
 
-            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600">
-              {typeof exam.totalQuestions === "number" && (
-                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                  ทั้งหมด {exam.totalQuestions} ข้อ
-                </span>
-              )}
-              {exam.timeLimit != null && exam.timeLimit! > 0 && (
-                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                  เวลา {exam.timeLimit} นาที
-                </span>
-              )}
-              {typeof exam.canRetake === "boolean" && (
-                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                  {exam.canRetake ? "ทำซ้ำได้" : "ทำได้ครั้งเดียว"}
-                </span>
-              )}
-            </div>
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+              <section className="flex-1 space-y-5">
+                {qList.length === 0 && (
+                  <div className="text-sm text-gray-500">ข้อสอบนี้ยังไม่มีคำถาม</div>
+                )}
 
-            <div className="space-y-4">
-              {qList.length === 0 && (
-                <div className="text-sm text-gray-500">ข้อสอบนี้ยังไม่มีคำถาม</div>
-              )}
-              {qList.map((q, idx) => {
-                const qType = (q.type || (Array.isArray(q.options) && q.options.length === 2 ? "TRUE_FALSE" : "MULTIPLE_CHOICE")).toUpperCase()
-                return (
-                  <div key={q.id} className="p-4 rounded-lg border bg-white">
-                    <div className="font-medium mb-2">{idx + 1}. {q.text || "คำถาม"}</div>
-                    {qType === "SHORT_ANSWER" ? (
-                      <Input
-                        placeholder="พิมพ์คำตอบของคุณ"
-                        value={answers[q.id]?.textAnswer || ""}
-                        onChange={(e) => setText(q.id, e.target.value)}
-                      />
-                    ) : (
-                      <div className="space-y-2">
-                        {(q.options || [
-                          { id: "TRUE", text: "ถูก" },
-                          { id: "FALSE", text: "ผิด" },
-                        ]).map((opt) => (
-                          <label key={opt.id} className="flex items-center gap-2">
-                            <input
-                              type="radio"
-                              name={`q-${q.id}`}
-                              className="h-4 w-4"
-                              checked={answers[q.id]?.optionId === opt.id}
-                              onChange={() => setChoice(q.id, opt.id)}
-                            />
-                            <span className="text-sm text-gray-800">{opt.text || opt.id}</span>
-                          </label>
-                        ))}
+                {qList.map((q, idx) => {
+                  const qType = (q.type || (Array.isArray(q.options) && q.options.length === 2 ? "TRUE_FALSE" : "MULTIPLE_CHOICE")).toUpperCase()
+                  return (
+                    <div key={q.id} className="rounded-xl bg-white p-4 shadow-sm space-y-4 transition-shadow duration-200">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-2">
+                          {q.image && (
+                            <div className="relative w-full overflow-hidden rounded-md border bg-gray-50">
+                              <Image
+                                src={q.image}
+                                alt={q.text || `Question ${idx + 1}`}
+                                width={960}
+                                height={540}
+                                className="h-auto w-full object-contain bg-white"
+                                unoptimized
+                              />
+                            </div>
+                          )}
+                          <p className="font-medium text-gray-900">
+                            {idx + 1}. {q.text || "คำถาม"}
+                          </p>
+                        </div>
+                        {typeof q.marks === "number" && (
+                          <Badge className="bg-yellow-100 text-yellow-700 px-2 py-1 text-[11px] font-medium">
+                            +{q.marks} คะแนน
+                          </Badge>
+                        )}
                       </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
 
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => router.push(`/profile/my-courses/course/${encodeURIComponent(String(courseId))}/exams`)}>ยกเลิก</Button>
-              <Button className="bg-yellow-400 hover:bg-yellow-500 text-white" onClick={submit} disabled={submitting}>
-                {submitting ? "กำลังส่งคำตอบ..." : "ส่งคำตอบ"}
-              </Button>
+                      {qType === "SHORT_ANSWER" ? (
+                        <Input
+                          placeholder="พิมพ์คำตอบของคุณ"
+                          value={answers[q.id]?.textAnswer || ""}
+                          onChange={(e) => setText(q.id, e.target.value)}
+                        />
+                      ) : (
+                        <div className="grid gap-2 sm:grid-cols-1">
+                          {(q.options || [
+                            { id: "TRUE", text: "ถูก" },
+                            { id: "FALSE", text: "ผิด" },
+                          ]).map((opt) => {
+                            const selected = answers[q.id]?.optionId === opt.id
+                            return (
+                              <label
+                                key={opt.id}
+                                className={`flex items-center gap-3 rounded-lg border px-3 py-2 transition focus-within:ring-2 focus-within:ring-yellow-400 ${selected ? "border-yellow-400 bg-yellow-50 ring-1 ring-yellow-200" : "border-gray-200 bg-white hover:bg-gray-50"}`}
+                              >
+                                <input
+                                  type="radio"
+                                  name={`q-${q.id}`}
+                                  className="h-4 w-4"
+                                  checked={selected}
+                                  onChange={() => setChoice(q.id, opt.id)}
+                                />
+                                <span className="text-sm text-gray-800">{opt.text || opt.id}</span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end">
+                  <Button variant="outline" onClick={() => router.push(`/profile/my-courses/course/${encodeURIComponent(String(courseId))}/exams`)}>
+                    ยกเลิก
+                  </Button>
+                  <Button className="bg-yellow-400 hover:bg-yellow-500 text-white" onClick={submit} disabled={submitting}>
+                    {submitting ? "กำลังส่งคำตอบ..." : "ส่งคำตอบ"}
+                  </Button>
+                </div>
+              </section>
+
+              {isDesktop && (
+                <aside className="w-72 shrink-0 space-y-4 sticky top-4">
+                  <div className="rounded-xl border bg-gradient-to-br from-white via-white to-yellow-50 p-4 shadow-sm ring-1 ring-black/5">
+                    <h3 className="text-sm font-semibold text-gray-900">สรุปข้อสอบ</h3>
+                    {summaryContent}
+                  </div>
+
+                  {typeof exam.canRetake === "boolean" && (
+                    <div className="rounded-xl border bg-white/80 p-4 text-xs text-gray-600">
+                      <span className="font-semibold text-gray-900">เงื่อนไข:</span>
+                      <span className="ml-2">{exam.canRetake ? "สามารถกลับมาทำข้อสอบได้อีก" : "ทำได้เพียงครั้งเดียว"}</span>
+                    </div>
+                  )}
+                </aside>
+              )}
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Floating toggle controls for non-desktop */}
+      {!isDesktop && !loading && !error && exam && (
+        <>
+          <Button
+            variant="default"
+            size="icon"
+            className="fixed bottom-5 right-5 z-40 h-12 w-12 rounded-full bg-yellow-400 text-white shadow-lg transition hover:bg-yellow-500 xl:hidden"
+            onClick={() => setSummaryOpen((prev) => !prev)}
+            aria-label={summaryOpen ? "ซ่อนสรุปข้อสอบ" : "แสดงสรุปข้อสอบ"}
+          >
+            {summaryOpen ? <PanelRightClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
+          </Button>
+
+          <Button
+            variant="default"
+            size="icon"
+            className="fixed top-1/2 right-5 z-40 hidden h-12 w-12 -translate-y-1/2 rounded-full border border-yellow-100 bg-white text-yellow-600 shadow-lg transition hover:bg-yellow-50 xl:flex"
+            onClick={() => setSummaryOpen((prev) => !prev)}
+            aria-label={summaryOpen ? "ซ่อนสรุปข้อสอบ" : "แสดงสรุปข้อสอบ"}
+          >
+            {summaryOpen ? <PanelRightClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
+          </Button>
+        </>
+      )}
+
+      {summaryContent && !isDesktop && !loading && !error && exam && (
+        <div>
+          <div
+            className={`fixed inset-0 z-30 bg-black/40 transition-opacity duration-300 ${summaryOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+            onClick={() => setSummaryOpen(false)}
+          />
+          <div
+            className={`fixed top-0 bottom-0 right-0 z-40 w-full max-w-[90vw] sm:max-w-sm border border-yellow-100 bg-white p-5 shadow-xl transition-transform duration-300 ${summaryOpen ? "translate-x-0" : "translate-x-full"}`}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-900">สรุปข้อสอบ</h3>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSummaryOpen(false)} aria-label="ปิดสรุป">
+                <PanelRightClose className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="overflow-y-auto pr-1" style={{ maxHeight: "calc(100vh - 5rem)" }}>
+              {summaryContent}
+              {typeof exam.canRetake === "boolean" && (
+                <div className="mt-4 rounded-xl border bg-white/80 p-4 text-xs text-gray-600">
+                  <span className="font-semibold text-gray-900">เงื่อนไข:</span>
+                  <span className="ml-2">{exam.canRetake ? "สามารถกลับมาทำข้อสอบได้อีก" : "ทำได้เพียงครั้งเดียว"}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
