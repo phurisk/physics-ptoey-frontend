@@ -12,11 +12,17 @@ import { useAuth } from "@/components/auth-provider"
 
 type ExamDetail = {
   id: string
-  title?: string
+  title: string
   description?: string | null
-  type?: string
+  examType?: string
+  duration?: number | null
   timeLimit?: number | null
-  questions?: Question[]
+  totalQuestions: number
+  questions: Question[]
+  status?: string | null
+  canRetake?: boolean
+  attemptId?: string
+  startedAt?: string | null
 }
 
 type Question = {
@@ -52,8 +58,48 @@ export default function ExamAttemptPage() {
         const res = await fetch(`/api/my-courses/course/${encodeURIComponent(String(courseId))}/exams/${encodeURIComponent(String(examId))}?userId=${encodeURIComponent(String(user.id))}`, { cache: "no-store" })
         const json: ExamDetailResponse = await res.json().catch(() => ({ success: false }))
         if (!res.ok || json.success === false) throw new Error(json?.error || `HTTP ${res.status}`)
-        const data = json.data || (json as any).exam || null
-        if (active) setExam(data)
+        const payload = json.data || (json as any).exam || null
+
+        let normalized: ExamDetail | null = null
+        if (payload) {
+          const examInfo = (payload as any).exam || payload
+          const rawQuestions: any[] = Array.isArray((payload as any).questions)
+            ? ((payload as any).questions as any[])
+            : []
+
+          const questions: Question[] = rawQuestions.map((q) => ({
+            id: q.id,
+            text: q.questionText ?? q.text ?? "",
+            type: q.questionType ?? q.type,
+            options: Array.isArray(q.options)
+              ? q.options.map((opt: any) => ({
+                  id: opt.id,
+                  text: opt.optionText ?? opt.text ?? opt.label ?? opt.id,
+                }))
+              : [],
+          }))
+
+          normalized = {
+            id: examInfo?.id ?? String(examId),
+            title: examInfo?.title ?? payload?.title ?? "ข้อสอบ",
+            description: examInfo?.description ?? payload?.description ?? null,
+            examType: examInfo?.examType ?? examInfo?.type,
+            duration: examInfo?.duration ?? null,
+            timeLimit:
+              examInfo?.timeLimit ?? examInfo?.duration ?? examInfo?.timeLimitMinutes ?? null,
+            totalQuestions:
+              typeof (payload as any).totalQuestions === "number"
+                ? (payload as any).totalQuestions
+                : questions.length,
+            questions,
+            status: (payload as any).status ?? examInfo?.status ?? null,
+            canRetake: (payload as any).canRetake,
+            attemptId: (payload as any).attemptId,
+            startedAt: (payload as any).startedAt,
+          }
+        }
+
+        if (active) setExam(normalized)
       } catch (e: any) {
         if (active) setError(e?.message || "โหลดข้อสอบไม่สำเร็จ")
       } finally {
@@ -64,13 +110,23 @@ export default function ExamAttemptPage() {
     return () => { active = false }
   }, [courseId, examId, user?.id])
 
-  const qList = useMemo(() => Array.isArray(exam?.questions) ? exam!.questions! : [], [exam?.questions])
+  const qList = useMemo(() => exam?.questions ?? [], [exam?.questions])
   const title = exam?.title || "ข้อสอบ"
   const typeBadge = (t?: string) => {
     const x = (t || "").toUpperCase()
     if (x === "PRETEST") return <Badge className="bg-blue-600 text-white">Pre-test</Badge>
     if (x === "POSTTEST") return <Badge className="bg-green-600 text-white">Post-test</Badge>
     return <Badge className="bg-amber-500 text-white">แบบทดสอบ</Badge>
+  }
+
+  const statusBadge = (status?: string | null) => {
+    const value = (status || "").toUpperCase()
+    if (value === "PASSED") return <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-200">ผ่านแล้ว</Badge>
+    if (value === "FAILED") return <Badge className="bg-rose-100 text-rose-700 border border-rose-200">ไม่ผ่าน</Badge>
+    if (value === "IN_PROGRESS") return <Badge className="bg-blue-100 text-blue-700 border border-blue-200">กำลังทำ</Badge>
+    if (value === "NOT_STARTED") return <Badge className="bg-gray-100 text-gray-700 border border-gray-200">ยังไม่ได้ทำ</Badge>
+    if (value) return <Badge className="bg-gray-100 text-gray-700 border border-gray-200">{value}</Badge>
+    return null
   }
 
   const setChoice = (qid: string, optionId: string) => {
@@ -144,7 +200,10 @@ export default function ExamAttemptPage() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>{title}</span>
-              {typeBadge(exam.type)}
+              <div className="flex items-center gap-2">
+                {statusBadge(exam.status)}
+                {typeBadge(exam.examType)}
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -152,7 +211,28 @@ export default function ExamAttemptPage() {
               <div className="text-sm text-gray-700">{exam.description}</div>
             )}
 
+            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600">
+              {typeof exam.totalQuestions === "number" && (
+                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                  ทั้งหมด {exam.totalQuestions} ข้อ
+                </span>
+              )}
+              {exam.timeLimit != null && exam.timeLimit! > 0 && (
+                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                  เวลา {exam.timeLimit} นาที
+                </span>
+              )}
+              {typeof exam.canRetake === "boolean" && (
+                <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                  {exam.canRetake ? "ทำซ้ำได้" : "ทำได้ครั้งเดียว"}
+                </span>
+              )}
+            </div>
+
             <div className="space-y-4">
+              {qList.length === 0 && (
+                <div className="text-sm text-gray-500">ข้อสอบนี้ยังไม่มีคำถาม</div>
+              )}
               {qList.map((q, idx) => {
                 const qType = (q.type || (Array.isArray(q.options) && q.options.length === 2 ? "TRUE_FALSE" : "MULTIPLE_CHOICE")).toUpperCase()
                 return (
@@ -200,4 +280,3 @@ export default function ExamAttemptPage() {
     </div>
   )
 }
-

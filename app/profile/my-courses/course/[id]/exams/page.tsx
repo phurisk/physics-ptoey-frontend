@@ -13,11 +13,19 @@ type ExamItem = {
   id: string
   title?: string
   description?: string | null
-  type?: string // PRETEST | POSTTEST | QUIZ
-  timeLimit?: number | null // minutes
+  type?: string 
+  examType?: string 
+  timeLimit?: number | null 
+  timeLimitMinutes?: number | null
+  duration?: number | null
   questionCount?: number | null
+  totalQuestions?: number | null
   attempts?: number | null
+  maxAttempts?: number | null
   status?: string | null
+  canRetake?: boolean
+  lastAttempt?: string | null
+  createdAt?: string | null
 }
 
 type ExamsResponse = {
@@ -52,7 +60,16 @@ export default function CourseExamsPage() {
             : Array.isArray((json?.data as any)?.exams)
               ? (json?.data as any)?.exams
               : []
-        if (active) setExams(list)
+        const normalized = list.map((item: any) => ({
+          ...item,
+          type: item?.type || item?.examType,
+          examType: item?.examType || item?.type,
+          questionCount: item?.questionCount ?? item?.totalQuestions ?? null,
+          timeLimit: item?.timeLimit ?? item?.timeLimitMinutes ?? null,
+          duration: item?.duration ?? null,
+          maxAttempts: item?.maxAttempts ?? item?.attempts ?? null,
+        }))
+        if (active) setExams(normalized)
       } catch (e: any) {
         if (active) setError(e?.message || "โหลดข้อสอบไม่สำเร็จ")
       } finally {
@@ -68,6 +85,26 @@ export default function CourseExamsPage() {
     if (t === "PRETEST") return <Badge className="bg-blue-600 text-white">Pre-test</Badge>
     if (t === "POSTTEST") return <Badge className="bg-green-600 text-white">Post-test</Badge>
     return <Badge className="bg-amber-500 text-white">แบบทดสอบ</Badge>
+  }
+
+  const statusLabel = (status?: string | null) => {
+    const value = (status || "").toUpperCase()
+    if (value === "PASSED") return <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-200">ผ่านแล้ว</Badge>
+    if (value === "FAILED") return <Badge className="bg-rose-100 text-rose-700 border border-rose-200">ไม่ผ่าน</Badge>
+    if (value === "IN_PROGRESS") return <Badge className="bg-blue-100 text-blue-700 border border-blue-200">กำลังทำ</Badge>
+    if (value === "NOT_STARTED") return <Badge className="bg-gray-100 text-gray-700 border border-gray-200">ยังไม่ได้ทำ</Badge>
+    if (value) return <Badge className="bg-gray-100 text-gray-700 border border-gray-200">{value}</Badge>
+    return null
+  }
+
+  const attemptsInfo = (status?: string | null, attempts?: number | null, maxAttempts?: number | null) => {
+    const total = typeof maxAttempts === "number" && maxAttempts > 0 ? maxAttempts : null
+    const used = typeof attempts === "number" && attempts >= 0 ? attempts : null
+    if (total && used !== null) {
+      return `${Math.min(used, total)}/${total}`
+    }
+    if (total) return `0/${total}`
+    return null
   }
 
   if (!isAuthenticated) {
@@ -97,28 +134,61 @@ export default function CourseExamsPage() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        {exams.map((ex) => (
-          <Card key={ex.id} className="bg-white border-gray-200">
-            <CardContent className="p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="text-lg font-semibold truncate">{ex.title || "ข้อสอบ"}</div>
-                {badgeForType(ex.type)}
-              </div>
-              {ex.description && <div className="text-sm text-gray-600 line-clamp-2">{ex.description}</div>}
-              <div className="text-xs text-gray-500 flex items-center gap-4">
-                {ex.questionCount != null && <span>จำนวน {ex.questionCount} ข้อ</span>}
-                {ex.timeLimit != null && ex.timeLimit! > 0 && <span>เวลา {ex.timeLimit} นาที</span>}
-              </div>
-              <div className="flex justify-end">
-                <Link href={`/profile/my-courses/course/${encodeURIComponent(String(id))}/exams/${encodeURIComponent(String(ex.id))}`}>
-                  <Button className="bg-yellow-400 hover:bg-yellow-500 text-white">เริ่มทำข้อสอบ</Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {exams.map((ex) => {
+          const attemptText = attemptsInfo(ex.status, ex.attempts ?? (ex as any)?.attemptCount ?? null, ex.maxAttempts)
+          const disableStart = ex.canRetake === false
+          return (
+            <Card key={ex.id} className="bg-white border-gray-200">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-lg font-semibold truncate">{ex.title || "ข้อสอบ"}</div>
+                    {ex.description && (
+                      <div className="text-sm text-gray-600 line-clamp-2">{ex.description}</div>
+                    )}
+                  </div>
+                  {badgeForType(ex.examType)}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600">
+                  {statusLabel(ex.status)}
+                  {ex.questionCount != null && (
+                    <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                      {ex.questionCount} ข้อ
+                    </span>
+                  )}
+                  {(ex.timeLimit ?? ex.duration) != null && (ex.timeLimit ?? ex.duration)! > 0 && (
+                    <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                      เวลา {(ex.timeLimit ?? ex.duration)} นาที
+                    </span>
+                  )}
+                  {attemptText && (
+                    <span className="inline-flex items-center gap-1 bg-yellow-50 text-yellow-700 px-2 py-1 rounded border border-yellow-100">
+                      {ex.canRetake === false ? "ทำครบแล้ว" : "ทำซ้ำได้"} ({attemptText})
+                    </span>
+                  )}
+                  {attemptText == null && typeof ex.canRetake === "boolean" && (
+                    <span className="inline-flex items-center gap-1 bg-yellow-50 text-yellow-700 px-2 py-1 rounded border border-yellow-100">
+                      {ex.canRetake ? "ทำซ้ำได้" : "ทำครบแล้ว"}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex justify-end">
+                  <Link href={`/profile/my-courses/course/${encodeURIComponent(String(id))}/exams/${encodeURIComponent(String(ex.id))}`}>
+                    <Button
+                      className={`bg-yellow-400 hover:bg-yellow-500 text-white ${disableStart ? "opacity-80" : ""}`}
+                      disabled={disableStart}
+                    >
+                      {disableStart ? "ทำเสร็จแล้ว" : "เริ่มทำข้อสอบ"}
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
     </div>
   )
 }
-
