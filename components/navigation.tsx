@@ -119,7 +119,7 @@ export function Navigation() {
                   disabled
                   className="ml-5 px-4 py-6 bg-gray-200 text-gray-600 rounded-lg text-base font-semibold cursor-not-allowed"
                 >
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isLoggingOut ? "กำลังออกจากระบบ…" : "กำลังเข้าสู่ระบบ…"}
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin " /> {isLoggingOut ? "กำลังออกจากระบบ…" : "กำลังเข้าสู่ระบบ…"}
                 </Button>
               ) : !isAuthenticated ? (
                 <Button

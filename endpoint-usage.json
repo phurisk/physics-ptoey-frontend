@@ -1,0 +1,366 @@
+{
+  "/api/admin/categories": [
+    "e-learning-backoffice/src/components/admin/categories/index.js",
+    "e-learning-backoffice/src/hooks/useCourses.js"
+  ],
+  "/api/admin/categories/:id": [
+    "e-learning-backoffice/src/components/admin/categories/index.js"
+  ],
+  "/api/admin/chapters": [
+    "e-learning-backoffice/src/components/admin/chapters/index.js",
+    "e-learning-backoffice/src/hooks/useChapters.js"
+  ],
+  "/api/admin/chapters/:id": [
+    "e-learning-backoffice/src/components/admin/chapters/index.js",
+    "e-learning-backoffice/src/hooks/useChapters.js"
+  ],
+  "/api/admin/contents": [
+    "e-learning-backoffice/src/components/admin/contents/index.js",
+    "e-learning-backoffice/src/hooks/useContents.js"
+  ],
+  "/api/admin/contents/:id": [
+    "e-learning-backoffice/src/components/admin/contents/index.js",
+    "e-learning-backoffice/src/hooks/useContents.js"
+  ],
+  "/api/admin/coupons": [
+    "e-learning-backoffice/src/app/admin/coupons/page.js",
+    "e-learning-backoffice/src/hooks/useCoupons.js"
+  ],
+  "/api/admin/coupons/:id": [
+    "e-learning-backoffice/src/app/admin/coupons/page.js"
+  ],
+  "/api/admin/course-exams": [
+    "e-learning-backoffice/src/app/admin/courses/exams/[courseId]/page.js",
+    "e-learning-backoffice/src/hooks/useCourseExams.js"
+  ],
+  "/api/admin/course-exams/:examId": [
+    "e-learning-backoffice/src/app/admin/courses/exams/questions/[examId]/page.js"
+  ],
+  "/api/admin/course-exams/:id": [
+    "e-learning-backoffice/src/app/admin/courses/exams/[courseId]/page.js"
+  ],
+  "/api/admin/courses": [
+    "e-learning-backoffice/src/components/admin/courses/index.js",
+    "e-learning-backoffice/src/hooks/useCourses.js"
+  ],
+  "/api/admin/courses/:courseId": [
+    "e-learning-backoffice/src/app/admin/courses/exams/[courseId]/page.js"
+  ],
+  "/api/admin/courses/:id": [
+    "e-learning-backoffice/src/components/admin/courses/index.js"
+  ],
+  "/api/admin/dashboard/course-sales": [
+    "e-learning-backoffice/src/components/admin/CourseSalesDetail.js",
+    "e-learning-backoffice/src/hooks/useDashboard.js"
+  ],
+  "/api/admin/dashboard/ebook-sales": [
+    "e-learning-backoffice/src/components/admin/EbookSales.js",
+    "e-learning-backoffice/src/components/admin/EbookSalesDetail.js"
+  ],
+  "/api/admin/dashboard/revenue-analytics": [
+    "e-learning-backoffice/src/hooks/useDashboard.js"
+  ],
+  "/api/admin/dashboard/sales-chart": [
+    "e-learning-backoffice/src/components/admin/SalesChart.js"
+  ],
+  "/api/admin/dashboard/stats": [
+    "e-learning-backoffice/src/hooks/useDashboard.js"
+  ],
+  "/api/admin/ebook-categories": [
+    "e-learning-backoffice/src/components/admin/ebook-categories/index.js",
+    "e-learning-backoffice/src/hooks/useEbooks.js"
+  ],
+  "/api/admin/ebook-categories/:id": [
+    "e-learning-backoffice/src/components/admin/ebook-categories/index.js"
+  ],
+  "/api/admin/ebook-files": [
+    "e-learning-backoffice/src/hooks/useEbooks.js"
+  ],
+  "/api/admin/ebook-files/:ebookId": [
+    "e-learning-backoffice/src/hooks/useEbooks.js"
+  ],
+  "/api/admin/ebooks": [
+    "e-learning-backoffice/src/hooks/useEbooks.js"
+  ],
+  "/api/admin/ebooks/:ebookId": [
+    "e-learning-backoffice/src/hooks/useEbooks.js"
+  ],
+  "/api/admin/ebooks/:id": [
+    "e-learning-backoffice/src/hooks/useEbooks.js"
+  ],
+  "/api/admin/exam-bank": [
+    "e-learning-backoffice/src/hooks/useExamBank.js",
+    "e-learning-backoffice/src/hooks/useExams.js"
+  ],
+  "/api/admin/exam-bank/:examId": [
+    "e-learning-backoffice/src/hooks/useExamBank.js"
+  ],
+  "/api/admin/exam-bank/:id": [
+    "e-learning-backoffice/src/hooks/useExamBank.js",
+    "e-learning-backoffice/src/hooks/useExams.js"
+  ],
+  "/api/admin/exam-categories": [
+    "e-learning-backoffice/src/hooks/useExamBank.js",
+    "e-learning-backoffice/src/hooks/useExamCategories.js",
+    "e-learning-backoffice/src/hooks/useExams.js"
+  ],
+  "/api/admin/exam-categories/:id": [
+    "e-learning-backoffice/src/hooks/useExamCategories.js"
+  ],
+  "/api/admin/exam-files": [
+    "e-learning-backoffice/src/hooks/useExamBank.js",
+    "e-learning-backoffice/src/hooks/useExams.js"
+  ],
+  "/api/admin/exam-files/:fileId": [
+    "e-learning-backoffice/src/hooks/useExamBank.js",
+    "e-learning-backoffice/src/hooks/useExams.js"
+  ],
+  "/api/admin/exam-questions": [
+    "e-learning-backoffice/src/app/admin/courses/exams/questions/[examId]/page.js",
+    "e-learning-backoffice/src/hooks/useExamQuestions.js"
+  ],
+  "/api/admin/exam-questions/:id": [
+    "e-learning-backoffice/src/app/admin/courses/exams/questions/[examId]/page.js"
+  ],
+  "/api/admin/orders": [
+    "e-learning-backoffice/src/components/admin/orders/index.js"
+  ],
+  "/api/admin/orders/:id": [
+    "e-learning-backoffice/src/components/admin/orders/index.js"
+  ],
+  "/api/admin/payments/analyze-slip": [
+    "e-learning-backoffice/src/components/admin/orders/index.js"
+  ],
+  "/api/admin/post-types": [
+    "e-learning-backoffice/src/app/admin/post-types/page.js",
+    "e-learning-backoffice/src/components/admin/post-categories/index.js",
+    "e-learning-backoffice/src/hooks/usePostCategories.js",
+    "e-learning-backoffice/src/hooks/usePosts.js"
+  ],
+  "/api/admin/post-types/:id": [
+    "e-learning-backoffice/src/app/admin/post-types/page.js",
+    "e-learning-backoffice/src/components/admin/post-categories/index.js"
+  ],
+  "/api/admin/posts": [
+    "e-learning-backoffice/src/hooks/usePosts.js"
+  ],
+  "/api/admin/posts/:id": [
+    "e-learning-backoffice/src/hooks/usePosts.js"
+  ],
+  "/api/admin/posts/:id/content": [
+    "e-learning-backoffice/src/app/admin/posts/page.js"
+  ],
+  "/api/admin/posts/:postId/content": [
+    "e-learning-backoffice/src/components/admin/posts/PostContentModal.js"
+  ],
+  "/api/admin/shipping": [
+    "e-learning-backoffice/src/hooks/useShipping.js"
+  ],
+  "/api/admin/shipping/:id": [
+    "e-learning-backoffice/src/hooks/useShipping.js"
+  ],
+  "/api/admin/users": [
+    "e-learning-backoffice/src/app/admin/users/page.js",
+    "e-learning-backoffice/src/hooks/useCourses.js",
+    "e-learning-backoffice/src/hooks/usePosts.js",
+    "e-learning-backoffice/src/hooks/useUsers.js"
+  ],
+  "/api/admin/users/:id": [
+    "e-learning-backoffice/src/app/admin/users/page.js"
+  ],
+  "/api/auth/login": [
+    "components/auth-provider.tsx",
+    "e-learning-backoffice/src/app/contexts/AuthContext.js"
+  ],
+  "/api/auth/logout": [
+    "components/auth-provider.tsx"
+  ],
+  "/api/auth/me": [
+    "components/auth-provider.tsx"
+  ],
+  "/api/auth/register": [
+    "components/auth-provider.tsx",
+    "e-learning-backoffice/src/app/contexts/AuthContext.js"
+  ],
+  "/api/coupons/validate": [
+    "app/checkout/course/[id]/page.tsx",
+    "app/checkout/ebook/[id]/page.tsx",
+    "app/courses/[id]/page.tsx",
+    "components/sections/books.tsx"
+  ],
+  "/api/courses": [
+    "app/courses/high-competition/page.tsx",
+    "app/courses/high/page.tsx",
+    "app/courses/middle/page.tsx",
+    "app/courses/page.tsx"
+  ],
+  "/api/courses/:id": [
+    "app/checkout/course/[id]/page.tsx",
+    "app/courses/[id]/page.tsx",
+    "components/profile/orders.tsx"
+  ],
+  "/api/courses/:id/chapters": [
+    "app/courses/[id]/page.tsx"
+  ],
+  "/api/ebook-categories": [
+    "app/books/page.tsx"
+  ],
+  "/api/ebooks": [
+    "app/books/page.tsx",
+    "app/checkout/ebook/[id]/page.tsx",
+    "components/sections/books.tsx"
+  ],
+  "/api/ebooks/:eid": [
+    "app/order-success/[id]/page.tsx",
+    "app/profile/my-books/page.tsx"
+  ],
+  "/api/ebooks/:id": [
+    "app/books/[id]/page.tsx"
+  ],
+  "/api/enrollment": [
+    "app/order-success/[id]/page.tsx"
+  ],
+  "/api/enrollments": [
+    "app/courses/[id]/page.tsx",
+    "app/order-success/[id]/page.tsx"
+  ],
+  "/api/exam-categories": [
+    "app/exam-bank/page.tsx"
+  ],
+  "/api/exam-files/delete": [
+    "e-learning-backoffice/src/components/admin/exam-bank/index.js"
+  ],
+  "/api/exams": [
+    "app/exam-bank/page.tsx"
+  ],
+  "/api/exams/:id": [
+    "app/exam-bank/view/[id]/page.tsx"
+  ],
+  "/api/exams/years": [
+    "app/exam-bank/page.tsx"
+  ],
+  "/api/external/": [
+    "e-learning-backoffice/src/middleware.js"
+  ],
+  "/api/external/:path*": [
+    "e-learning-backoffice/src/middleware.js"
+  ],
+  "/api/external/auth/exchange": [
+    "lib/api-utils.ts"
+  ],
+  "/api/external/auth/line": [
+    "components/auth-provider.tsx"
+  ],
+  "/api/external/auth/refresh": [
+    "lib/api-utils.ts",
+    "lib/http.ts"
+  ],
+  "/api/external/auth/validate": [
+    "components/auth-provider.tsx",
+    "lib/api-utils.ts"
+  ],
+  "/api/my-courses": [
+    "app/courses/[id]/page.tsx",
+    "components/profile/my-courses.tsx",
+    "lib/api-utils.ts"
+  ],
+  "/api/my-courses/course/:courseId": [
+    "app/profile/my-courses/course/[id]/page.tsx"
+  ],
+  "/api/my-courses/course/:courseId/exams": [
+    "e-learning-backoffice/src/hooks/useMyCourseExams.js"
+  ],
+  "/api/my-courses/course/:courseId/exams/:examId": [
+    "app/profile/my-courses/course/[id]/exams/[examId]/page.tsx",
+    "e-learning-backoffice/src/hooks/useMyCourseExams.js"
+  ],
+  "/api/my-courses/course/:id/exams": [
+    "app/profile/my-courses/course/[id]/exams/page.tsx"
+  ],
+  "/api/my-courses/exam-results": [
+    "app/profile/my-courses/exam-results/page.tsx",
+    "e-learning-backoffice/src/hooks/useMyCourseExams.js"
+  ],
+  "/api/my-courses/exam-results/:attemptId": [
+    "app/profile/my-courses/exam-results/[attemptId]/page.tsx",
+    "e-learning-backoffice/src/hooks/useMyCourseExams.js"
+  ],
+  "/api/orders": [
+    "app/checkout/course/[id]/page.tsx",
+    "app/checkout/ebook/[id]/page.tsx",
+    "app/profile/my-books/page.tsx",
+    "components/profile/orders.tsx",
+    "components/sections/books.tsx"
+  ],
+  "/api/orders/:id": [
+    "app/profile/my-books/page.tsx"
+  ],
+  "/api/orders/:orderId": [
+    "app/order-success/[id]/page.tsx",
+    "app/profile/my-books/page.tsx"
+  ],
+  "/api/payments/upload-slip": [
+    "app/courses/[id]/page.tsx",
+    "app/order-success/[id]/page.tsx",
+    "components/profile/orders.tsx",
+    "components/sections/books.tsx"
+  ],
+  "/api/posts": [
+    "app/about/page.tsx",
+    "app/articles/[slug]/page.tsx",
+    "app/courses/high-competition/page.tsx",
+    "app/courses/high/page.tsx",
+    "app/courses/live/page.tsx",
+    "app/courses/middle/page.tsx",
+    "app/student-works/page.tsx",
+    "app/study-plans/page.tsx",
+    "components/sections/articles.tsx",
+    "components/sections/hero-banner.tsx",
+    "components/sections/popup-promotion.tsx",
+    "components/sections/reviews.tsx",
+    "components/sections/student-success.tsx",
+    "components/sections/view-of-teaching.tsx"
+  ],
+  "/api/progress": [
+    "components/my-courses.tsx",
+    "components/profile/my-courses.tsx",
+    "e-learning-backoffice/src/lib/progress-utils.js",
+    "lib/progress-utils.ts"
+  ],
+  "/api/proxy-download-pdf": [
+    "app/exam-bank/page.tsx",
+    "app/order-success/[id]/page.tsx",
+    "app/profile/my-books/page.tsx"
+  ],
+  "/api/proxy-view": [
+    "app/exam-bank/view/[id]/page.tsx",
+    "app/order-success/[id]/page.tsx",
+    "app/profile/my-books/page.tsx"
+  ],
+  "/api/reviews": [
+    "app/books/[id]/page.tsx",
+    "app/courses/[id]/page.tsx"
+  ],
+  "/api/update-progress": [
+    "app/profile/my-courses/course/[id]/page.tsx",
+    "e-learning-backoffice/src/lib/progress-utils.js",
+    "lib/progress-utils.ts"
+  ],
+  "/api/upload": [
+    "e-learning-backoffice/src/components/admin/posts/PostContentModal.js"
+  ],
+  "/api/upload-blob": [
+    "e-learning-backoffice/src/components/admin/courses/CourseModal.js",
+    "e-learning-backoffice/src/components/admin/ebooks/EbookModal.js",
+    "e-learning-backoffice/src/components/admin/exam-questions/QuestionModal.js",
+    "e-learning-backoffice/src/components/admin/exam-questions/QuestionModal_new.js",
+    "e-learning-backoffice/src/components/admin/posts/PostModal.js",
+    "e-learning-backoffice/src/components/admin/users/UserModal.js"
+  ],
+  "/api/upload-blob/delete": [
+    "e-learning-backoffice/src/components/admin/posts/PostModal.js"
+  ],
+  "/api/upload-blob/test": [
+    "e-learning-backoffice/src/lib/upload-diagnostics.js"
+  ]
+}

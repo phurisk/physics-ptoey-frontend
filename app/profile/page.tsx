@@ -5,12 +5,12 @@ import { useState } from "react"
 import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { BookOpen, Receipt, Book } from "lucide-react"
+import { BookOpen, Receipt, Book, Loader2 } from "lucide-react"
 import LoginModal from "@/components/login-modal"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export default function ProfilePage() {
-  const { user, isAuthenticated, logout } = useAuth()
+  const { user, isAuthenticated, logout, loading } = useAuth()
   const [loginOpen, setLoginOpen] = useState(false)
 
   const name = (user as any)?.name || (user as any)?.displayName || "ผู้ใช้"
@@ -22,7 +22,12 @@ export default function ProfilePage() {
     <div className="max-w-4xl mx-auto px-4 py-12 space-y-8">
       <div className="space-y-2">
         <h1 className="text-2xl font-bold">โปรไฟล์</h1>
-        {!isAuthenticated ? (
+        {loading && !isAuthenticated ? (
+          <div className="flex items-center gap-3 bg-white border rounded-lg p-6 text-gray-700">
+            <Loader2 className="h-5 w-5 animate-spin text-yellow-500" />
+            <span>กำลังตรวจสอบสถานะการเข้าสู่ระบบ...</span>
+          </div>
+        ) : !isAuthenticated ? (
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white border rounded-lg p-6">
             <p className="text-gray-700">กรุณาเข้าสู่ระบบเพื่อจัดการโปรไฟล์และการสั่งซื้อ</p>
             <Button className="bg-yellow-400 hover:bg-yellow-500 text-white" onClick={() => setLoginOpen(true)}>เข้าสู่ระบบ</Button>
@@ -37,8 +42,8 @@ export default function ProfilePage() {
               )}
             </Avatar>
             <div>
-              <div className="text-lg font-medium">{name}</div>
-              {email && <div className="text-gray-600">{email}</div>}
+              <div className="text-lg font-medium ">{name}</div>
+              {email && <div className="text-gray-600 md:text-sm text-xs">{email}</div>}
             </div>
           </div>
         )}

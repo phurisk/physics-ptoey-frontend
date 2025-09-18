@@ -72,6 +72,13 @@ type UiExam = {
 
 const EXAMS_API = "/api/exams";
 const ITEMS_PER_PAGE = 12;
+const MAX_FILE_NAME_LENGTH = 23;
+
+const formatFileName = (value?: string | null, fallback = "ไฟล์ PDF") => {
+  const safe = (value ?? "").trim() || fallback;
+  if (safe.length <= MAX_FILE_NAME_LENGTH) return safe;
+  return `${safe.slice(0, MAX_FILE_NAME_LENGTH - 1)}…`;
+};
 
 export default function ExamBankPage() {
   const router = useRouter();
@@ -880,8 +887,11 @@ export default function ExamBankPage() {
                       <div className="flex items-center gap-3 min-w-0">
                         <FileText className="h-5 w-5 text-gray-600 shrink-0" />
                         <div className="truncate">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {f.name || "ไฟล์ PDF"}
+                          <p
+                            className="text-sm font-medium text-gray-900 truncate"
+                            title={f.name || "ไฟล์ PDF"}
+                          >
+                            {formatFileName(f.name)}
                           </p>
                         </div>
                       </div>

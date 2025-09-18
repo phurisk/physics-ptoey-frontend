@@ -4,9 +4,10 @@ import { useAuth } from '@/components/auth-provider'
 import { getMyCourses } from '@/lib/api-utils'
 import http from '@/lib/http'
 import { useState, useEffect } from 'react'
+import { Loader2 } from 'lucide-react'
 
 export function MyCourses() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, loading: authLoading } = useAuth()
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -67,6 +68,15 @@ export function MyCourses() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (authLoading && !isAuthenticated) {
+    return (
+      <div className="text-center p-8 flex items-center justify-center gap-3 text-gray-600">
+        <Loader2 className="h-5 w-5 animate-spin text-yellow-500" />
+        <span>กำลังตรวจสอบสถานะการเข้าสู่ระบบ...</span>
+      </div>
+    )
   }
 
   if (!isAuthenticated) {

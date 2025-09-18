@@ -1096,7 +1096,7 @@ export default function CourseDetailPage() {
 
                       <div className="space-y-3">
                         {isEnrolled ? (
-                          <Link href={`/courses/${id}/learn`}>
+                          <Link href={`/profile/my-courses/course/${id}/`}>
                             <Button className="w-full bg-yellow-400 hover:bg-yellow-500 text-white text-lg py-3 rounded-xl shadow hover:shadow-md transition">
                               เข้าเรียนทันที
                             </Button>
@@ -1256,7 +1256,7 @@ export default function CourseDetailPage() {
               <Button variant="outline" onClick={() => setEnrolledOpen(false)}>
                 ปิด
               </Button>
-              <Link href={`/courses/${id}/learn`}>
+              <Link href={`/profile/my-courses/course/${id}/`}>
                 <Button className="bg-yellow-400 hover:bg-yellow-500 text-white">
                   เข้าเรียน
                 </Button>

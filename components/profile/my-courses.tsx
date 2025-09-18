@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { BookOpen, Clock, Check } from "lucide-react"
+import { BookOpen, Clock, Check, Loader2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -46,7 +46,7 @@ type ProgressAPI =
   | any
 
 export default function MyCourses() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [courses, setCourses] = useState<PaidCourse[]>([])
@@ -59,8 +59,10 @@ export default function MyCourses() {
     let active = true
     const load = async () => {
       if (!user?.id) {
-        setLoading(false)
-        setCourses([])
+        if (!authLoading) {
+          setLoading(false)
+          setCourses([])
+        }
         return
       }
       try {
@@ -79,7 +81,7 @@ export default function MyCourses() {
     return () => {
       active = false
     }
-  }, [user?.id])
+  }, [user?.id, authLoading])
 
 
   useEffect(() => {
@@ -135,6 +137,15 @@ export default function MyCourses() {
     } catch {
       return ""
     }
+  }
+
+  if (authLoading && !user?.id) {
+    return (
+      <div className="py-12 flex items-center justify-center gap-3 text-gray-600">
+        <Loader2 className="h-5 w-5 animate-spin text-yellow-500" />
+        <span>กำลังตรวจสอบสถานะการเข้าสู่ระบบ...</span>
+      </div>
+    )
   }
 
   return (

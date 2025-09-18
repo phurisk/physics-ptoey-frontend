@@ -5,9 +5,10 @@ import MyCourses from "@/components/profile/my-courses"
 import { useAuth } from "@/components/auth-provider"
 import LoginModal from "@/components/login-modal"
 import { Button } from "@/components/ui/button"
+import { Loader2 } from "lucide-react"
 
 export default function MyCoursesPage() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, loading } = useAuth()
   const [loginOpen, setLoginOpen] = useState(false)
 
   return (
@@ -16,7 +17,12 @@ export default function MyCoursesPage() {
         <h1 className="text-2xl font-bold">คอร์สของฉัน</h1>
         <p className="text-gray-600">ดูคอร์สที่คุณซื้อและเริ่มเรียนได้ทันที</p>
       </div>
-      {!isAuthenticated ? (
+      {loading && !isAuthenticated ? (
+        <div className="bg-white border rounded-lg p-6 flex items-center gap-3 text-gray-700">
+          <Loader2 className="h-5 w-5 animate-spin text-yellow-500" />
+          <span>กำลังตรวจสอบสถานะการเข้าสู่ระบบ...</span>
+        </div>
+      ) : !isAuthenticated ? (
         <div className="bg-white border rounded-lg p-6">
           <div className="flex items-center justify-between gap-4">
             <div className="text-gray-700">กรุณาเข้าสู่ระบบเพื่อดูคอร์สของคุณ</div>
@@ -30,4 +36,3 @@ export default function MyCoursesPage() {
     </div>
   )
 }
-

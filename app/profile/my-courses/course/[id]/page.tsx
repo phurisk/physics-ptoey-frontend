@@ -11,6 +11,7 @@ import {
   CheckCircle,
   X,
   Menu,
+  Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -120,9 +121,9 @@ type FlatItem = { index: number; content: Content; chapter: Chapter }
 
 export default function CourseDetailPage() {
   const params = useParams()
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated, user, loading: authLoading } = useAuth()
 
-  const [loading, setLoading] = useState(true)
+  const [courseLoading, setCourseLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [course, setCourse] = useState<CourseDetail | null>(null)
   const [loginOpen, setLoginOpen] = useState(false)
@@ -199,12 +200,12 @@ export default function CourseDetailPage() {
     let active = true
     const loadCourse = async () => {
       if (!courseId || !user?.id) {
-        setLoading(false)
+        if (!authLoading) setCourseLoading(false)
         return
       }
 
       try {
-        setLoading(true)
+        setCourseLoading(true)
         const res = await fetch(
           `/api/my-courses/course/${courseId}?userId=${encodeURIComponent(user.id)}`,
           { cache: 'no-store' }
@@ -236,7 +237,7 @@ export default function CourseDetailPage() {
       } catch (e: any) {
         if (active) setError(e?.message ?? 'โหลดคอร์สไม่สำเร็จ')
       } finally {
-        if (active) setLoading(false)
+        if (active) setCourseLoading(false)
       }
     }
 
@@ -244,7 +245,7 @@ export default function CourseDetailPage() {
     return () => {
       active = false
     }
-  }, [courseId, user?.id])
+  }, [courseId, user?.id, authLoading])
 
   const getYouTubeEmbedUrl = (url: string) => {
     const idMatch = url.match(
@@ -372,6 +373,17 @@ export default function CourseDetailPage() {
     </div>
   )
 
+  if (authLoading && !isAuthenticated) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-12">
+        <div className="bg-white border rounded-lg p-6 flex items-center gap-3 text-gray-700">
+          <Loader2 className="h-5 w-5 animate-spin text-yellow-500" />
+          <span>กำลังตรวจสอบสถานะการเข้าสู่ระบบ...</span>
+        </div>
+      </div>
+    )
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-12">
@@ -391,7 +403,7 @@ export default function CourseDetailPage() {
     )
   }
 
-  if (loading) {
+  if (courseLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="flex items-center gap-4 mb-6">

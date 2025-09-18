@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Loader2 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import LoginModal from "@/components/login-modal"
 import http from "@/lib/http"
@@ -20,7 +21,7 @@ type Order = {
 type OrdersResponse = { success: boolean; data: Order[] }
 
 export default function MyBooksPage() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
@@ -53,7 +54,10 @@ export default function MyBooksPage() {
   useEffect(() => {
     let active = true
     const run = async () => {
-      if (!user?.id) { setLoading(false); return }
+      if (!user?.id) {
+        if (!authLoading) setLoading(false)
+        return
+      }
       try {
         setLoading(true)
         const res = await http.get(`/api/orders`, { params: { userId: user.id } })
@@ -68,7 +72,7 @@ export default function MyBooksPage() {
     }
     run()
     return () => { active = false }
-  }, [user?.id])
+  }, [user?.id, authLoading])
 
   useEffect(() => {
     let cancelled = false
@@ -129,7 +133,12 @@ export default function MyBooksPage() {
         <p className="text-gray-600">ดู eBook ที่คุณซื้อและอ่าน/ดาวน์โหลด</p>
       </div>
 
-      {!isAuthenticated ? (
+      {authLoading && !isAuthenticated ? (
+        <div className="bg-white border rounded-lg p-6 flex items-center gap-3 text-gray-700">
+          <Loader2 className="h-5 w-5 animate-spin text-yellow-500" />
+          <span>กำลังตรวจสอบสถานะการเข้าสู่ระบบ...</span>
+        </div>
+      ) : !isAuthenticated ? (
         <div className="bg-white border rounded-lg p-6">
           <div className="flex items-center justify-between gap-4">
             <div className="text-gray-700">กรุณาเข้าสู่ระบบเพื่อดู eBook ของคุณ</div>
