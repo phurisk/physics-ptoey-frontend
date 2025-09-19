@@ -360,9 +360,9 @@ export default function AboutPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="py-16 px-4 bg-white"
+          className="py-16 px-4 bg-none"
         >
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-7xl mx-auto ">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">บรรยากาศการสอน</h2>
               <p className="text-xl text-gray-600">สภาพแวดล้อมการเรียนรู้ที่เอื้อต่อการพัฒนาศักยภาพ</p>
@@ -427,7 +427,7 @@ export default function AboutPage() {
 
 
 
-        <section className="py-16 lg:py-24 bg-white">
+        <section className="py-16 lg:py-24 bg-none">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
               <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-3 bg-[#ffbf00] px-8 py-4 w-fit mx-auto rounded-full shadow-sm">
