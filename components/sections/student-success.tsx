@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import type React from "react" 
 import { X } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -128,6 +128,9 @@ export default function StudentSuccess() {
   const [isDragging, setIsDragging] = useState(false)
   const [dragStartX, setDragStartX] = useState(0)
   const [dragOffset, setDragOffset] = useState(0)
+  const sliderRef = useRef<HTMLDivElement | null>(null)
+  const pointerIdRef = useRef<number | null>(null)
+  const hasCapturedPointerRef = useRef(false)
 
   // กัน index เกินเมื่อจำนวนคอลัมน์เปลี่ยน
   useEffect(() => {
@@ -156,15 +159,34 @@ export default function StudentSuccess() {
     setIsDragging(true)
     setDragStartX(e.clientX)
     setDragOffset(0)
-    ;(e.currentTarget as HTMLDivElement).setPointerCapture?.(e.pointerId)
+    pointerIdRef.current = e.pointerId
+    hasCapturedPointerRef.current = false
   }
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDragging) return
     const deltaX = e.clientX - dragStartX
     setDragOffset(deltaX)
+
+    if (
+      !hasCapturedPointerRef.current &&
+      sliderRef.current &&
+      pointerIdRef.current !== null &&
+      Math.abs(deltaX) > 4
+    ) {
+      try {
+        sliderRef.current.setPointerCapture(pointerIdRef.current)
+        hasCapturedPointerRef.current = true
+      } catch {
+        // Ignore capture errors (e.g. not supported)
+      }
+    }
   }
   const endDrag = () => {
-    if (!isDragging) return setIsInteracting(false)
+    if (!isDragging) {
+      pointerIdRef.current = null
+      hasCapturedPointerRef.current = false
+      return setIsInteracting(false)
+    }
     const threshold = 50
     if (Math.abs(dragOffset) > threshold) {
       if (dragOffset < 0) nextSlide()
@@ -172,6 +194,18 @@ export default function StudentSuccess() {
     }
     setIsDragging(false)
     setDragOffset(0)
+
+    if (pointerIdRef.current !== null && sliderRef.current) {
+      try {
+        if (sliderRef.current.hasPointerCapture(pointerIdRef.current)) {
+          sliderRef.current.releasePointerCapture(pointerIdRef.current)
+        }
+      } catch {
+        // Ignore release errors
+      }
+    }
+    pointerIdRef.current = null
+    hasCapturedPointerRef.current = false
     setTimeout(() => setIsInteracting(false), 100)
   }
 
@@ -204,6 +238,7 @@ export default function StudentSuccess() {
           <div className="relative">
             <div className="overflow-hidden mx-4 sm:mx-8">
               <div
+                ref={sliderRef}
                 className={`flex ${isDragging ? "" : "transition-transform duration-300 ease-in-out"}`}
                 style={{
                   transform: `translateX(calc(-${currentIndex * (100 / visible)}% + ${dragOffset}px))`,
