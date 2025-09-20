@@ -360,11 +360,11 @@ export default function AllBooksPage() {
         </div>
 
         {loading && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 py-0">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Card key={`sk-${i}`} className="overflow-hidden">
+              <Card key={`sk-${i}`} className="overflow-hidden py-0">
                 <CardContent className="p-0">
-                  <div className="aspect-[640/906] relative">
+                  <div className="aspect-[3/4] relative">
                     <Skeleton className="absolute inset-0" />
                   </div>
                   <div className="p-4 space-y-3">
@@ -396,9 +396,9 @@ export default function AllBooksPage() {
                 : 0;
 
               return (
-                <Card key={book.id} className="overflow-hidden group">
+                <Card key={book.id} className="overflow-hidden group py-0">
                   <CardContent className="p-0">
-                    <div className="relative aspect-[640/906] bg-white">
+                    <div className="relative aspect-[3/4] bg-white">
                       <Image
                         src={
                           book.coverImageUrl ||
@@ -406,7 +406,7 @@ export default function AllBooksPage() {
                         }
                         alt={book.title}
                         fill
-                        className="object-contain group-hover:scale-105 transition-transform duration-300"
+                        className="object-cover transition-transform duration-300 hover:object-contain group-hover:scale-105"
                       />
                       {hasDiscount && (
                         <Badge className="absolute top-3 left-3 bg-red-500 text-white">
