@@ -198,6 +198,7 @@ export default function CourseDetailPage() {
   const [hasMoreReviews, setHasMoreReviews] = useState(true)
 
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false)
+  const [reviewRestriction, setReviewRestriction] = useState<string | null>(null)
   const [reviewRating, setReviewRating] = useState<number>(5)
   const [reviewTitle, setReviewTitle] = useState("")
   const [reviewComment, setReviewComment] = useState("")
@@ -308,6 +309,10 @@ export default function CourseDetailPage() {
     setHasMoreReviews(true)
     setReviewsError(null)
   }, [id])
+
+  useEffect(() => {
+    if (isEnrolled) setReviewRestriction(null)
+  }, [isEnrolled])
 
   useEffect(() => {
     let active = true
@@ -502,12 +507,22 @@ export default function CourseDetailPage() {
       setLoginOpen(true)
       return
     }
+    if (!isEnrolled) {
+      setReviewRestriction("ต้องซื้อคอร์สนี้ก่อนจึงจะสามารถรีวิวได้")
+      return
+    }
+    setReviewRestriction(null)
     setReviewDialogOpen(true)
   }
 
   const submitReview = async () => {
     if (!id || !isAuthenticated || !user?.id) {
       setLoginOpen(true)
+      return
+    }
+    if (!isEnrolled) {
+      setReviewRestriction("ต้องซื้อคอร์สนี้ก่อนจึงจะสามารถรีวิวได้")
+      setReviewDialogOpen(false)
       return
     }
     if (!reviewRating || !reviewTitle.trim() || !reviewComment.trim()) return
@@ -546,6 +561,7 @@ export default function CourseDetailPage() {
         setReviews((prev) => [temp, ...prev])
       }
 
+      setReviewRestriction(null)
       setReviewDialogOpen(false)
       setReviewTitle("")
       setReviewComment("")
@@ -1167,6 +1183,11 @@ export default function CourseDetailPage() {
                             เขียนรีวิว
                           </Button>
                         </div>
+                        {reviewRestriction && (
+                          <div className="text-sm text-red-600 mt-2">
+                            {reviewRestriction}
+                          </div>
+                        )}
                       </div>
                     </CardHeader>
                     <CardContent>

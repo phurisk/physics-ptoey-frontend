@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useEffect, useState } from "react"
+import { use, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Maximize2 } from "lucide-react"
 import { Navigation } from "@/components/navigation"
@@ -8,9 +8,9 @@ import { Footer } from "@/components/sections/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import LoginModal from "@/components/login-modal"
 import { useAuth } from "@/components/auth-provider"
+import PdfViewer from "@/components/pdf/pdf-viewer"
 
 type ExamDetail = {
   id: string
@@ -27,8 +27,22 @@ export default function ExamViewer({ params }: { params: Promise<{ id: string }>
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [exam, setExam] = useState<ExamDetail | null>(null)
-  const [activeFile, setActiveFile] = useState<{ id?: string; name: string; url: string } | null>(null)
+  const [activeFile, setActiveFile] = useState<{ id?: string; name: string; url: string; type?: string } | null>(null)
   const { id } = use(params)
+
+  const resolvedFile = useMemo(() => {
+    if (!activeFile) {
+      return { viewerSrc: null as string | null, iframeSrc: null as string | null, isPdf: false }
+    }
+    const filename = activeFile.name || exam?.title || "exam.pdf"
+    const viewerSrc = `/api/proxy-view?url=${encodeURIComponent(activeFile.url)}&filename=${encodeURIComponent(filename)}`
+    const isPdf =
+      /pdf/i.test(activeFile.type || "") ||
+      /\.pdf(?:\?|$)/i.test(activeFile.url) ||
+      /\.pdf$/i.test(filename)
+    const iframeSrc = isPdf ? `${viewerSrc}#page=1&zoom=page-width` : viewerSrc
+    return { viewerSrc, iframeSrc, isPdf }
+  }, [activeFile, exam?.title])
 
   useEffect(() => {
     let cancelled = false
@@ -50,7 +64,9 @@ export default function ExamViewer({ params }: { params: Promise<{ id: string }>
         })).filter((f) => !!f.url)
         const pdfs = files.filter((f) => /pdf/i.test(f.type) || /\.pdf(\?|$)/i.test(f.url))
         const first = (pdfs[0] || files[0]) || null
-        if (!cancelled) setActiveFile(first ? { id: first.id, name: first.name, url: first.url } : null)
+        if (!cancelled) {
+          setActiveFile(first ? { id: first.id, name: first.name, url: first.url, type: first.type } : null)
+        }
       } catch (e: any) {
         if (!cancelled) setError(e?.message ?? "โหลดข้อมูลไม่สำเร็จ")
       } finally {
@@ -62,9 +78,8 @@ export default function ExamViewer({ params }: { params: Promise<{ id: string }>
   }, [id])
 
   const openFullscreen = () => {
-    if (!activeFile) return
-    const rawPdfUrl = `/api/proxy-view?url=${encodeURIComponent(activeFile.url)}&filename=${encodeURIComponent(activeFile.name || (exam?.title || 'exam.pdf'))}`
-    const fullUrl = `${rawPdfUrl}#page=1`
+    if (!resolvedFile.viewerSrc) return
+    const fullUrl = `${resolvedFile.viewerSrc}#page=1`
     try { window.open(fullUrl, "_blank", "noopener,noreferrer") } catch {}
   }
 
@@ -115,17 +130,17 @@ export default function ExamViewer({ params }: { params: Promise<{ id: string }>
                     <div className="text-center text-gray-500 py-12">ไม่พบไฟล์สำหรับข้อสอบนี้</div>
                   ) : (
                     <div className="w-full bg-gray-100">
-                      {(() => {
-                        const rawPdfUrl = `/api/proxy-view?url=${encodeURIComponent(activeFile.url)}&filename=${encodeURIComponent(activeFile.name || (exam?.title || 'exam.pdf'))}`
-                        const pdfWithZoom = `${rawPdfUrl}#page=1&zoom=page-width`
-                        return (
-                          <iframe
-                            src={pdfWithZoom}
-                            className="w-full h-[70vh] sm:h-[75vh] md:h-[80vh] lg:h-[83vh]"
-                            title={activeFile.name}
-                          />
-                        )
-                      })()}
+                      {resolvedFile.isPdf && resolvedFile.viewerSrc ? (
+                        <div className="h-[70vh] sm:h-[75vh] md:h-[80vh] lg:h-[83vh]">
+                          <PdfViewer fileUrl={resolvedFile.viewerSrc} className="rounded-b-2xl bg-white" />
+                        </div>
+                      ) : (
+                        <iframe
+                          src={resolvedFile.iframeSrc ?? activeFile.url}
+                          className="w-full h-[70vh] sm:h-[75vh] md:h-[80vh] lg:h-[83vh]"
+                          title={activeFile.name}
+                        />
+                      )}
                     </div>
                   )}
                 </CardContent>

@@ -113,11 +113,13 @@ export default function BookDetailPage() {
   const [hasMoreReviews, setHasMoreReviews] = useState(true)
   const [reviewsStats, setReviewsStats] = useState<{ totalReviews?: number; averageRating?: number } | null>(null)
 
+  const [hasPurchased, setHasPurchased] = useState(false)
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false)
   const [reviewRating, setReviewRating] = useState<number>(5)
   const [reviewTitle, setReviewTitle] = useState("")
   const [reviewComment, setReviewComment] = useState("")
   const [postingReview, setPostingReview] = useState(false)
+  const [reviewRestriction, setReviewRestriction] = useState<string | null>(null)
 
   const [loginOpen, setLoginOpen] = useState(false)
 
@@ -147,6 +149,49 @@ export default function BookDetailPage() {
     setReviewsError(null)
     setReviewsStats(null)
   }, [id])
+
+  useEffect(() => {
+    let active = true
+    const checkPurchase = async () => {
+      if (!isAuthenticated || !user?.id || !id) {
+        if (active) {
+          setHasPurchased(false)
+          setReviewRestriction(null)
+        }
+        return
+      }
+      try {
+        const res = await fetch(`/api/orders?userId=${encodeURIComponent(user.id)}`, { cache: "no-store" })
+        const json = await res.json().catch(() => ({}))
+        if (!active) return
+        if (res.ok && Array.isArray(json?.data)) {
+          const found = json.data.some((order: any) => {
+            const type = String(order?.orderType || "").toUpperCase()
+            if (type !== "EBOOK") return false
+            const orderStatus = String(order?.status || "").toUpperCase()
+            const paymentStatus = String(order?.payment?.status || "").toUpperCase()
+            const paid = orderStatus === "COMPLETED" || paymentStatus === "COMPLETED"
+            if (!paid) return false
+            const orderEbookId = order?.ebookId ?? order?.ebook?.id ?? null
+            return String(orderEbookId || "") === String(id)
+          })
+          setHasPurchased(found)
+        } else {
+          setHasPurchased(false)
+        }
+      } catch {
+        if (active) setHasPurchased(false)
+      }
+    }
+    checkPurchase()
+    return () => {
+      active = false
+    }
+  }, [isAuthenticated, user?.id, id])
+
+  useEffect(() => {
+    if (hasPurchased) setReviewRestriction(null)
+  }, [hasPurchased])
 
   useEffect(() => {
     let active = true
@@ -213,11 +258,21 @@ export default function BookDetailPage() {
 
   const openReviewDialog = () => {
     if (!isAuthenticated) { setLoginOpen(true); return }
+    if (!hasPurchased) {
+      setReviewRestriction("ต้องซื้อหนังสือเล่มนี้ก่อนจึงจะสามารถรีวิวได้")
+      return
+    }
+    setReviewRestriction(null)
     setReviewDialogOpen(true)
   }
 
   const submitReview = async () => {
     if (!id || !isAuthenticated || !user?.id) { setLoginOpen(true); return }
+    if (!hasPurchased) {
+      setReviewRestriction("ต้องซื้อหนังสือเล่มนี้ก่อนจึงจะสามารถรีวิวได้")
+      setReviewDialogOpen(false)
+      return
+    }
     if (!reviewRating || !reviewTitle.trim() || !reviewComment.trim()) return
     try {
       setPostingReview(true)
@@ -245,6 +300,7 @@ export default function BookDetailPage() {
         user: { id: user.id, name: user.name || "คุณผู้ใช้" },
       }
       setReviews((prev) => [newItem, ...prev])
+      setReviewRestriction(null)
       setReviewDialogOpen(false)
       setReviewTitle("")
       setReviewComment("")
@@ -391,6 +447,11 @@ export default function BookDetailPage() {
                         เขียนรีวิว
                       </Button>
                     </div>
+                    {reviewRestriction && (
+                      <div className="text-sm text-red-600 mt-2">
+                        {reviewRestriction}
+                      </div>
+                    )}
                   </CardHeader>
                   <CardContent className="pt-2">
                     {reviewsError && <div className="text-red-600 text-sm mb-3">{reviewsError}</div>}
