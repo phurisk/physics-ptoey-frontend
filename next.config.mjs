@@ -9,6 +9,20 @@ const nextConfig = {
   typescript: { ignoreBuildErrors: true },
   images: { unoptimized: true },
 
+  webpack(config, { isServer }) {
+    config.resolve = config.resolve || {}
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      canvas: false,
+    }
+
+    if (isServer) {
+      config.externals = [...(config.externals || []), "canvas"]
+    }
+
+    return config
+  },
+
   async rewrites() {
     return [
       { source: "/api/reviews",       destination: `${API_PROXY_TARGET}/api/reviews` },
