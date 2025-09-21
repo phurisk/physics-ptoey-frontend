@@ -806,7 +806,7 @@ export default function CourseDetailPage() {
                   <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3 leading-tight text-balance">
                     {course.title}
                   </h1>
-                  <p className="text-lg text-gray-600 mb-6 text-pretty">
+                  <p className="text-lg text-gray-600 mb-6 whitespace-pre-line text-pretty">
                     {course.description}
                   </p>
 
