@@ -234,11 +234,6 @@ const summaryContent = exam ? (
           ผ่านเมื่อได้: <span className="font-medium text-gray-900">{exam.passingMarks}</span>
         </div>
       )}
-      {typeof exam.attemptsAllowed === "number" && (
-        <div>
-          จำนวนครั้งที่ทำได้: <span className="font-medium text-gray-900">{exam.attemptsAllowed}</span>
-        </div>
-      )}
       {timeLimitMinutes != null && timeLimitMinutes > 0 && (
         <div>
           เวลาที่กำหนด: <span className="font-medium text-gray-900">{timeLimitMinutes} นาที</span>
