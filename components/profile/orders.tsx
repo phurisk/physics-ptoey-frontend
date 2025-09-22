@@ -182,8 +182,8 @@ export default function Orders() {
             <Card key={`o-sk-${i}`}>
               <CardContent className="p-4">
                 <div className="grid gap-4 grid-cols-1 sm:grid-cols-[8rem_1fr_auto] sm:items-center">
-                  {/* รูป: EBOOK (2:3) / COURSE (16:9) — ใช้ 2:3 เป็น default สวยกว่าในมือถือ */}
-                  <div className="relative w-full sm:w-auto aspect-[2/3] rounded-md bg-gray-100 ring-1 ring-black/5 overflow-hidden">
+                  {/* รูป: COURSE (16:9) / EBOOK (3:4) — ใช้ 3:4 เป็น default ในช่วงโหลดเพื่อสมดุลบนมือถือ */}
+                  <div className="relative w-full sm:w-auto aspect-[3/4] rounded-md bg-gray-100 ring-1 ring-black/5 overflow-hidden">
                     <Skeleton className="h-full w-full rounded-none" />
                   </div>
                   <div className="flex-1 min-w-0 space-y-2">
@@ -222,7 +222,7 @@ export default function Orders() {
               : (courseId && courseCovers[courseId]) || "/placeholder.svg"
 
 
-            const aspectClass = isEbook ? "aspect-[2/3]" : "aspect-video"
+            const aspectClass = isEbook ? "aspect-[3/4]" : "aspect-video"
 
             const statusLabel = orderStatusText(o.status, o.payment?.status)
             const payStatus = o.payment?.status
@@ -241,7 +241,7 @@ export default function Orders() {
                         alt={title}
                         fill
                     
-                        className="object-contain"
+                        className="object-cover"
                         sizes="(max-width: 640px) 100vw, 8rem"
                         priority={false}
                       />
