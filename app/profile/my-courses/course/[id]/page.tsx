@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -17,19 +17,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  AlertDialog,
-  AlertDialogTrigger,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from "@/components/ui/alert-dialog"
 import LoginModal from '@/components/login-modal'
 import { useAuth } from '@/components/auth-provider'
+import Player from '@vimeo/player'
 
 // ===== Types =====
 
@@ -99,6 +89,31 @@ type CourseResponse = {
 }
 
 
+function getYouTubeEmbedUrl(url: string) {
+  const idMatch = url.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\n?#]+)/
+  )?.[1]
+  return idMatch ? `https://www.youtube-nocookie.com/embed/${idMatch}?rel=0&modestbranding=1` : null
+}
+
+function getVimeoEmbedUrl(url: string) {
+  const idMatch = url.match(/(?:vimeo\.com|player\.vimeo\.com)\/(?:video\/)?(\d+)/)?.[1]
+  return idMatch ? `https://player.vimeo.com/video/${idMatch}?dnt=1&title=0&byline=0&portrait=0` : null
+}
+
+function getEmbedSrc(url: string) {
+  return getYouTubeEmbedUrl(url) || getVimeoEmbedUrl(url) || null
+}
+
+function getVideoThumbnailUrl(url: string) {
+  const ytId = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\n?#]+)/)?.[1]
+  if (ytId) return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`
+  const vmId = url.match(/(?:vimeo\.com|player\.vimeo\.com)\/(?:video\/)?(\d+)/)?.[1]
+  if (vmId) return `https://vumbnail.com/${vmId}.jpg`
+  return null
+}
+
+
 function indexToProgress(index: number, total: number) {
   if (total <= 0) return 0
   return Math.round(((index + 1) / total) * 100)
@@ -133,7 +148,10 @@ export default function CourseDetailPage() {
 
 
   const [selectedContent, setSelectedContent] = useState<Content | null>(null)
-
+  const [videoReplayVisible, setVideoReplayVisible] = useState(false)
+  const [videoEmbedKey, setVideoEmbedKey] = useState(0)
+  const videoFrameRef = useRef<HTMLIFrameElement | null>(null)
+  const videoPlayerRef = useRef<Player | null>(null)
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
@@ -170,6 +188,27 @@ export default function CourseDetailPage() {
     [flat, selectedContent?.id]
   )
   const currentChapter = selectedItem?.chapter
+  const selectedEmbedSrc = useMemo(() => {
+    if (!selectedContent || selectedContent.contentType !== 'VIDEO') return null
+    return getEmbedSrc(selectedContent.contentUrl)
+  }, [selectedContent])
+  const isSelectedVimeo = useMemo(
+    () => selectedEmbedSrc?.includes('player.vimeo.com') ?? false,
+    [selectedEmbedSrc]
+  )
+  const selectedContentIndex = selectedItem?.index ?? -1
+  const nextPlayableContent = useMemo(() => {
+    if (selectedContentIndex === -1) return null
+    for (let i = selectedContentIndex + 1; i < flat.length; i++) {
+      const item = flat[i]
+      if (item.content.contentType !== 'VIDEO') continue
+      if (!getEmbedSrc(item.content.contentUrl)) continue
+      return item.content
+    }
+    return null
+  }, [flat, selectedContentIndex])
+  const isCurrentCompleted = selectedContentIndex !== -1 && selectedContentIndex <= highestCompletedIndex
+  const hasOverlay = videoReplayVisible && isSelectedVimeo
   const completedCount = Math.max(0, highestCompletedIndex + 1)
 
 
@@ -247,29 +286,40 @@ export default function CourseDetailPage() {
     }
   }, [courseId, user?.id, authLoading])
 
-  const getYouTubeEmbedUrl = (url: string) => {
-    const idMatch = url.match(
-      /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\n?#]+)/
-    )?.[1]
-    return idMatch ? `https://www.youtube-nocookie.com/embed/${idMatch}?rel=0&modestbranding=1` : null
-  }
+  useEffect(() => {
+    setVideoReplayVisible(false)
+    setVideoEmbedKey((key) => key + 1)
+  }, [selectedEmbedSrc])
 
-  const getVimeoEmbedUrl = (url: string) => {
-    const idMatch = url.match(/(?:vimeo\.com|player\.vimeo\.com)\/(?:video\/)?(\d+)/)?.[1]
-    return idMatch ? `https://player.vimeo.com/video/${idMatch}?dnt=1&title=0&byline=0&portrait=0` : null
-  }
+  useEffect(() => {
+    if (!isSelectedVimeo || !selectedEmbedSrc) {
+      if (videoPlayerRef.current) {
+        videoPlayerRef.current.unload().catch(() => { })
+        videoPlayerRef.current = null
+      }
+      return
+    }
 
-  const getEmbedSrc = (url: string) => {
-    return getYouTubeEmbedUrl(url) || getVimeoEmbedUrl(url) || null
-  }
+    if (!videoFrameRef.current) return
 
-  const getVideoThumbnailUrl = (url: string) => {
-    const ytId = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\n?#]+)/)?.[1]
-    if (ytId) return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`
-    const vmId = url.match(/(?:vimeo\.com|player\.vimeo\.com)\/(?:video\/)?(\d+)/)?.[1]
-    if (vmId) return `https://vumbnail.com/${vmId}.jpg`
-    return null
-  }
+    const player = new Player(videoFrameRef.current, { dnt: true })
+    videoPlayerRef.current = player
+
+    const handleEnded = async () => {
+      setVideoReplayVisible(true)
+      try {
+        await player.unload()
+      } catch { }
+    }
+
+    player.on('ended', handleEnded)
+
+    return () => {
+      player.off('ended', handleEnded)
+      player.unload().catch(() => { })
+      if (videoPlayerRef.current === player) videoPlayerRef.current = null
+    }
+  }, [isSelectedVimeo, selectedEmbedSrc, videoEmbedKey])
 
   const handleMarkCompleted = async (content: Content) => {
     if (!user?.id || !courseId) return
@@ -361,7 +411,18 @@ export default function CourseDetailPage() {
 
   const handleSelectContent = (content: Content) => {
     setSelectedContent(content)
+    setVideoReplayVisible(false)
     setIsSidebarOpen(false)
+  }
+
+  const handleReplayVideo = () => {
+    setVideoReplayVisible(false)
+    setVideoEmbedKey((key) => key + 1)
+  }
+
+  const handlePlayNextAvailable = () => {
+    if (!nextPlayableContent) return
+    handleSelectContent(nextPlayableContent)
   }
 
   const ProgressBar = ({ progress }: { progress: number }) => (
@@ -569,15 +630,40 @@ export default function CourseDetailPage() {
             <Card className="bg-white border-gray-200 pt-0">
               <CardContent className="p-0">
                 <div className="aspect-video bg-black rounded-t-lg overflow-hidden relative" onContextMenu={(e) => e.preventDefault()}>
-                  {selectedContent && selectedContent.contentType === 'VIDEO' && getEmbedSrc(selectedContent.contentUrl) ? (
-                    <iframe
-                      src={getEmbedSrc(selectedContent.contentUrl) || ''}
-                      className="w-full h-full"
-                      allowFullScreen
-                      referrerPolicy="no-referrer"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      title={selectedContent.title}
-                    />
+                  {selectedContent && selectedContent.contentType === 'VIDEO' && selectedEmbedSrc ? (
+                    <>
+                      <iframe
+                        key={isSelectedVimeo ? `video-${videoEmbedKey}` : 'video'}
+                        ref={videoFrameRef}
+                        src={selectedEmbedSrc}
+                        className={`w-full h-full transition-opacity ${hasOverlay ? 'pointer-events-none opacity-0' : 'opacity-100'}`}
+                        allowFullScreen
+                        referrerPolicy="no-referrer"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        title={selectedContent.title}
+                      />
+                      {hasOverlay && (
+                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-black/90 text-white px-6 text-center">
+                          <div className="space-y-1">
+                            <p className="text-lg sm:text-xl font-semibold">ชมวิดีโอนี้จบแล้ว</p>
+                            <p className="text-sm text-white/80">เลือกกดดูซ้ำหรือเรียนวิดีโอต่อไปจากปุ่มด้านล่าง</p>
+                          </div>
+                          <div className="flex flex-wrap items-center justify-center gap-3">
+                            <Button onClick={handleReplayVideo} className="bg-yellow-400 hover:bg-yellow-500 text-black">
+                              ดูอีกครั้ง
+                            </Button>
+                            <Button
+                              onClick={handlePlayNextAvailable}
+                              disabled={!nextPlayableContent}
+                              variant="ghost"
+                              className="text-white hover:bg-white/10 hover:text-white"
+                            >
+                              เล่นวิดีโอต่อไป
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-white">
                       <div className="text-center">
@@ -606,46 +692,24 @@ export default function CourseDetailPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        {(() => {
-                          const idx = contentIndexMap.get(selectedContent.id) ?? -1
-                          const already = idx !== -1 && idx <= highestCompletedIndex
-                          if (already) {
-                            return (
-                              <div className="flex items-center gap-2 text-green-600">
-                                <CheckCircle className="h-5 w-5" />
-                                <span className="text-sm font-medium">เรียนแล้ว</span>
-                              </div>
-                            )
-                          }
-                          return (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  disabled={progressLoading}
-                                  className="bg-yellow-400 hover:bg-yellow-500 text-white"
-                                  size="sm"
-                                >
-                                  <CheckCircle className="h-4 w-4 mr-2" /> ทำเครื่องหมายเรียนแล้ว
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>ยืนยันการทำเครื่องหมายเรียนแล้ว</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    คุณต้องการทำเครื่องหมายว่าได้เรียน "{selectedContent?.title}" แล้วใช่หรือไม่?
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleMarkCompleted(selectedContent)}>
-                                    ยืนยัน
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )
-                        })()}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handlePlayNextAvailable}
+                          disabled={!nextPlayableContent}
+                        >
+                          <Play className="h-4 w-4 mr-2" /> เล่นวิดีโอต่อไป
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => selectedContent && handleMarkCompleted(selectedContent)}
+                          disabled={isCurrentCompleted || progressLoading}
+                          className="bg-yellow-400 hover:bg-yellow-500 text-white"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          {isCurrentCompleted ? 'เรียนแล้ว' : progressLoading ? 'กำลังบันทึก...' : 'เรียนวิดีโอนี้จบแล้ว'}
+                        </Button>
                       </div>
                     </div>
 

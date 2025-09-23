@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Image from "next/image"
 import { useParams, useRouter } from "next/navigation"
@@ -16,6 +16,8 @@ import LoginModal from "@/components/login-modal"
 import { useAuth } from "@/components/auth-provider"
 
 import { Textarea } from "@/components/ui/textarea"
+import Player from "@vimeo/player"
+import { AspectRatio } from "@/components/ui/aspect-ratio"
 
 const API_BASE = (process.env.NEXT_PUBLIC_ELEARNING_BASE_URL || "").replace(/\/$/, "");
 
@@ -209,8 +211,13 @@ export default function CourseDetailPage() {
 
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null)
 
-  // Intro video source 
+  // Intro video 
   const [introSrc, setIntroSrc] = useState<string | null>(null)
+  const introFrameRef = useRef<HTMLIFrameElement | null>(null)
+  const introPlayerRef = useRef<Player | null>(null)
+  const [introReplayVisible, setIntroReplayVisible] = useState(false)
+  const [introEmbedKey, setIntroEmbedKey] = useState(0)
+  const isIntroVimeo = useMemo(() => introSrc?.includes("player.vimeo.com") ?? false, [introSrc])
 
 
   useEffect(() => {
@@ -262,11 +269,50 @@ export default function CourseDetailPage() {
     }
   }, [id])
 
-  // Resolve intro video from course.sampleVideo (public field)
+ 
   useEffect(() => {
     const src = getEmbedSrc(course?.sampleVideo || null)
     setIntroSrc(src)
   }, [course?.sampleVideo])
+
+  useEffect(() => {
+    setIntroReplayVisible(false)
+  }, [introSrc])
+
+  useEffect(() => {
+    if (!isIntroVimeo) {
+      if (introPlayerRef.current) {
+        introPlayerRef.current.unload().catch(() => {})
+        introPlayerRef.current = null
+      }
+      return
+    }
+
+    if (!introFrameRef.current) return
+
+    const player = new Player(introFrameRef.current, { dnt: true })
+    introPlayerRef.current = player
+
+    const handleEnded = async () => {
+      setIntroReplayVisible(true)
+      try {
+        await player.unload()
+      } catch { }
+    }
+
+    player.on("ended", handleEnded)
+
+    return () => {
+      player.off("ended", handleEnded)
+      player.unload().catch(() => {})
+      if (introPlayerRef.current === player) introPlayerRef.current = null
+    }
+  }, [isIntroVimeo, introSrc, introEmbedKey])
+
+  const handleIntroReplay = () => {
+    setIntroReplayVisible(false)
+    setIntroEmbedKey((key) => key + 1)
+  }
 
   // load enrollment flag
   useEffect(() => {
@@ -446,7 +492,7 @@ export default function CourseDetailPage() {
   const createOrder = async () => {
     if (!course) return
     if (!isAuthenticated) { setLoginOpen(true); return }
-    // ส่งไปหน้า Checkout เพื่อให้กรอกที่อยู่จัดส่งและใช้คูปอง
+    // ส่งไปหน้า Checkout 
     const couponQuery = couponCode ? `?coupon=${encodeURIComponent(couponCode)}` : ""
     router.push(`/checkout/course/${encodeURIComponent(String(id))}${couponQuery}`)
   }
@@ -470,7 +516,7 @@ export default function CourseDetailPage() {
     }
   }
 
-  // Build/cleanup preview for selected slip
+  
   useEffect(() => {
     if (!slip) {
       if (slipPreview) {
@@ -576,8 +622,8 @@ export default function CourseDetailPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-50 pt-0 md:pt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-8">
 
           <div className="mb-6">
             <Link href="/courses">
@@ -586,163 +632,67 @@ export default function CourseDetailPage() {
                 className="gap-2 rounded-xl border-gray-200 shadow-sm hover:shadow transition-all hover:-translate-y-0.5"
               >
                 <ArrowLeft className="h-4 w-4" />
-                กลับไปหน้าคอร์สเรียนทั้งหมด
+                <span className="hidden xs:inline">กลับไปหน้าคอร์สเรียนทั้งหมด</span>
+                <span className="xs:hidden">คอร์สเรียนทั้งหมด</span>
               </Button>
             </Link>
           </div>
 
 
           {loading && (
-            <div className="grid lg:grid-cols-3 gap-12 py-4" aria-busy="true" aria-live="polite">
+            <div className="grid lg:grid-cols-3 gap-8 py-4" aria-busy="true" aria-live="polite">
 
-              <section className="lg:col-span-2 space-y-8 order-1 lg:order-1">
+              <section className="lg:col-span-2 space-y-6 order-1 lg:order-1">
 
                 <div className="aspect-video rounded-2xl ring-1 ring-black/5 shadow-lg overflow-hidden">
                   <Skeleton className="h-full w-full rounded-none" />
                 </div>
-
 
                 <div className="flex items-center gap-2">
                   <Skeleton className="h-7 w-24 rounded-full" />
                   <Skeleton className="h-7 w-32 rounded-full" />
                 </div>
 
-
                 <Skeleton className="h-8 w-3/4" />
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-4 w-5/6" />
-                  <Skeleton className="h-4 w-2/3" />
                 </div>
 
-
-                <div className="flex flex-wrap items-center gap-6">
+                <div className="flex flex-wrap items-center gap-4">
                   <Skeleton className="h-6 w-28" />
                   <Skeleton className="h-6 w-24" />
-                  <Skeleton className="h-6 w-24" />
                 </div>
 
-
-                <Card className="rounded-2xl border-gray-200 shadow-sm">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-end justify-between gap-4">
-                      <Skeleton className="h-6 w-40" />
-                      <div className="flex items-center gap-4">
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-4 w-24" />
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-2">
-
-                    <div className="mb-5">
-                      <div className="flex items-center justify-between mb-2">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-4 w-16" />
-                      </div>
-                      <Skeleton className="h-2 w-full rounded-full" />
-                    </div>
-
-
-                    <div className="space-y-3">
-                      {[...Array(4)].map((_, i) => (
-                        <div key={i} className="p-4 rounded-xl border bg-white/90 backdrop-blur border-gray-200 shadow-sm">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4 min-w-0">
-                              <Skeleton className="h-9 w-9 rounded-full" />
-                              <div className="space-y-2 w-48">
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-3 w-20" />
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <Skeleton className="h-4 w-16" />
-                              <Skeleton className="h-8 w-24 rounded-lg" />
-                            </div>
-                          </div>
-
-                          <div className="mt-3 space-y-2 border-l-2 border-yellow-100 pl-3">
-                            <Skeleton className="h-4 w-56" />
-                            <Skeleton className="h-4 w-40" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
               </section>
 
-
-              <aside className="lg:col-span-1 order-2 lg:order-2">
+              <aside className="lg:col-span-1 order-3 lg:order-2 space-y-6">
                 <Card className="rounded-2xl shadow-lg ring-1 ring-black/5">
-                  <CardContent className="p-6 space-y-6">
-                    <div className="text-center">
-                      <Skeleton className="h-8 w-40 mx-auto" />
-                      <Skeleton className="h-3 w-32 mx-auto mt-2" />
-                    </div>
-
-                    <Separator />
-
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-4 w-16" />
-                      </div>
-                      <div className="flex justify-between">
-                        <Skeleton className="h-4 w-16" />
-                        <Skeleton className="h-4 w-14" />
-                      </div>
-                      <div className="flex justify-between">
-                        <Skeleton className="h-4 w-16" />
-                        <Skeleton className="h-4 w-12" />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Skeleton className="h-10 w-full rounded-xl" />
-                      <Skeleton className="h-10 w-full rounded-xl" />
-                    </div>
-
-                    <Separator />
-
-                    <div className="text-center space-y-1">
-                      <Skeleton className="h-3 w-40 mx-auto" />
-                      <Skeleton className="h-3 w-28 mx-auto" />
-                    </div>
+                  <CardContent className="p-4 space-y-4">
+                    <Skeleton className="h-8 w-40 mx-auto" />
+                    <Skeleton className="h-10 w-full rounded-xl" />
                   </CardContent>
                 </Card>
               </aside>
 
-
-              <section className="lg:col-span-2 order-3 lg:order-3">
+              <section className="lg:col-span-2 order-2 lg:order-3">
                 <Card className="rounded-2xl border-gray-200 shadow-sm">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-end justify-between gap-4">
-                      <Skeleton className="h-6 w-40" />
-                      <div className="flex gap-2">
-                        <Skeleton className="h-9 w-24 rounded-xl" />
-                        <Skeleton className="h-9 w-28 rounded-xl" />
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {[...Array(3)].map((_, i) => (
-                        <div key={i} className="rounded-xl border border-gray-200 p-4 bg-white/90 shadow-sm">
-                          <div className="flex items-start gap-3">
-                            <div className="flex-1 space-y-2">
-                              <Skeleton className="h-4 w-32" />
-                              <Skeleton className="h-4 w-20" />
-                              <Skeleton className="h-4 w-5/6" />
-                              <Skeleton className="h-4 w-2/3" />
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                  <CardHeader><Skeleton className="h-6 w-40" /></CardHeader>
+                  <CardContent className="space-y-3">
+                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
                   </CardContent>
                 </Card>
               </section>
+
+              <section className="lg:col-span-3 order-4">
+                 <Card className="rounded-2xl border-gray-200 shadow-sm">
+                  <CardHeader><Skeleton className="h-6 w-40" /></CardHeader>
+                  <CardContent className="space-y-4">
+                     {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+                  </CardContent>
+                </Card>
+              </section>
+
             </div>
           )}
 
@@ -756,20 +706,41 @@ export default function CourseDetailPage() {
           )}
 
           {!loading && !error && course && (
-            <div className="grid lg:grid-cols-3 gap-12">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-y-8 gap-x-12">
 
-              <section className="lg:col-span-2 space-y-8 order-1 lg:order-1">
-                <motion.div variants={fadeInUp} initial="initial" animate="animate">
-                  <div className="group relative aspect-video overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-lg mb-6">
+              <section className="lg:col-span-2 space-y-8 order-1">
+                <motion.div variants={fadeInUp} initial="initial" animate="animate" className="w-full max-w-full">
+                  <div className="mb-6">
+                    <AspectRatio ratio={16 / 9}>
+                      <div className="group relative h-full w-full overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-lg bg-black">
                     {introSrc ? (
-                      <iframe
-                        src={introSrc}
-                        className="w-full h-full"
-                        allowFullScreen
-                        referrerPolicy="no-referrer"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        title={`${course.title} - แนะนำคอร์ส`}
-                      />
+                      <>
+                        <iframe
+                          key={isIntroVimeo ? `intro-${introEmbedKey}` : "intro"}
+                          ref={introFrameRef}
+                          src={introSrc}
+                          className={`absolute inset-0 h-full w-full transition-opacity ${isIntroVimeo && introReplayVisible ? "pointer-events-none opacity-0" : "opacity-100"}`}
+                          width="100%"
+                          height="100%"
+                          style={{ border: 0, display: "block" }}
+                          allowFullScreen
+                          referrerPolicy="no-referrer"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          title={`${course.title} - แนะนำคอร์ส`}
+                          loading="lazy"
+                        />
+                        {isIntroVimeo && introReplayVisible && (
+                          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-black/90 text-white p-4">
+                            <div className="text-center space-y-2">
+                              <p className="text-lg font-semibold">ชมวิดีโอตัวอย่างจบแล้ว</p>
+                              <p className="text-sm text-white/80">กดปุ่มด้านล่างเพื่อชมซ้ำ</p>
+                            </div>
+                            <Button onClick={handleIntroReplay} className="bg-yellow-400 hover:bg-yellow-500 text-black">
+                              ดูอีกครั้ง
+                            </Button>
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <>
                         <Image
@@ -790,6 +761,8 @@ export default function CourseDetailPage() {
                         </div>
                       </>
                     )}
+                      </div>
+                    </AspectRatio>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -803,44 +776,44 @@ export default function CourseDetailPage() {
                     )}
                   </div>
 
-                  <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3 leading-tight text-balance">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 leading-tight break-words">
                     {course.title}
                   </h1>
-                  <p className="text-lg text-gray-600 mb-6 whitespace-pre-line text-pretty">
+                  <p className="text-base text-gray-600 mb-6 whitespace-pre-line break-words">
                     {course.description}
                   </p>
 
-                  <div className="flex flex-wrap items-center gap-6 text-gray-700">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-3 text-gray-700">
                     <div className="inline-flex items-center gap-2">
                       <Users className="h-5 w-5 text-[#004B7D]" />
-                      <span className="font-medium">
+                      <span className="font-medium text-sm">
                         {course._count?.enrollments ?? 0} นักเรียน
                       </span>
                     </div>
                     <div className="inline-flex items-center gap-2">
                       <BookOpen className="h-5 w-5 text-[#004B7D]" />
-                      <span className="font-medium">
-                        {course._count?.chapters ?? 0} บทเรียน
+                      <span className="font-medium text-sm">
+                        {chapters.length} บทเรียน
                       </span>
                     </div>
                     <div className="inline-flex items-center gap-2">
                       <Clock className="h-5 w-5 text-[#004B7D]" />
-                      <span className="font-medium">{course.duration ?? "-"}</span>
+                      <span className="font-medium text-sm">{course.duration ?? "-"}</span>
                     </div>
                   </div>
                 </motion.div>
-
-                <motion.div
+                
+                 <motion.div
                   variants={fadeInUp}
                   initial="initial"
                   animate="animate"
                   transition={{ delay: 0.2 }}
                 >
                   <Card className="rounded-2xl border-gray-200 shadow-sm">
-                    <CardHeader className="pb-2">
-                      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                        <CardTitle className="text-2xl">Course Overview</CardTitle>
-                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <CardHeader className="p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                        <CardTitle className="text-xl">Course Overview</CardTitle>
+                        <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-xs sm:text-sm text-gray-600">
                           <div className="inline-flex items-center gap-1">
                             <BookOpen className="h-4 w-4" /> {chapters.length} บทเรียน
                           </div>
@@ -852,13 +825,13 @@ export default function CourseDetailPage() {
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="pt-2">
+                    <CardContent className="pt-0 p-4">
                       {totalContents > 0 && (
                         <div className="mb-5">
                           <div className="flex items-center justify-between text-sm text-gray-700 mb-2">
                             <div>ความคืบหน้า</div>
                             <div className="font-semibold">
-                              {progressPercent}% {saving ? "(กำลังบันทึก...)" : ""}
+                              {progressPercent}% {saving ? "(บันทึก...)" : ""}
                             </div>
                           </div>
                           <div
@@ -877,7 +850,7 @@ export default function CourseDetailPage() {
                       )}
 
                       {chapters.length === 0 ? (
-                        <div className="text-gray-500">ยังไม่มีบทเรียน</div>
+                        <div className="text-gray-500">ยังไม่มีบทเรียนในคอร์สนี้  </div>
                       ) : (
                         <div id="chapters" className="space-y-3">
                           {chapters
@@ -889,40 +862,34 @@ export default function CourseDetailPage() {
                               return (
                                 <div
                                   key={ch.id}
-                                  className="p-4 rounded-xl border bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-gray-200 hover:border-yellow-300/60 hover:bg-yellow-50/30 transition-colors shadow-sm"
+                                  className="p-3 rounded-xl border bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-gray-200 hover:border-yellow-300/60 hover:bg-yellow-50/30 transition-colors shadow-sm"
                                 >
-                                  <div className="flex items-center justify-between">
+                                  <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3">
                                  
                                     <button
                                       type="button"
                                       onClick={() => setActiveChapterId((prev) => (prev === ch.id ? null : ch.id))}
                                       aria-expanded={expanded}
                                       aria-controls={`chapter-panel-${ch.id}`}
-                                      className="flex items-center gap-4 min-w-0 group/hd cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-300 rounded-lg pr-2"
+                                      className="flex items-center gap-3 min-w-0 w-full group/hd cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-300 rounded-lg pr-2"
                                     >
-                                      <div className="h-9 w-9 rounded-full bg-yellow-400 text-white flex items-center justify-center font-semibold shadow-sm ring-1 ring-black/5">
+                                      <div className="h-9 w-9 flex-shrink-0 rounded-full bg-yellow-400 text-white flex items-center justify-center font-semibold shadow-sm ring-1 ring-black/5">
                                         {number}
                                       </div>
-                                      <div className="truncate text-left">
+                                      <div className="truncate text-left flex-1">
                                         <div className="font-medium text-gray-900 truncate flex items-center gap-2">
                                           {ch.title}
-                                          {ch.isFreePreview && (
-                                            <span className="mt-0.5 inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
-                                              ตัวอย่างฟรี
-                                            </span>
-                                          )}
                                         </div>
                                       </div>
                                       <ChevronDown
-                                        className={`ml-2 h-5 w-5 text-gray-400 transition-transform ${expanded ? "rotate-180" : "rotate-0"}`}
+                                        className={`ml-auto sm:ml-2 h-5 w-5 text-gray-400 transition-transform ${expanded ? "rotate-180" : "rotate-0"}`}
                                         aria-hidden="true"
                                       />
                                     </button>
 
-                                   
-                                    <div className="flex items-center gap-3 text-sm text-gray-600 shrink-0">
+                                    <div className="flex items-center gap-2 text-sm text-gray-600 shrink-0 self-end xs:self-center">
                                       {typeof ch.duration === "number" && (
-                                        <div className="inline-flex items-center gap-1">
+                                        <div className="hidden xs:inline-flex items-center gap-1 text-xs">
                                           <Clock className="h-4 w-4" /> {ch.duration} นาที
                                         </div>
                                       )}
@@ -930,23 +897,25 @@ export default function CourseDetailPage() {
                                         <Button
                                           variant="ghost"
                                           size="sm"
-                                          className="text-[#004B7D] hover:bg-[#004B7D1A] rounded-lg"
+                                          className="text-[#004B7D] hover:bg-[#004B7D1A] rounded-lg h-8 px-2"
                                           onClick={(e) => e.stopPropagation()}
                                         >
-                                          <Play className="h-4 w-4 mr-1" /> ดูตัวอย่าง
+                                          <Play className="h-4 w-4 sm:mr-1" />
+                                          <span className="hidden sm:inline">ดูตัวอย่าง</span>
                                         </Button>
                                       ) : isEnrolled ? (
                                         <Button
                                           variant="ghost"
                                           size="sm"
-                                          className="text-[#004B7D] hover:bg-[#004B7D1A] rounded-lg"
+                                          className="text-[#004B7D] hover:bg-[#004B7D1A] rounded-lg h-8 px-2"
                                           onClick={(e) => e.stopPropagation()}
                                         >
-                                          <Play className="h-4 w-4 mr-1" /> เริ่มเรียน
+                                          <Play className="h-4 w-4 sm:mr-1" />
+                                          <span className="hidden sm:inline">เริ่มเรียน</span>
                                         </Button>
                                       ) : (
-                                        <div className="inline-flex items-center gap-1 text-gray-400">
-                                          <Lock className="h-4 w-4" /> เฉพาะผู้ลงทะเบียน
+                                        <div className="inline-flex items-center gap-1 text-gray-400 text-xs">
+                                          <Lock className="h-4 w-4" /> <span className="hidden xs:inline">เฉพาะผู้ลงทะเบียน</span>
                                         </div>
                                       )}
                                     </div>
@@ -976,9 +945,9 @@ export default function CourseDetailPage() {
                                               return (
                                                 <div
                                                   key={ct.id}
-                                                  className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-yellow-50/60"
+                                                  className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg hover:bg-yellow-50/60"
                                                 >
-                                                  <div className="text-sm text-gray-800 truncate">
+                                                  <div className="text-sm text-gray-800 truncate pr-2">
                                                     • {ct.title}
                                                   </div>
                                                   <div className="flex items-center gap-3">
@@ -990,7 +959,7 @@ export default function CourseDetailPage() {
                                                           checked={checked}
                                                           onChange={() => toggleContentViewed(ct.id)}
                                                         />
-                                                        <span>เรียนแล้ว</span>
+                                                        <span className="hidden sm:inline">เรียนแล้ว</span>
                                                       </label>
                                                     ) : (
                                                       <span className="text-xs text-gray-400">ล็อก</span>
@@ -1014,34 +983,34 @@ export default function CourseDetailPage() {
               </section>
 
 
-              <aside className="lg:col-span-1 order-2 lg:order-2">
+              <aside className="lg:col-span-1 order-2 lg:order-3">
                 <motion.div
-                  className="lg:sticky lg:top-24"
+                  className="lg:sticky lg:top-8"
                   variants={fadeInUp}
                   initial="initial"
                   animate="animate"
                   transition={{ delay: 0.1 }}
                 >
                   <Card className="rounded-2xl shadow-lg ring-1 ring-black/5">
-                    <CardContent className="p-6">
+                    <CardContent className="p-4 sm:p-6">
                       <div className="text-center mb-6">
-                        <div className="flex items-center justify-center gap-2 mb-1">
+                        <div className="flex items-center justify-center gap-2 mb-1 flex-wrap">
                           {effectivePrice === 0 ? (
-                            <span className="text-3xl font-extrabold text-green-600 tracking-tight">
+                            <span className="text-2xl sm:text-3xl font-extrabold text-green-600 tracking-tight">
                               ฟรี
                             </span>
                           ) : hasDiscount ? (
-                            <div className="flex items-end gap-3">
-                              <span className="text-xl text-gray-400 line-through">
+                            <>
+                              <span className="text-lg sm:text-xl text-gray-400 line-through">
                                 ฿{(originalPrice || 0).toLocaleString()}
                               </span>
-                              <span className="text-3xl font-extrabold text-yellow-600 tracking-tight">
-                                ฿{(effectivePrice || 0).toLocaleString()} บาท
+                              <span className="text-2xl sm:text-3xl font-extrabold text-yellow-600 tracking-tight">
+                                ฿{(effectivePrice || 0).toLocaleString()}
                               </span>
-                            </div>
+                            </>
                           ) : (
-                            <span className="text-3xl font-extrabold text-yellow-600 tracking-tight">
-                              ฿{(effectivePrice || 0).toLocaleString()} บาท
+                            <span className="text-2xl sm:text-3xl font-extrabold text-yellow-600 tracking-tight">
+                              ฿{(effectivePrice || 0).toLocaleString()}
                             </span>
                           )}
                         </div>
@@ -1057,7 +1026,7 @@ export default function CourseDetailPage() {
                         <div className="flex justify-between">
                           <span className="text-gray-600">บทเรียน</span>
                           <span className="font-medium">
-                            {course._count?.chapters ?? 0} บทเรียน
+                            {chapters.length} บทเรียน
                           </span>
                         </div>
                         <div className="flex justify-between">
@@ -1070,9 +1039,9 @@ export default function CourseDetailPage() {
                         {effectivePrice > 0 && (
                           <div className="space-y-2 pt-2">
                             <div className="text-sm font-medium">คูปองส่วนลด</div>
-                            <div className="flex gap-2">
+                            <div className="flex flex-col sm:flex-row gap-2">
                               <Input
-                                placeholder="กรอกรหัสคูปอง (ถ้ามี)"
+                                placeholder="กรอกรหัสคูปอง"
                                 value={couponCode}
                                 onChange={(e) => setCouponCode(e.target.value)}
                                 className="h-10 rounded-lg"
@@ -1081,13 +1050,10 @@ export default function CourseDetailPage() {
                                 variant="outline"
                                 disabled={validatingCoupon}
                                 onClick={applyCoupon}
-                                className="rounded-lg"
+                                className="rounded-lg flex-shrink-0"
                               >
                                 {validatingCoupon ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                    กำลังตรวจสอบ...
-                                  </>
+                                  <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
                                   "ใช้คูปอง"
                                 )}
@@ -1099,12 +1065,12 @@ export default function CourseDetailPage() {
                             {discount > 0 && (
                               <div className="flex justify-between text-sm text-green-700">
                                 <span>ส่วนลดคูปอง</span>
-                                <span>-฿{discount.toLocaleString()} บาท</span>
+                                <span>-฿{discount.toLocaleString()}</span>
                               </div>
                             )}
-                            <div className="flex justify-between text-base font-semibold">
+                            <div className="flex justify-between text-base font-semibold pt-1">
                               <span>ยอดสุทธิ</span>
-                              <span>฿{finalTotal.toLocaleString()} บาท</span>
+                              <span>฿{finalTotal.toLocaleString()}</span>
                             </div>
                           </div>
                         )}
@@ -1113,7 +1079,7 @@ export default function CourseDetailPage() {
                       <div className="space-y-3">
                         {isEnrolled ? (
                           <Link href={`/profile/my-courses/course/${id}/`}>
-                            <Button className="w-full bg-yellow-400 hover:bg-yellow-500 text-white text-lg py-3 rounded-xl shadow hover:shadow-md transition">
+                            <Button className="w-full bg-yellow-400 hover:bg-yellow-500 text-white text-base sm:text-lg h-12 rounded-xl shadow hover:shadow-md transition">
                               เข้าเรียนทันที
                             </Button>
                           </Link>
@@ -1125,17 +1091,15 @@ export default function CourseDetailPage() {
                               router.push(`/checkout/course/${encodeURIComponent(String(id))}${q}`)
                             }}
                             disabled={creating}
-                            className="w-full bg-yellow-400 hover:bg-yellow-500 text-white text-lg py-3 rounded-xl shadow hover:shadow-md transition"
+                            className="w-full bg-yellow-400 hover:bg-yellow-500 text-white text-base sm:text-lg h-12 rounded-xl shadow hover:shadow-md transition"
                           >
-                            {creating ? "กำลังสร้างคำสั่งซื้อ..." : "สมัครเรียนเลย"}
+                            {creating ? "กำลังสร้าง..." : "สมัครเรียนเลย"}
                           </Button>
                         )}
-                        <Button variant="outline" className="w-full rounded-xl">
+                        <Button variant="outline" className="w-full rounded-xl h-12">
                           เพิ่มในรายการโปรด
                         </Button>
                       </div>
-
-                      <Separator className="my-6" />
 
                     </CardContent>
                   </Card>
@@ -1143,7 +1107,7 @@ export default function CourseDetailPage() {
               </aside>
 
 
-              <section id="reviewsSection" className="lg:col-span-2 order-3 lg:order-3">
+              <section id="reviewsSection" className="lg:col-span-3 order-4">
                 <motion.div
                   variants={fadeInUp}
                   initial="initial"
@@ -1151,17 +1115,17 @@ export default function CourseDetailPage() {
                   transition={{ delay: 0.25 }}
                 >
                   <Card className="rounded-2xl border-gray-200 shadow-sm">
-                    <CardHeader className="pb-3">
-                      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                    <CardHeader className="p-4">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                         <div>
-                          <CardTitle className="text-2xl">รีวิวจากผู้เรียน</CardTitle>
+                          <CardTitle className="text-xl">รีวิวจากผู้เรียน</CardTitle>
                           <div className="mt-1 flex items-center gap-2 text-gray-700">
                             <Star className="h-5 w-5 text-yellow-500 fill-current" />
                             <span className="font-semibold">{averageRating.toFixed(1)}</span>
                             <span className="text-sm text-gray-500">/ 5 จาก {totalReviews} รีวิว</span>
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col xs:flex-row gap-2 w-full xs:w-auto">
                           <Button
                             variant="outline"
                             className="rounded-xl border-gray-200"
@@ -1184,13 +1148,13 @@ export default function CourseDetailPage() {
                           </Button>
                         </div>
                         {reviewRestriction && (
-                          <div className="text-sm text-red-600 mt-2">
+                          <div className="text-sm text-red-600 sm:w-full sm:basis-full">
                             {reviewRestriction}
                           </div>
                         )}
                       </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-4 pt-0">
                       {reviewsError ? (
                         <div className="text-red-600 mb-3">{reviewsError}</div>
                       ) : reviews.length === 0 && !reviewsLoading ? (
@@ -1204,8 +1168,8 @@ export default function CourseDetailPage() {
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <div className="font-semibold text-gray-900 truncate">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <div className="font-semibold text-gray-900 break-words">
                                       {rv.user?.name || "ผู้ใช้"}
                                     </div>
                                     <span className="text-xs text-gray-400">
@@ -1216,12 +1180,12 @@ export default function CourseDetailPage() {
                                     <StarRating value={rv.rating} readOnly />
                                   </div>
                                   {rv.title && (
-                                    <div className="mt-2 text-gray-900 font-medium">
+                                    <div className="mt-2 text-gray-900 font-medium break-words">
                                       {rv.title}
                                     </div>
                                   )}
                                   {rv.comment && (
-                                    <p className="mt-1 text-gray-700 whitespace-pre-wrap">
+                                    <p className="mt-1 text-gray-700 whitespace-pre-wrap break-words">
                                       {rv.comment}
                                     </p>
                                   )}
@@ -1417,6 +1381,12 @@ export default function CourseDetailPage() {
     @keyframes shimmer {
       0% { transform: translateX(-100%); }
       100% { transform: translateX(100%); }
+    }
+     @media (max-width: 400px) {
+      .xs\\:hidden { display: none; }
+      .xs\\:inline { display: inline; }
+      .xs\\:flex-row { flex-direction: row; }
+       .xs\\:w-auto { width: auto; }
     }
   `}</style>
     </>

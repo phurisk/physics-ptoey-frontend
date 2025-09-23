@@ -67,7 +67,9 @@ export default function MyCourses() {
       }
       try {
         setLoading(true)
-        const res = await http.get(`/api/my-courses`, { params: { userId: user.id } })
+        const res = await http.get(`/api/my-courses`, {
+          params: { userId: user.id, includeCompleted: true },
+        })
         const json: MyCoursesResponse = res.data || { success: false, courses: [], count: 0 }
         if ((res.status < 200 || res.status >= 300) || json.success === false) throw new Error((json as any)?.error || "โหลดคอร์สไม่สำเร็จ")
         if (active) setCourses(json.courses || [])
