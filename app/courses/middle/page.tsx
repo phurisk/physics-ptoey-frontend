@@ -7,20 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Users, BookOpen, Clock } from "lucide-react"
+import { useRecommendedCourses } from "@/hooks/use-recommended-courses"
+import { number } from "framer-motion"
 
 type Post = { id: string; title?: string; content?: string | null }
-type Course = {
-  id: string
-  title: string
-  description?: string | null
-  coverImageUrl?: string | null
-  category?: { name?: string | null }
-  price?: number
-  discountPrice?: number | null
-  isFree?: boolean
-  duration?: string | number | null
-  _count?: { enrollments?: number; chapters?: number }
-}
 
 function getYouTubeEmbed(url: string) {
   const id = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\n?#]+)/)?.[1]
@@ -39,8 +29,7 @@ function extractFirstUrl(text?: string | null) {
 export default function MiddleCoursesPage() {
   const [videoSrc, setVideoSrc] = useState<string | null>(null)
   const [loadingVideo, setLoadingVideo] = useState(true)
-  const [courses, setCourses] = useState<Course[]>([])
-  const [loadingCourses, setLoadingCourses] = useState(true)
+  const { courses, loading: loadingCourses } = useRecommendedCourses("ม.ต้น")
   const [summaries, setSummaries] = useState<
     { id: string; desktop?: string | null; mobile?: string | null; title?: string }[]
   >([])
@@ -103,25 +92,6 @@ export default function MiddleCoursesPage() {
         if (!cancelled) setSummaries(all)
       } finally {
         if (!cancelled) setLoadingSummaries(false)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        setLoadingCourses(true)
-        const res = await fetch(`/api/courses`, { cache: "no-store" })
-        const json = await res.json().catch(() => ({}))
-        const list: Course[] = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : []
-        const filtered = list.filter((c) => (c as any)?.category?.name === "คอร์สแนะนำ-ม.ต้น")
-        if (!cancelled) setCourses(filtered)
-      } finally {
-        if (!cancelled) setLoadingCourses(false)
       }
     })()
     return () => {
@@ -250,7 +220,7 @@ export default function MiddleCoursesPage() {
           </div>
         ) : courses.length ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {courses.slice(0, 3).map((course) => (
+            {courses.map((course) => (
               <Card key={course.id} className="h-full hover:shadow-xl transition-shadow duration-300 group pt-0">
                 <CardContent className="p-0">
                   <div className="aspect-video relative overflow-hidden rounded-t-lg">

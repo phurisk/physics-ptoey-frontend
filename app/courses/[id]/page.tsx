@@ -632,8 +632,8 @@ export default function CourseDetailPage() {
                 className="gap-2 rounded-xl border-gray-200 shadow-sm hover:shadow transition-all hover:-translate-y-0.5"
               >
                 <ArrowLeft className="h-4 w-4" />
-                <span className="hidden xs:inline">กลับไปหน้าคอร์สเรียนทั้งหมด</span>
-                <span className="xs:hidden">คอร์สเรียนทั้งหมด</span>
+                <span className="hidden sm:inline">กลับไปหน้าคอร์สเรียนทั้งหมด</span>
+                <span className="sm:hidden">คอร์สเรียนทั้งหมด</span>
               </Button>
             </Link>
           </div>
@@ -864,7 +864,7 @@ export default function CourseDetailPage() {
                                   key={ch.id}
                                   className="p-3 rounded-xl border bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-gray-200 hover:border-yellow-300/60 hover:bg-yellow-50/30 transition-colors shadow-sm"
                                 >
-                                  <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3">
+                                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                  
                                     <button
                                       type="button"
@@ -887,9 +887,9 @@ export default function CourseDetailPage() {
                                       />
                                     </button>
 
-                                    <div className="flex items-center gap-2 text-sm text-gray-600 shrink-0 self-end xs:self-center">
+                                    <div className="flex items-center gap-2 text-sm text-gray-600 shrink-0 self-end sm:self-center">
                                       {typeof ch.duration === "number" && (
-                                        <div className="hidden xs:inline-flex items-center gap-1 text-xs">
+                                        <div className="hidden sm:inline-flex items-center gap-1 text-xs">
                                           <Clock className="h-4 w-4" /> {ch.duration} นาที
                                         </div>
                                       )}
@@ -915,7 +915,7 @@ export default function CourseDetailPage() {
                                         </Button>
                                       ) : (
                                         <div className="inline-flex items-center gap-1 text-gray-400 text-xs">
-                                          <Lock className="h-4 w-4" /> <span className="hidden xs:inline">เฉพาะผู้ลงทะเบียน</span>
+                                          <Lock className="h-4 w-4" /> <span className="hidden sm:inline">เฉพาะผู้ลงทะเบียน</span>
                                         </div>
                                       )}
                                     </div>
@@ -1125,7 +1125,7 @@ export default function CourseDetailPage() {
                             <span className="text-sm text-gray-500">/ 5 จาก {totalReviews} รีวิว</span>
                           </div>
                         </div>
-                        <div className="flex flex-col xs:flex-row gap-2 w-full xs:w-auto">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto sm:justify-end">
                           <Button
                             variant="outline"
                             className="rounded-xl border-gray-200"

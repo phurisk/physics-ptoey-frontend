@@ -60,6 +60,12 @@ type ApiCourse = {
 type ApiResponse = {
   success: boolean
   data: ApiCourse[]
+  pagination?: {
+    page?: number
+    limit?: number
+    total?: number
+    totalPages?: number
+  }
 }
 
 const COURSES_API = "/api/courses"
@@ -80,10 +86,39 @@ export default function CoursesPage() {
     const load = async () => {
       try {
         setLoading(true)
-        const res = await fetch(COURSES_API, { cache: "no-store" })
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const json: ApiResponse = await res.json()
-        if (active) setData(json.data || [])
+        setError(null)
+        const collected: ApiCourse[] = []
+        const seen = new Set<string>()
+        let page = 1
+        let lastReportedPage = 0
+        const maxPages = 50
+        while (page <= maxPages) {
+          const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
+          const res = await fetch(`${COURSES_API}?${params.toString()}`, { cache: "no-store" })
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          const json: ApiResponse & { pagination?: { page?: number; totalPages?: number } } = await res.json()
+          const list = Array.isArray(json?.data) ? json.data : []
+          for (const course of list) {
+            if (course?.id && !seen.has(course.id)) {
+              seen.add(course.id)
+              collected.push(course)
+            }
+          }
+          const pagination = json?.pagination
+          const reported = Number(pagination?.page)
+          const reportedPage = Number.isFinite(reported) && reported > 0 ? reported : page
+          const repeatedPage = page > 1 && reportedPage === lastReportedPage
+          lastReportedPage = reportedPage
+          const totalPages = Number(pagination?.totalPages)
+          const done =
+            !list.length ||
+            list.length < PAGE_SIZE ||
+            (Number.isFinite(totalPages) && reportedPage >= totalPages) ||
+            repeatedPage
+          if (done) break
+          page += 1
+        }
+        if (active) setData(collected)
       } catch (e: any) {
         if (active) setError(e?.message ?? "Failed to load courses")
       } finally {

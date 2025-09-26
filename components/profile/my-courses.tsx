@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { BookOpen, Clock, Check, Loader2 } from "lucide-react"
@@ -31,6 +31,8 @@ type PaidCourse = {
   
   progress?: number | null
   chapters?: ChapterSlim[]
+  enrollmentStatus?: string | null
+  isExpire?: boolean | null
 }
 
 type MyCoursesResponse = {
@@ -94,7 +96,9 @@ export default function MyCourses() {
       try {
         const results = await Promise.all(
           courses.map(async (c) => {
-           
+            if (c.isExpire) {
+              return [c.id, { percent: 0, complete: false }] as const
+            }
             if (c.progress !== undefined && c.progress !== null) {
               let p = Number(c.progress) || 0
               if (p > 0 && p <= 1) p = p * 100
@@ -186,6 +190,7 @@ export default function MyCourses() {
             const prog = progressMap[c.id]
             const percent = prog?.percent ?? 0
             const complete = prog?.complete ?? false
+            const expired = Boolean(c.isExpire)
 
             return (
               <Card key={c.id} className="overflow-hidden group p-0">
@@ -202,6 +207,11 @@ export default function MyCourses() {
                     {c.category?.name && (
                       <Badge className="absolute top-3 left-3 bg-yellow-400 text-white">
                         {c.category.name}
+                      </Badge>
+                    )}
+                    {expired && (
+                      <Badge className="absolute top-3 right-3 bg-red-600 text-white">
+                        หมดอายุ
                       </Badge>
                     )}
                   </div>
@@ -236,23 +246,34 @@ export default function MyCourses() {
                         aria-valuenow={percent}
                       >
                         <div
-                          className="h-full bg-yellow-400 rounded-full transition-[width] duration-500"
+                          className={`h-full rounded-full transition-[width] duration-500 ${expired ? "bg-gray-300" : "bg-yellow-400"}`}
                           style={{ width: `${percent}%` }}
                         />
                       </div>
 
-                      {complete && (
+                      {complete && !expired && (
                         <div className="mt-2 inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
                           <Check className="h-3.5 w-3.5" />
                           เรียนจบแล้ว
                         </div>
                       )}
+                      {expired && (
+                        <div className="mt-2 inline-flex items-center gap-1 text-xs text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+                          คอร์สหมดอายุแล้ว
+                        </div>
+                      )}
                     </div>
 
                     <div className="pt-1">
-                      <Link href={`/profile/my-courses/course/${c.id}`}>
-                        <Button className="bg-yellow-400 hover:bg-yellow-500 text-white">เข้าเรียน</Button>
-                      </Link>
+                      {expired ? (
+                        <Button className="bg-gray-200 text-gray-500 cursor-not-allowed" disabled>
+                          คอร์สหมดอายุ
+                        </Button>
+                      ) : (
+                        <Link href={`/profile/my-courses/course/${c.id}`}>
+                          <Button className="bg-yellow-400 hover:bg-yellow-500 text-white">เข้าเรียน</Button>
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </CardContent>

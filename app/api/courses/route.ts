@@ -10,9 +10,12 @@ export async function GET(req: Request) {
   }
 
   try {
+    const requestUrl = new URL(req.url)
+    const search = requestUrl.search
     const cookie = req.headers.get("cookie") ?? ""
-    const res = await fetch(`${baseUrl}/api/courses`, {
-      next: { revalidate: 60 },
+    const upstream = `${baseUrl.replace(/\/$/, "")}/api/courses${search}`
+    const res = await fetch(upstream, {
+      cache: "no-store",
       headers: { cookie },
     })
     const data = await res.json()

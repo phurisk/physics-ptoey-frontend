@@ -7,20 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, BookOpen, Clock } from "lucide-react";
+import { useRecommendedCourses } from "@/hooks/use-recommended-courses";
 
 type Post = { id: string; content?: string | null };
-type Course = {
-  id: string;
-  title: string;
-  description?: string | null;
-  coverImageUrl?: string | null;
-  category?: { name?: string | null };
-  price?: number;
-  discountPrice?: number | null;
-  isFree?: boolean;
-  duration?: string | number | null;
-  _count?: { enrollments?: number; chapters?: number };
-};
 
 function y(url: string) {
   const m = url.match(
@@ -47,8 +36,7 @@ function firstUrl(t?: string | null) {
 export default function HighCoursesPage() {
   const [video, setVideo] = useState<string | null>(null);
   const [lv, setLv] = useState(true);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [lc, setLc] = useState(true);
+  const { courses, loading: lc } = useRecommendedCourses("ม.ปลาย");
   const [sums, setSums] = useState<
     {
       id: string;
@@ -83,31 +71,6 @@ export default function HighCoursesPage() {
         if (!c) setVideo(e);
       } finally {
         if (!c) setLv(false);
-      }
-    })();
-    return () => {
-      c = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let c = false;
-    (async () => {
-      try {
-        setLc(true);
-        const r = await fetch(`/api/courses`, { cache: "no-store" });
-        const j = await r.json().catch(() => ({}));
-        const list: Course[] = Array.isArray(j?.data)
-          ? j.data
-          : Array.isArray(j)
-          ? j
-          : [];
-        const fl = list.filter(
-          (x) => (x as any)?.category?.name === "คอร์สแนะนำ-ม.ปลาย"
-        );
-        if (!c) setCourses(fl);
-      } finally {
-        if (!c) setLc(false);
       }
     })();
     return () => {
@@ -340,7 +303,7 @@ export default function HighCoursesPage() {
           </div>
         ) : courses.length ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {courses.slice(0, 3).map((course) => (
+            {courses.map((course) => (
               <Card
                 key={course.id}
                 className="h-full hover:shadow-xl transition-shadow duration-300 group pt-0"
