@@ -2,7 +2,7 @@
 
 import { use, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Maximize2 } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/sections/footer"
 import { Button } from "@/components/ui/button"
@@ -77,11 +77,6 @@ export default function ExamViewer({ params }: { params: Promise<{ id: string }>
     return () => { cancelled = true }
   }, [id])
 
-  const openFullscreen = () => {
-    if (!resolvedFile.viewerSrc) return
-    const fullUrl = `${resolvedFile.viewerSrc}#page=1`
-    try { window.open(fullUrl, "_blank", "noopener,noreferrer") } catch {}
-  }
 
   return (
     <>
@@ -98,12 +93,6 @@ export default function ExamViewer({ params }: { params: Promise<{ id: string }>
       ดูข้อสอบ
     </Badge>
 
-    <Button
-      onClick={openFullscreen}
-      className="ml-auto cursor-pointer px-3 py-2 text-sm sm:text-base whitespace-nowrap"
-    >
-      <Maximize2 className="h-4 w-4 mr-1" /> ดูเต็มหน้าจอ
-    </Button>
   </div>
 </div>
 

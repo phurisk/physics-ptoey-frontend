@@ -6,8 +6,49 @@ import { Play, Youtube, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { teachingVideos } from "@/lib/dummy-data"
+import http from "@/lib/http"
 
-type Video = (typeof teachingVideos)[number]
+type VideoItem = {
+  id: string | number
+  title: string
+  youtubeId: string
+  description: string
+}
+
+const fallbackVideos: VideoItem[] = teachingVideos.map((video, idx) => ({
+  id: video.id ?? idx,
+  title: video.title ?? "",
+  youtubeId: video.youtubeId ?? "",
+  description: video.description ?? "",
+}))
+
+function extractYoutubeId(input?: unknown): string | null {
+  if (!input) return null
+  const raw = String(input).trim()
+  if (!raw) return null
+
+  const iframeSrcMatch = raw.match(/src=["']([^"']+)["']/i)
+  const candidate = iframeSrcMatch?.[1] ?? raw
+  const decoded = candidate.replace(/&amp;/g, "&").trim()
+
+  const patterns = [
+    /youtu\.be\/([A-Za-z0-9_-]{11})/,
+    /youtube\.com\/shorts\/([A-Za-z0-9_-]{11})/,
+    /youtube\.com\/embed\/([A-Za-z0-9_-]{11})/,
+    /youtube\.com\/watch\?v=([A-Za-z0-9_-]{11})/,
+  ]
+
+  for (const pattern of patterns) {
+    const match = decoded.match(pattern)
+    if (match?.[1]) return match[1]
+  }
+
+  const queryMatch = decoded.match(/[?&]v=([A-Za-z0-9_-]{11})/)
+  if (queryMatch?.[1]) return queryMatch[1]
+
+  const idMatch = decoded.match(/([A-Za-z0-9_-]{11})/)
+  return idMatch?.[1] ?? null
+}
 
 function VideoModal({
   isOpen,
@@ -79,10 +120,74 @@ function VideoModal({
 }
 
 export default function TeachingVideos() {
+  const [videos, setVideos] = useState<VideoItem[]>(fallbackVideos)
   const [open, setOpen] = useState(false)
-  const [active, setActive] = useState<Video | null>(null)
+  const [active, setActive] = useState<VideoItem | null>(null)
 
-  const openVideo = useCallback((video: Video) => {
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const params = new URLSearchParams({ postType: "วิดีโอแนะนำ-หน้าแรก" })
+        const res = await http.get(`/api/posts?${params.toString()}`)
+        const json: any = res.data ?? null
+        const list: any[] = Array.isArray(json)
+          ? json
+          : Array.isArray(json?.data)
+          ? json.data
+          : []
+
+        const mapped = list
+          .filter((item) => item?.postType?.name === "วิดีโอแนะนำ-หน้าแรก")
+          .map((item: any, idx: number) => {
+            const youtubeId = extractYoutubeId(item?.content)
+            if (!youtubeId) return null
+
+            const title =
+              typeof item?.title === "string"
+                ? item.title
+                : item?.title != null
+                ? String(item.title)
+                : ""
+            const descriptionRaw =
+              typeof item?.excerpt === "string"
+                ? item.excerpt
+                : item?.excerpt != null
+                ? String(item.excerpt)
+                : ""
+            const description = descriptionRaw
+              .replace(/<[^>]+>/g, " ")
+              .replace(/\s+/g, " ")
+              .trim()
+
+            return {
+              id: item?.id ?? idx,
+              title,
+              youtubeId,
+              description,
+            }
+          })
+          .filter((video): video is VideoItem => !!video?.youtubeId)
+
+        if (!mounted) return
+
+        if (res.status >= 200 && res.status < 300 && mapped.length) {
+          setVideos(mapped)
+        } else {
+          console.warn("[TeachingVideos] API ไม่คืนข้อมูลที่ต้องการ → ใช้ fallback")
+          setVideos(fallbackVideos)
+        }
+      } catch (error) {
+        console.error("[TeachingVideos] Failed to load videos", error)
+        if (mounted) setVideos(fallbackVideos)
+      }
+    })()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const openVideo = useCallback((video: VideoItem) => {
     setActive(video)
     setOpen(true)
   }, [])
@@ -92,12 +197,6 @@ export default function TeachingVideos() {
   
     setTimeout(() => setActive(null), 150)
   }, [])
-
-  const handleVideoClick = (youtubeId: string) => {
- 
-    const v = teachingVideos.find((t) => t.youtubeId === youtubeId)
-    if (v) openVideo(v)
-  }
 
   return (
     <section className="pt-0 pb-10 lg:pt-24 lg:pb-5 bg-white">
@@ -112,11 +211,11 @@ export default function TeachingVideos() {
 
     
         <div className="grid md:grid-cols-2 gap-8 mb-12">
-          {teachingVideos.map((video) => (
+          {videos.map((video) => (
             <Card
               key={video.id}
               className="group hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer pt-0"
-              onClick={() => handleVideoClick(video.youtubeId)}
+              onClick={() => openVideo(video)}
             >
               <CardContent className="p-0">
    

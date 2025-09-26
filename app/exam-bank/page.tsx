@@ -72,6 +72,7 @@ type UiExam = {
 
 const EXAMS_API = "/api/exams";
 const ITEMS_PER_PAGE = 12;
+const SEARCH_RESULTS_LIMIT = 200;
 const MAX_FILE_NAME_LENGTH = 23;
 
 const formatFileName = (value?: string | null, fallback = "ไฟล์ PDF") => {
@@ -103,11 +104,43 @@ export default function ExamBankPage() {
   const [filesLoading, setFilesLoading] = useState(false);
   const [filesError, setFilesError] = useState<string | null>(null);
   const [files, setFiles] = useState<
-    { id?: string; name?: string; url: string; mime?: string }[]
+    { id?: string; name?: string; url: string; mime?: string; isDownload?: boolean }[]
   >([]);
 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isCompactPagination, setIsCompactPagination] = useState(false);
+  const [canDownload, setCanDownload] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    // Fetch centralized download toggle. When false, hide download controls.
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/exams/e03395c1-cd6a-4cda-9da3-78e47a2981c5`,
+          { cache: "no-store" }
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json: any = await res.json().catch(() => ({}));
+        const data = json?.data ?? json ?? {};
+        const flag =
+          typeof data?.isDownload === "boolean"
+            ? data.isDownload
+            : Array.isArray(data?.files)
+            ? data.files.some((f: any) => f?.isDownload !== false)
+            : undefined;
+        if (active) {
+          if (typeof flag === "boolean") setCanDownload(flag);
+          else setCanDownload(true);
+        }
+      } catch {
+        if (active) setCanDownload(true);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return;
@@ -201,18 +234,35 @@ export default function ExamBankPage() {
       try {
         setLoading(true);
         setError(null);
-        const params = new URLSearchParams();
-        params.set("page", String(currentPage));
-        params.set("limit", String(ITEMS_PER_PAGE));
-        if (selectedCategory !== "all") {
-          params.set("categoryId", selectedCategory);
+        const q = searchTerm.trim();
+        const buildParams = (opts: { useSearch: boolean; useQ: boolean }) => {
+          const params = new URLSearchParams();
+          params.set("page", String(currentPage));
+          const limit = q ? SEARCH_RESULTS_LIMIT : ITEMS_PER_PAGE;
+          params.set("limit", String(limit));
+          if (selectedCategory !== "all") params.set("categoryId", selectedCategory);
+          if (selectedYear !== "all") params.set("year", selectedYear);
+          if (q) {
+            if (opts.useSearch) params.set("search", q);
+            if (opts.useQ) params.set("q", q);
+          }
+          return params;
+        };
+
+        const attemptFetch = async (useSearch: boolean, useQ: boolean) => {
+          const params = buildParams({ useSearch, useQ });
+          return fetch(`${EXAMS_API}?${params.toString()}`, { cache: "no-store" });
+        };
+
+        let res = await attemptFetch(true, true);
+        if (q && res.status >= 500) {
+          res = await attemptFetch(false, true);
         }
-        if (selectedYear !== "all") params.set("year", selectedYear);
-        if (searchTerm.trim()) params.set("search", searchTerm.trim());
-        const res = await fetch(`${EXAMS_API}?${params.toString()}`, {
-          cache: "no-store",
-        });
+        if (q && res.status >= 500) {
+          res = await attemptFetch(true, false);
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
         const json: ApiResponse | any = await res.json().catch(() => ({}));
         const items: ApiExam[] = Array.isArray(json?.data)
           ? (json.data as ApiExam[])
@@ -294,13 +344,15 @@ export default function ExamBankPage() {
               f?.contentType ||
               f?.fileType ||
               undefined;
-            return url ? { id: f?.id, name, url, mime } : null;
+            const isDownload = typeof f?.isDownload === "boolean" ? f.isDownload : undefined;
+            return url ? { id: f?.id, name, url, mime, isDownload } : null;
           })
           .filter(Boolean) as {
           id?: string;
           name?: string;
           url: string;
           mime?: string;
+          isDownload?: boolean;
         }[];
         const pdfs = normalized.filter(
           (f) => /pdf/i.test(f.mime || "") || /\.pdf(\?|$)/i.test(f.url)
@@ -339,13 +391,15 @@ export default function ExamBankPage() {
                     f?.contentType ||
                     f?.fileType ||
                     undefined;
-                  return url ? { id: f?.id, name, url, mime } : null;
+                  const isDownload = typeof f?.isDownload === "boolean" ? f.isDownload : undefined;
+                  return url ? { id: f?.id, name, url, mime, isDownload } : null;
                 })
                 .filter(Boolean) as {
                 id?: string;
                 name?: string;
                 url: string;
                 mime?: string;
+                isDownload?: boolean;
               }[];
               const pdfs2 = norm2.filter(
                 (f) => /pdf/i.test(f.mime || "") || /\.pdf(\?|$)/i.test(f.url)
@@ -381,8 +435,24 @@ export default function ExamBankPage() {
     return match?.color ?? "rgb(250 202 21)";
   };
 
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+
+  const filteredData = useMemo(() => {
+    if (!normalizedSearch) return data || [];
+    return (data || []).filter((exam) => {
+      const target = [
+        exam.title,
+        exam.description,
+        exam.category?.name,
+      ]
+        .filter(Boolean)
+        .map((v) => String(v).toLowerCase());
+      return target.some((value) => value.includes(normalizedSearch));
+    });
+  }, [data, normalizedSearch]);
+
   const uiExams: UiExam[] = useMemo(() => {
-    return (data || [])
+    return (filteredData || [])
       .filter((e) => e.isActive)
       .map((e) => {
         const year = new Date(e.createdAt).getFullYear();
@@ -397,14 +467,16 @@ export default function ExamBankPage() {
           examType: categoryName,
         };
       });
-  }, [data]);
+  }, [filteredData]);
 
   const categoriesForUI = categories;
 
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil((totalCount || 0) / ITEMS_PER_PAGE)),
-    [totalCount]
-  );
+  const displayTotal = normalizedSearch ? uiExams.length : totalCount;
+
+  const totalPages = useMemo(() => {
+    if (normalizedSearch) return 1;
+    return Math.max(1, Math.ceil((totalCount || 0) / ITEMS_PER_PAGE));
+  }, [normalizedSearch, totalCount]);
 
   const buildPageList = useMemo<(number | "...")[]>(() => {
     if (totalPages <= 1) return [1];
@@ -529,7 +601,7 @@ export default function ExamBankPage() {
   };
 
   const handleDownload = async (downloadUrl: string, filename?: string) => {
-    if (!downloadUrl) return;
+    if (!downloadUrl || !canDownload) return;
     if (!isAuthenticated) {
       setLoginOpen(true);
       return;
@@ -675,8 +747,12 @@ export default function ExamBankPage() {
           >
             {!loading && (
               <p className="text-gray-600">
-                พบข้อสอบ {totalCount} รายการ • หน้า{" "}
-                {Math.min(currentPage, totalPages)} / {totalPages}
+                พบข้อสอบ {displayTotal} รายการ
+                {!normalizedSearch && (
+                  <>
+                    {" "}• หน้า {Math.min(currentPage, totalPages)} / {totalPages}
+                  </>
+                )}
               </p>
             )}
           </motion.div>
@@ -768,7 +844,9 @@ export default function ExamBankPage() {
                       <CardContent className="pt-0">
                         <div className="text-center pt-2">
                           <p className="text-xs text-gray-500">
-                            คลิกเพื่อดูหรือดาวน์โหลด
+                            {canDownload
+                              ? "คลิกเพื่อดูหรือดาวน์โหลด"
+                              : "คลิกเพื่อดูเฉลย"}
                           </p>
                         </div>
                       </CardContent>
@@ -778,7 +856,7 @@ export default function ExamBankPage() {
               })}
           </motion.div>
 
-          {!loading && !error && totalCount > ITEMS_PER_PAGE && (
+          {!loading && !error && !normalizedSearch && totalCount > ITEMS_PER_PAGE && (
             <div className="mt-8 flex w-full flex-wrap items-center justify-center gap-2">
               {paginationControls}
             </div>
@@ -903,24 +981,28 @@ export default function ExamBankPage() {
                           className="hover:bg-blue-50 hover:border-blue-300"
                         >
                           <Eye className="h-4 w-4" />
-                          ดูข้อสอบ
+                          {f.isDownload === false || !canDownload
+                            ? "ดูเฉลย"
+                            : "ดูข้อสอบ"}
                         </Button>
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            handleDownload(
-                              f.url,
-                              f.name || `${selectedExam?.title || "exam"}.pdf`
-                            )
-                          }
-                          style={{
-                            backgroundColor: getCategoryColorById(
-                              selectedExam?.categoryId
-                            ),
-                          }}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
+                        {canDownload && f.isDownload !== false && (
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              handleDownload(
+                                f.url,
+                                f.name || `${selectedExam?.title || "exam"}.pdf`
+                              )
+                            }
+                            style={{
+                              backgroundColor: getCategoryColorById(
+                                selectedExam?.categoryId
+                              ),
+                            }}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
