@@ -16,11 +16,29 @@ type Post = {
 
 function getYouTubeEmbed(url: string) {
   const id = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\n?#]+)/)?.[1]
-  return id ? `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1` : null
+  if (!id) return null
+  const params = new URLSearchParams({
+    rel: "0",
+    modestbranding: "1",
+    autoplay: "1",
+    mute: "1",
+    playsinline: "1",
+  })
+  return `https://www.youtube-nocookie.com/embed/${id}?${params.toString()}`
 }
 function getVimeoEmbed(url: string) {
   const id = url.match(/(?:vimeo\.com|player\.vimeo\.com)\/(?:video\/)?(\d+)/)?.[1]
-  return id ? `https://player.vimeo.com/video/${id}?dnt=1&title=0&byline=0&portrait=0` : null
+  if (!id) return null
+  const params = new URLSearchParams({
+    dnt: "1",
+    title: "0",
+    byline: "0",
+    portrait: "0",
+    autoplay: "1",
+    muted: "1",
+    playsinline: "1",
+  })
+  return `https://player.vimeo.com/video/${id}?${params.toString()}`
 }
 function extractFirstUrl(text?: string | null) {
   if (!text) return null
