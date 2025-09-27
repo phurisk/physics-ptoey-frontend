@@ -28,7 +28,7 @@ export default function PopupPromotion() {
   const [dontShowToday, setDontShowToday] = useState(false)
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<PromotionPost | null>(null)
-  const [imgSrc, setImgSrc] = useState<string>("/promotion.png")
+  const [imgSrc, setImgSrc] = useState<string>("/promotion.jpeg")
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
@@ -83,7 +83,7 @@ export default function PopupPromotion() {
     if (!data) return
     const preferred =
       (isMobile ? (data.imageUrlMobileMode || data.imageUrl) : (data.imageUrl || data.imageUrlMobileMode))
-      || "/promotion.png"
+      || "/promotion.jpeg"
     setImgSrc(preferred)
   }, [data, isMobile])
 
@@ -110,7 +110,7 @@ export default function PopupPromotion() {
               alt={data?.title || "Promotion"}
               fill
               className="object-cover"
-              onError={() => setImgSrc("/promotion.png")}
+              onError={() => setImgSrc("/promotion.jpeg")}
               priority
               sizes="(max-width: 640px) 100vw, 400px"
             />
