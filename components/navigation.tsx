@@ -196,7 +196,7 @@ export function Navigation() {
                 transition={{ duration: 0.18, ease: "easeOut" }}
                 className="lg:hidden"
               >
-                <div className="px-2 pt-2 pb-3 space-y-3 bg-white border-t border-gray-200 shadow-sm">
+                <div className="px-2 pt-2 pb-3 space-y-3 bg-white border-t border-gray-200 shadow-sm rounded-lg mb-4">
                   {menuItems.map((item) => (
                     <Link
                       key={item.href}
