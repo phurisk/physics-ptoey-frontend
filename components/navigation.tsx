@@ -209,8 +209,12 @@ export function Navigation() {
                   ))}
 
                   {loading || isLoggingOut ? (
-                    <Button disabled className="block w-full text-left px-3 py-0 rounded-md text-base font-medium bg-gray-200 text-gray-600">
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isLoggingOut ? "กำลังออกจากระบบ…" : "กำลังเข้าสู่ระบบ…"}
+                    <Button
+                      disabled
+                      className="w-full justify-center gap-2 rounded-lg bg-gray-200 text-gray-600 text-base font-medium py-3"
+                    >
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      {isLoggingOut ? "กำลังออกจากระบบ…" : "กำลังเข้าสู่ระบบ…"}
                     </Button>
                   ) : !isAuthenticated ? (
                     <Button
