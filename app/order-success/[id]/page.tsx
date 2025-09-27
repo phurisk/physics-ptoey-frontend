@@ -434,7 +434,7 @@ export default function OrderSuccessPage() {
                       ) : (
                         <AlertCircle className="h-6 w-6 text-red-600" />
                       )}
-                      <CardTitle>คำสั่งซื้อ</CardTitle>
+                      <CardTitle className="text-lg truncate max-w-[250px] md:max-w-full ">คำสั่งซื้อ #{order.id}</CardTitle>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm text-gray-600">สถานะ:</span>
@@ -499,7 +499,6 @@ export default function OrderSuccessPage() {
                   )}
 
                   <div className="flex flex-wrap gap-2">
-
                     {/* {isPending && (
                       <Button className="bg-yellow-400 hover:bg-yellow-500 text-white" onClick={() => setOpenUpload(true)}>
                         อัพโหลดสลิป
@@ -580,7 +579,7 @@ export default function OrderSuccessPage() {
                         <Image src={slipUrl} alt="สลิปโอนเงิน" fill className="object-cover" />
                       </div>
                       <a href={slipUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">
-                        ดูสลิป
+                        เปิดสลิปต้นฉบับ
                       </a>
                     </div>
                   )}
