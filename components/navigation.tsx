@@ -261,7 +261,7 @@ export function Navigation() {
                           }
                         }}
                         variant="outline"
-                        className="block w-full text-left"
+                        className="block w-full text-left border-red-200 text-red-600 hover:text-red-700 hover:bg-red-50"
                         disabled={isLoggingOut}
                       >
                         {isLoggingOut ? (

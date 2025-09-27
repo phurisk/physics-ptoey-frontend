@@ -9,6 +9,7 @@ import { BookOpen, Receipt, Book, Loader2 } from "lucide-react"
 import LoginModal from "@/components/login-modal"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
+
 export default function ProfilePage() {
   const { user, isAuthenticated, logout, loading } = useAuth()
   const [loginOpen, setLoginOpen] = useState(false)
@@ -43,7 +44,15 @@ export default function ProfilePage() {
             </Avatar>
             <div>
               <div className="text-lg font-medium ">{name}</div>
-              {email && <div className="text-gray-600 md:text-sm text-xs">{email}</div>}
+              {email && <div className="text-gray-600 md:text-sm text-xs truncate md:max-w-full max-w-[230px] ">{email}</div>}
+
+              <Button className="mt-2 text-xs"
+                variant="outline"
+                size="sm"
+                onClick={() => navigator.clipboard.writeText(email || "")}
+              >
+                คัดลอกอีเมล
+              </Button>
             </div>
           </div>
         )}
@@ -86,7 +95,7 @@ export default function ProfilePage() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-lg font-semibold text-gray-900 group-hover:text-yellow-700">คำสั่งซื้อของฉัน</div>
-                <div className="text-sm text-gray-600 truncate">ตรวจสถานะและอัพโหลดหลักฐานการชำระเงิน</div>
+                <div className="text-sm text-gray-600 truncate">ตรวจสถานะและอัพโหลดอัปสลิปชำระเงิน</div>
               </div>
             </CardContent>
           </Card>
