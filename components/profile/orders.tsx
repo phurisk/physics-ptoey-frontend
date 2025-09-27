@@ -104,14 +104,14 @@ export default function Orders() {
   const orderStatusText = (status?: string, paymentStatus?: string) => {
     const s = (status || "").toUpperCase()
     const ps = (paymentStatus || "").toUpperCase()
+    if (s === "CANCELLED") return "ยกเลิก"
+    if (s === "REJECTED") return "ปฏิเสธ"
     // Prefer payment status when present
     if (ps === "COMPLETED") return "ชำระเงินแล้ว"
     if (ps === "PENDING_VERIFICATION") return "รอตรวจสอบสลิป"
     if (s === "COMPLETED") return "ชำระเงินแล้ว"
     if (s === "PENDING_VERIFICATION") return "รอตรวจสอบสลิป"
     if (s === "PENDING") return "รอการชำระ"
-    if (s === "CANCELLED") return "ยกเลิก"
-    if (s === "REJECTED") return "ปฏิเสธ"
     return status || "-"
   }
 
@@ -119,12 +119,12 @@ export default function Orders() {
   const statusTone = (status?: string, paymentStatus?: string) => {
     const s = (status || "").toUpperCase()
     const ps = (paymentStatus || "").toUpperCase()
+    if (s === "CANCELLED" || s === "REJECTED") return "bg-red-50 text-red-700 border border-red-200"
     if (ps === "COMPLETED") return "bg-green-50 text-green-700 border border-green-200"
     if (ps === "PENDING_VERIFICATION") return "bg-blue-50 text-blue-700 border border-blue-200"
     if (s === "COMPLETED") return "bg-green-50 text-green-700 border border-green-200"
     if (s === "PENDING_VERIFICATION") return "bg-blue-50 text-blue-700 border border-blue-200"
     if (s === "PENDING") return "bg-amber-50 text-amber-700 border border-amber-200"
-    if (s === "CANCELLED" || s === "REJECTED") return "bg-red-50 text-red-700 border border-red-200"
     return "bg-gray-100 text-gray-700 border border-gray-200"
   }
 
@@ -225,9 +225,13 @@ export default function Orders() {
             const aspectClass = isEbook ? "aspect-[3/4]" : "aspect-video"
 
             const statusLabel = orderStatusText(o.status, o.payment?.status)
+            const orderState = (o.status || "").toUpperCase()
+            const payState = (o.payment?.status || "").toUpperCase()
+            const isCancelled = ["CANCELLED", "REJECTED"].includes(orderState)
+            const effectiveState = payState || orderState
+            const needsSlipUpload = !isCancelled && ["PENDING", "PENDING_VERIFICATION"].includes(effectiveState)
+            const isPaid = !isCancelled && effectiveState === "COMPLETED"
             const payStatus = o.payment?.status
-            const eff = (payStatus || o.status || "").toUpperCase()
-            const isPending = ["PENDING", "PENDING_VERIFICATION"].includes(eff)
 
             return (
               <Card key={o.id} className="shadow-sm">
@@ -283,15 +287,17 @@ export default function Orders() {
                         </Button>
                       </Link>
 
-                      {isPending ? (
+                      {needsSlipUpload ? (
                         <Button
                           onClick={() => onOpenUpload(o)}
                           className="bg-yellow-400 hover:bg-yellow-500 text-white w-full sm:w-28"
                         >
                           อัพโหลดสลิป
                         </Button>
-                      ) : (
+                      ) : isPaid ? (
                         <Badge className="bg-green-600 text-white w-full sm:w-auto justify-center">ชำระเงินแล้ว</Badge>
+                      ) : (
+                        <Badge className={`${statusTone(o.status, o.payment?.status)} w-full sm:w-auto justify-center`}>{statusLabel}</Badge>
                       )}
                     </div>
 

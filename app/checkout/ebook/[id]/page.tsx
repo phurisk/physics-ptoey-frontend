@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -27,6 +27,9 @@ export default function CheckoutEbookPage() {
   const search = useSearchParams()
   const { isAuthenticated, user, loading: authLoading } = useAuth()
 
+  const couponFromQuery = (search.get("coupon") || "").trim()
+  const authUserId = (user as any)?.id ?? null
+
   const [ebook, setEbook] = useState<Ebook | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -40,10 +43,18 @@ export default function CheckoutEbookPage() {
 
   const [shipping, setShipping] = useState({ name: "", phone: "", address: "", district: "", province: "", postalCode: "" })
 
+  const lastAutoAppliedCoupon = useRef<string | null>(null)
+
   useEffect(() => {
-    const prefill = search.get("coupon") || ""
-    if (prefill) setCouponCode(prefill)
-  }, [search])
+    if (!couponFromQuery) {
+      lastAutoAppliedCoupon.current = null
+      return
+    }
+    setCouponCode(couponFromQuery)
+    setDiscount(0)
+    setCouponError(null)
+    lastAutoAppliedCoupon.current = null
+  }, [couponFromQuery])
 
   useEffect(() => {
     let active = true
@@ -110,27 +121,54 @@ export default function CheckoutEbookPage() {
 
   const finalTotal = Math.max(0, (subtotal || 0) - (discount || 0))
 
+  const validateCoupon = useCallback(
+    async (code: string) => {
+      if (!ebook) return
+      if (!code) {
+        setCouponError("กรอกรหัสคูปอง")
+        setDiscount(0)
+        return
+      }
+      try {
+        setValidatingCoupon(true)
+        setCouponError(null)
+        const res = await fetch(`/api/coupons/validate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code,
+            userId: authUserId ?? "guest",
+            itemType: "ebook",
+            itemId: ebook.id,
+            subtotal,
+          }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok || json?.success === false) throw new Error(json?.error || "ใช้คูปองไม่สำเร็จ")
+        setDiscount(Number(json?.data?.discount || 0))
+      } catch (e: any) {
+        setCouponError(e?.message ?? "ใช้คูปองไม่สำเร็จ")
+        setDiscount(0)
+      } finally {
+        setValidatingCoupon(false)
+      }
+    },
+    [ebook, subtotal, authUserId]
+  )
+
   const applyCoupon = async () => {
-    if (!ebook) return
-    if (!couponCode) { setCouponError("กรอกรหัสคูปอง"); return }
-    try {
-      setValidatingCoupon(true)
-      setCouponError(null)
-      const res = await fetch(`/api/coupons/validate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: couponCode, userId: user?.id ?? "guest", itemType: "ebook", itemId: ebook.id, subtotal }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || json?.success === false) throw new Error(json?.error || "ใช้คูปองไม่สำเร็จ")
-      setDiscount(Number(json?.data?.discount || 0))
-    } catch (e: any) {
-      setCouponError(e?.message ?? "ใช้คูปองไม่สำเร็จ")
-      setDiscount(0)
-    } finally {
-      setValidatingCoupon(false)
-    }
+    await validateCoupon(couponCode)
   }
+
+  useEffect(() => {
+    if (!couponFromQuery) return
+    if (!ebook) return
+    if (!couponCode) return
+    if (subtotal <= 0) return
+    if (lastAutoAppliedCoupon.current === couponFromQuery) return
+    lastAutoAppliedCoupon.current = couponFromQuery
+    void validateCoupon(couponFromQuery)
+  }, [couponFromQuery, ebook, couponCode, subtotal, validateCoupon])
 
   const confirmOrder = async () => {
     if (!ebook) return

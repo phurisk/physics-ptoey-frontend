@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -28,6 +28,9 @@ export default function CheckoutCoursePage() {
   const search = useSearchParams()
   const { isAuthenticated, user, loading: authLoading } = useAuth()
 
+  const couponFromQuery = (search.get("coupon") || "").trim()
+  const authUserId = (user as any)?.id ?? null
+
   const [course, setCourse] = useState<ApiCourse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -37,14 +40,21 @@ export default function CheckoutCoursePage() {
   const [validatingCoupon, setValidatingCoupon] = useState(false)
   const [couponError, setCouponError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const lastAutoAppliedCoupon = useRef<string | null>(null)
   type ShippingAddress = { name: string; phone: string; address: string; district: string; province: string; postalCode: string }
   const [shipping, setShipping] = useState<ShippingAddress>({ name: "", phone: "", address: "", district: "", province: "", postalCode: "" })
   const [shippingError, setShippingError] = useState<string | null>(null)
 
   useEffect(() => {
-    const prefill = search.get("coupon") || ""
-    if (prefill) setCouponCode(prefill)
-  }, [search])
+    if (!couponFromQuery) {
+      lastAutoAppliedCoupon.current = null
+      return
+    }
+    setCouponCode(couponFromQuery)
+    setDiscount(0)
+    setCouponError(null)
+    lastAutoAppliedCoupon.current = null
+  }, [couponFromQuery])
 
   useEffect(() => {
     let active = true
@@ -113,27 +123,54 @@ export default function CheckoutCoursePage() {
 
   const finalTotal = Math.max(0, (price || 0) - (discount || 0))
 
+  const validateCoupon = useCallback(
+    async (code: string) => {
+      if (!course) return
+      if (!code) {
+        setCouponError("กรอกรหัสคูปอง")
+        setDiscount(0)
+        return
+      }
+      try {
+        setValidatingCoupon(true)
+        setCouponError(null)
+        const res = await fetch(`/api/coupons/validate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code,
+            userId: authUserId ?? "guest",
+            itemType: "course",
+            itemId: course.id,
+            subtotal: price,
+          }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok || json?.success === false) throw new Error(json?.error || "ใช้คูปองไม่สำเร็จ")
+        setDiscount(Number(json?.data?.discount || 0))
+      } catch (e: any) {
+        setCouponError(e?.message ?? "ใช้คูปองไม่สำเร็จ")
+        setDiscount(0)
+      } finally {
+        setValidatingCoupon(false)
+      }
+    },
+    [course, price, authUserId]
+  )
+
   const applyCoupon = async () => {
-    if (!course) return
-    if (!couponCode) { setCouponError("กรอกรหัสคูปอง"); return }
-    try {
-      setValidatingCoupon(true)
-      setCouponError(null)
-      const res = await fetch(`/api/coupons/validate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: couponCode, userId: user?.id ?? "guest", itemType: "course", itemId: course.id, subtotal: price }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || json?.success === false) throw new Error(json?.error || "ใช้คูปองไม่สำเร็จ")
-      setDiscount(Number(json?.data?.discount || 0))
-    } catch (e: any) {
-      setCouponError(e?.message ?? "ใช้คูปองไม่สำเร็จ")
-      setDiscount(0)
-    } finally {
-      setValidatingCoupon(false)
-    }
+    await validateCoupon(couponCode)
   }
+
+  useEffect(() => {
+    if (!couponFromQuery) return
+    if (!course) return
+    if (!couponCode) return
+    if (price <= 0) return
+    if (lastAutoAppliedCoupon.current === couponFromQuery) return
+    lastAutoAppliedCoupon.current = couponFromQuery
+    void validateCoupon(couponFromQuery)
+  }, [couponFromQuery, course, couponCode, price, validateCoupon])
 
   const confirmOrder = async () => {
     if (!course) return
