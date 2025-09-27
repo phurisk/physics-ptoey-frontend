@@ -360,7 +360,7 @@ export default function OrderSuccessPage() {
       <div className="space-y-2">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <h1 className="text-2xl font-bold">ยืนยันการสั่งซื้อ</h1>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
             <Button variant="outline" onClick={() => router.push("/profile/orders")}>กลับไปหน้าคำสั่งซื้อ</Button>
             <Button variant="outline" onClick={refreshOrder} className="gap-2">
               <RefreshCw className="h-4 w-4" /> รีเฟรชสถานะ
@@ -434,9 +434,9 @@ export default function OrderSuccessPage() {
                       ) : (
                         <AlertCircle className="h-6 w-6 text-red-600" />
                       )}
-                      <CardTitle>คำสั่งซื้อ #{order.id}</CardTitle>
+                      <CardTitle>คำสั่งซื้อ</CardTitle>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm text-gray-600">สถานะ:</span>
                       {statusBadge(paymentStatus)}
                     </div>
@@ -459,7 +459,7 @@ export default function OrderSuccessPage() {
                     </div>
                     <div className="space-y-1">
                       <div className="text-sm text-gray-600">หมายเลขคำสั่งซื้อ</div>
-                      <div className="text-gray-900 inline-flex items-center gap-2">
+                      <div className="text-gray-900 inline-flex flex-wrap items-center gap-2">
                         <span className="font-medium">#{order.id}</span>
                         <Button size="sm" variant="outline" onClick={() => navigator.clipboard?.writeText(String(order.id))}>คัดลอก</Button>
                       </div>
@@ -468,7 +468,7 @@ export default function OrderSuccessPage() {
                       <div className="text-sm text-gray-600">สินค้า</div>
                       <div className="font-medium text-gray-900">{order.course?.title || order.ebook?.title}</div>
                       {order.payment?.ref && (
-                        <div className="text-sm text-gray-600 inline-flex items-center gap-2">
+                        <div className="text-sm text-gray-600 inline-flex flex-wrap items-center gap-2">
                           เลขอ้างอิง: {order.payment.ref}
                           <Button size="sm" variant="outline" onClick={() => navigator.clipboard?.writeText(String(order.payment!.ref))}>คัดลอก</Button>
                         </div>
@@ -499,11 +499,12 @@ export default function OrderSuccessPage() {
                   )}
 
                   <div className="flex flex-wrap gap-2">
-                    {isPending && (
+
+                    {/* {isPending && (
                       <Button className="bg-yellow-400 hover:bg-yellow-500 text-white" onClick={() => setOpenUpload(true)}>
                         อัพโหลดสลิป
                       </Button>
-                    )}
+                    )} */}
 
                     {isCompleted && order.orderType === "COURSE" && courseId && (
                       <>
@@ -568,7 +569,7 @@ export default function OrderSuccessPage() {
                   <CardTitle>สถานะการตรวจสลิป</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <div className="text-sm text-gray-700">สถานะคำสั่งซื้อ:</div>
                     {statusBadge(paymentStatus)}
                   </div>
@@ -579,7 +580,7 @@ export default function OrderSuccessPage() {
                         <Image src={slipUrl} alt="สลิปโอนเงิน" fill className="object-cover" />
                       </div>
                       <a href={slipUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">
-                        เปิดสลิปต้นฉบับ
+                        ดูสลิป
                       </a>
                     </div>
                   )}
@@ -614,28 +615,28 @@ export default function OrderSuccessPage() {
                     <CardTitle>วิธีชำระเงินโดยการโอน</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                       <div className="relative h-6 w-[140px]">
                         <Image src="/kbank-logo.png" alt="ธนาคารกสิกรไทย" fill className="object-contain" />
                       </div>
                       <Badge className="bg-yellow-400 text-white">โอนผ่าน Mobile Banking</Badge>
                     </div>
                     <div className="space-y-2 text-sm">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                         <span className="text-gray-700">เลขบัญชี</span>
                         <div className="flex items-center gap-2">
                           <span className="font-semibold tracking-wider">107-889-8751</span>
                           <Button size="sm" variant="outline" onClick={() => navigator.clipboard?.writeText("1078898751")}>คัดลอก</Button>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                         <span className="text-gray-700">ชื่อบัญชี</span>
                         <div className="flex items-center gap-2">
                           <span className="font-medium">นาย เชษฐา พวงบุบผา</span>
                           <Button size="sm" variant="outline" onClick={() => navigator.clipboard?.writeText("นาย เชษฐา พวงบุบผา")}>คัดลอก</Button>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                         <span className="text-gray-700">ยอดที่ต้องชำระ</span>
                         <span className="font-semibold">฿{order.total.toLocaleString()}</span>
                       </div>
