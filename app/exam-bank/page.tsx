@@ -595,9 +595,19 @@ export default function ExamBankPage() {
     return nodes;
   }, [buildPageList, currentPage, totalPages]);
 
-  const handleViewPDF = (examId: string) => {
+  const handleViewPDF = (
+    examId: string,
+    file?: { id?: string; url?: string | null }
+  ) => {
     if (!examId) return;
-    router.push(`/exam-bank/view/${encodeURIComponent(examId)}`);
+    const params = new URLSearchParams();
+    if (file?.id != null) params.set("fileId", String(file.id));
+    else if (file?.url) params.set("fileUrl", String(file.url));
+    const query = params.toString();
+    const href = `/exam-bank/view/${encodeURIComponent(examId)}${
+      query ? `?${query}` : ""
+    }`;
+    router.push(href);
   };
 
   const handleDownload = async (downloadUrl: string, filename?: string) => {
@@ -977,7 +987,12 @@ export default function ExamBankPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleViewPDF(selectedExam?.id || "")}
+                          onClick={() =>
+                            handleViewPDF(selectedExam?.id || "", {
+                              id: f.id,
+                              url: f.url,
+                            })
+                          }
                           className="hover:bg-blue-50 hover:border-blue-300"
                         >
                           <Eye className="h-4 w-4" />
