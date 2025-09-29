@@ -19,13 +19,12 @@ export async function GET(req: Request) {
     })
     const data = await res.json().catch(() => ({}))
 
-    // Frontend normalization: remove shipping fee and adjust totals for display only.
     const normalize = (o: any) => {
       if (!o || typeof o !== 'object') return o
       const subtotal = Number(o.subtotal || 0)
       const couponDiscount = Number(o.couponDiscount || 0)
       const tax = Number(o.tax || 0)
-      // Ignore shippingFee completely on frontend
+      // Ignore shippingFee 
       o.shippingFee = 0
       o.total = Math.max(0, subtotal + tax - couponDiscount)
       if (o.shipping && typeof o.shipping === 'object') {
