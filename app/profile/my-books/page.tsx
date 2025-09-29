@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -8,6 +8,15 @@ import { Loader2 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import LoginModal from "@/components/login-modal"
 import http from "@/lib/http"
+
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '')
+const normalizeUrl = (u?: string | null): string => {
+  const url = String(u || '').trim()
+  if (!url) return ''
+  if (/^https?:\/\//i.test(url)) return url
+  if (API_BASE) return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`
+  return url
+}
 
 type Order = {
   id: string
@@ -28,26 +37,62 @@ export default function MyBooksPage() {
   const [links, setLinks] = useState<Record<string, string>>({})
   const [linksLoading, setLinksLoading] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
+  const [ebookMeta, setEbookMeta] = useState<Record<string, { title?: string | null; coverImageUrl?: string | null; author?: string | null; fileUrl?: string | null }>>({})
 
 
-  const fetchOrderLink = async (orderId: string) => {
+  function isPaidLikeStatus(s?: string | null) {
+    const x = String(s || "").toUpperCase()
+    return ["COMPLETED", "PAID", "APPROVED", "SUCCESS"].includes(x)
+  }
+
+  const linkKey = (orderId: string, ebookId: string) => `${orderId}:${ebookId}`
+
+  const fetchOrderLink = async (orderId: string, ebookId?: string) => {
     try {
       const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}`, { cache: 'no-store' })
       const json: any = await res.json().catch(() => ({}))
-      let url = json?.data?.ebook?.fileUrl || json?.data?.ebook?.previewUrl || ''
+      let url = ''
+      const fromOrder = json?.data?.ebook
+      if (fromOrder && (!ebookId || String(fromOrder?.id) === String(ebookId))) {
+        url = fromOrder?.fileUrl || fromOrder?.previewUrl || ''
+      }
+
       if (!url) {
-        const eid = json?.data?.ebook?.id
+        const items: any[] = Array.isArray(json?.data?.items) ? json.data.items : []
+        if (items.length && ebookId) {
+          const found = items.find((it: any) => String(it?.itemType || '').toUpperCase() === 'EBOOK' && String(it?.itemId) === String(ebookId))
+          if (found && (found.fileUrl || found.previewUrl)) {
+            url = found.fileUrl || found.previewUrl
+          }
+        }
+      }
+
+      if (!url) {
+        const eid = ebookId || json?.data?.ebook?.id
         if (eid) {
           try {
             const res2 = await fetch(`/api/ebooks/${encodeURIComponent(String(eid))}`, { cache: 'no-store' })
             const json2: any = await res2.json().catch(() => ({}))
-            url = json2?.data?.fileUrl || json2?.data?.previewUrl || ''
+            url = normalizeUrl(json2?.data?.fileUrl || json2?.data?.previewUrl || '')
+            // cache meta as well
+            setEbookMeta((prev) => ({
+              ...prev,
+              [String(eid)]: {
+                title: json2?.data?.title ?? prev[String(eid)]?.title,
+                coverImageUrl: normalizeUrl(json2?.data?.coverImageUrl ?? prev[String(eid)]?.coverImageUrl),
+                author: json2?.data?.author ?? prev[String(eid)]?.author,
+                fileUrl: url || prev[String(eid)]?.fileUrl || null,
+              },
+            }))
           } catch {}
         }
       }
-      setLinks((prev) => ({ ...prev, [orderId]: url }))
+
+      const key = ebookId ? linkKey(orderId, ebookId) : orderId
+      setLinks((prev) => ({ ...prev, [key]: url }))
     } catch {
-      setLinks((prev) => ({ ...prev, [orderId]: '' }))
+      const key = ebookId ? linkKey(orderId, ebookId) : orderId
+      setLinks((prev) => ({ ...prev, [key]: '' }))
     }
   }
 
@@ -74,39 +119,84 @@ export default function MyBooksPage() {
     return () => { active = false }
   }, [user?.id, authLoading])
 
+  // Flatten paid ebook entries from orders (supports single-ebook orders and multi-item orders)
+  const paidEbookEntries = useMemo(() => {
+    const entries: { orderId: string; ebookId: string; title?: string | null; coverImageUrl?: string | null; author?: string | null }[] = []
+    for (const o of orders) {
+      const os = String(o.status || '')
+      const ps = String(o.payment?.status || '')
+      if (!isPaidLikeStatus(os) && !isPaidLikeStatus(ps)) continue
+
+      // Legacy single-ebook order
+      const eb = o.ebook
+      if (eb?.id) {
+        entries.push({ orderId: o.id, ebookId: String(eb.id), title: eb.title, coverImageUrl: eb.coverImageUrl, author: (eb as any)?.author })
+      }
+
+      // Multi-item orders
+      const items: any[] = Array.isArray((o as any)?.items) ? (o as any).items : []
+      for (const it of items) {
+        const t = String(it?.itemType || '').toUpperCase()
+        if (t !== 'EBOOK') continue
+        const eid = String(it?.itemId || '')
+        if (!eid) continue
+        entries.push({ orderId: o.id, ebookId: eid, title: it?.title || eb?.title, coverImageUrl: it?.coverImageUrl || eb?.coverImageUrl, author: it?.author || (eb as any)?.author })
+      }
+    }
+    // de-duplicate same (orderId, ebookId)
+    const seen = new Set<string>()
+    return entries.filter((e) => {
+      const k = linkKey(e.orderId, e.ebookId)
+      if (seen.has(k)) return false
+      seen.add(k)
+      return true
+    })
+  }, [orders])
+
   useEffect(() => {
     let cancelled = false
     const loadLinks = async () => {
-      const paid = orders.filter((o) => {
-        if (o.orderType !== 'EBOOK') return false
-        const os = String(o.status || '').toUpperCase()
-        const ps = String(o.payment?.status || '').toUpperCase()
-        return os === 'COMPLETED' || ps === 'COMPLETED'
-      })
-      const missing = paid.filter((o) => !links[o.id])
+      const missing = paidEbookEntries.filter((e) => !links[linkKey(e.orderId, e.ebookId)])
       if (!missing.length) { setLinksLoading(false); return }
       try {
         setLinksLoading(true)
-        const results = await Promise.all(missing.map(async (o) => {
+        const results = await Promise.all(missing.map(async (e) => {
           try {
             let url = ''
             try {
-              const res = await fetch(`/api/orders/${encodeURIComponent(o.id)}`, { cache: 'no-store' })
+              const res = await fetch(`/api/orders/${encodeURIComponent(e.orderId)}`, { cache: 'no-store' })
               const json: any = await res.json().catch(() => ({}))
-              url = json?.data?.ebook?.fileUrl || json?.data?.ebook?.previewUrl || ''
-              if (!url && json?.data?.ebook?.id) {
-                const eid = String(json.data.ebook.id)
-                const res2 = await fetch(`/api/ebooks/${encodeURIComponent(eid)}`, { cache: 'no-store' })
+              const fromOrder = json?.data?.ebook
+              if (fromOrder && String(fromOrder?.id) === String(e.ebookId)) {
+                url = normalizeUrl(fromOrder?.fileUrl || fromOrder?.previewUrl || '')
+              }
+              if (!url) {
+                const items: any[] = Array.isArray(json?.data?.items) ? json.data.items : []
+                const found = items.find((it: any) => String(it?.itemType || '').toUpperCase() === 'EBOOK' && String(it?.itemId) === String(e.ebookId))
+                if (found) url = normalizeUrl(found?.fileUrl || found?.previewUrl || '')
+              }
+              if (!url) {
+                const res2 = await fetch(`/api/ebooks/${encodeURIComponent(String(e.ebookId))}`, { cache: 'no-store' })
                 const json2: any = await res2.json().catch(() => ({}))
-                url = json2?.data?.fileUrl || json2?.data?.previewUrl || ''
+                url = normalizeUrl(json2?.data?.fileUrl || json2?.data?.previewUrl || '')
+                // cache meta as well
+                setEbookMeta((prev) => ({
+                  ...prev,
+                  [String(e.ebookId)]: {
+                    title: json2?.data?.title ?? prev[String(e.ebookId)]?.title,
+                    coverImageUrl: normalizeUrl(json2?.data?.coverImageUrl ?? prev[String(e.ebookId)]?.coverImageUrl),
+                    author: json2?.data?.author ?? prev[String(e.ebookId)]?.author,
+                    fileUrl: url || prev[String(e.ebookId)]?.fileUrl || null,
+                  },
+                }))
               }
             } catch {}
-            return [o.id, url] as const
-          } catch { return [o.id, ''] as const }
+            return [linkKey(e.orderId, e.ebookId), url] as const
+          } catch { return [linkKey(e.orderId, e.ebookId), ''] as const }
         }))
         if (!cancelled) {
           const next = { ...links }
-          for (const [oid, url] of results) next[oid] = url
+          for (const [k, url] of results) next[k] = url
           setLinks(next)
         }
       } catch {}
@@ -114,17 +204,42 @@ export default function MyBooksPage() {
         if (!cancelled) setLinksLoading(false)
       }
     }
-    if (orders.length) loadLinks()
+    if (paidEbookEntries.length) loadLinks()
     return () => { cancelled = true }
-  
-  }, [orders])
+  }, [paidEbookEntries])
 
-  const paidEbooks = orders.filter((o) => {
-    if (o.orderType !== 'EBOOK') return false
-    const os = String(o.status || '').toUpperCase()
-    const ps = String(o.payment?.status || '').toUpperCase()
-    return os === 'COMPLETED' || ps === 'COMPLETED'
-  })
+  // Fetch missing ebook metadata to display proper cover/title/author
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      const missingIds = paidEbookEntries
+        .map((e) => e.ebookId)
+        .filter((id) => !ebookMeta[String(id)])
+      if (!missingIds.length) return
+      try {
+        await Promise.all(missingIds.map(async (eid) => {
+          try {
+            const res = await fetch(`/api/ebooks/${encodeURIComponent(String(eid))}`, { cache: 'no-store' })
+            const json: any = await res.json().catch(() => ({}))
+            if (cancelled) return
+            setEbookMeta((prev) => ({
+              ...prev,
+              [String(eid)]: {
+                title: json?.data?.title ?? prev[String(eid)]?.title,
+                coverImageUrl: normalizeUrl(json?.data?.coverImageUrl ?? prev[String(eid)]?.coverImageUrl),
+                author: json?.data?.author ?? prev[String(eid)]?.author,
+                fileUrl: normalizeUrl(json?.data?.fileUrl || json?.data?.previewUrl || prev[String(eid)]?.fileUrl || null),
+              },
+            }))
+          } catch {}
+        }))
+      } catch {}
+    }
+    if (paidEbookEntries.length) run()
+    return () => { cancelled = true }
+  }, [paidEbookEntries, ebookMeta])
+
+  const paidEbooks = paidEbookEntries
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12 space-y-6">
@@ -173,24 +288,25 @@ export default function MyBooksPage() {
 
           {!loading && !error && paidEbooks.length > 0 && (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {paidEbooks.map((o) => {
-                const title = o.ebook?.title || "eBook"
-                const cover = o.ebook?.coverImageUrl || "/placeholder.svg"
-                const inlineFile = (o.ebook as any)?.fileUrl || (o.ebook as any)?.previewUrl || null
-                const fileUrl = links[o.id] || inlineFile || null
-                const hasKey = Object.prototype.hasOwnProperty.call(links, o.id)
-                const resolved = hasKey || !!inlineFile
+              {paidEbooks.map((e) => {
+                const meta = ebookMeta[String(e.ebookId)] || {}
+                const title = meta.title || e.title || "eBook"
+                const cover = meta.coverImageUrl || normalizeUrl(e.coverImageUrl) || "/placeholder.svg"
+                const k = linkKey(e.orderId, e.ebookId)
+                const fileUrl = links[k] || meta.fileUrl || null
+                const hasKey = Object.prototype.hasOwnProperty.call(links, k)
+                const resolved = hasKey || !!meta.fileUrl
                 const isResolving = linksLoading && !resolved
                 const filename = `${title}.pdf`
                 return (
-                  <Card key={o.id} className="overflow-hidden">
+                  <Card key={k} className="overflow-hidden">
                     <CardContent className="p-0">
                       <div className="aspect-[2/3] relative bg-white">
                         <Image src={cover} alt={title} fill className="object-contain" />
                       </div>
                       <div className="p-4 space-y-3">
                         <div className="font-semibold text-gray-900 line-clamp-2">{title}</div>
-                        <div className="text-sm text-gray-600">{o.ebook?.author || "ไม่ระบุผู้เขียน"}</div>
+                        <div className="text-sm text-gray-600">{meta.author || e.author || "ไม่ระบุผู้เขียน"}</div>
                         <div className="flex gap-2">
                           {isResolving ? (
                             <>
@@ -222,7 +338,7 @@ export default function MyBooksPage() {
                             <>
                               <Button
                                 variant="outline"
-                                onClick={() => fetchOrderLink(o.id)}
+                                onClick={() => fetchOrderLink(e.orderId, e.ebookId)}
                               >
                                 ลองดึงลิงก์อีกครั้ง
                               </Button>

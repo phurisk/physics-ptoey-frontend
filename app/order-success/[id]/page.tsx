@@ -118,6 +118,9 @@ export default function OrderSuccessPage() {
 
   const [enrollErr, setEnrollErr] = useState<string | null>(null)
   const triedEnrollRef = useRef(false)
+  const [enrollErrByCourse, setEnrollErrByCourse] = useState<Record<string, string | null>>({})
+  const triedEnrollSetRef = useRef<Set<string>>(new Set())
+  const [enrollmentStatus, setEnrollmentStatus] = useState<Record<string, "loading" | "exists" | "missing" | "error">>({})
 
   const displayItems = useMemo<OrderItem[]>(() => {
     if (!order) return []
@@ -266,28 +269,74 @@ export default function OrderSuccessPage() {
   
 
   // ────────────────────────────────────────────────────────────────────────────
-  // Auto-enroll เฉพาะเมื่อชำระเงินแล้ว
+  // Auto-enroll เฉพาะเมื่อชำระเงินแล้ว (รองรับหลายคอร์ส)
   // ────────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!order) return
-    if (triedEnrollRef.current) return
-
     const paymentStatus = (order?.payment?.status || order?.status || "").toUpperCase()
-    const courseId = order?.orderType === "COURSE" ? order?.course?.id : undefined
     const userId = getSafeUserId(user)
+    if (!isPaidLikeStatus(paymentStatus) || !userId) return
 
-    if (isPaidLikeStatus(paymentStatus) && courseId && userId) {
-      triedEnrollRef.current = true
-      setEnrollErr(null)
-      ;(async () => {
+    const items = Array.isArray(order.items)
+      ? order.items.filter((i) => (i.itemType || "").toUpperCase() === "COURSE")
+      : (order.course?.id ? [{ itemType: "COURSE", itemId: order.course.id, title: order.course.title }] : [])
+
+    if (!items.length) return
+
+    ;(async () => {
+      for (const it of items) {
+        const cid = String(it.itemId)
+        if (triedEnrollSetRef.current.has(cid)) continue
+        triedEnrollSetRef.current.add(cid)
         try {
-          await enrollUser(userId, courseId, order.id)
+          await enrollUser(userId, cid, order.id)
+          setEnrollErrByCourse((prev) => ({ ...prev, [cid]: null }))
         } catch (e: any) {
-          setEnrollErr(e?.message || "Enroll ไม่สำเร็จ")
-          triedEnrollRef.current = false 
+          const msg = e?.message || "Enroll ไม่สำเร็จ"
+          setEnrollErrByCourse((prev) => ({ ...prev, [cid]: msg }))
         }
-      })()
-    }
+      }
+    })()
+  }, [order, user])
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // ตรวจสอบสถานะการลงทะเบียนของแต่ละคอร์ส (เพื่อโชว์ปุ่ม "ลองลงทะเบียนอีกครั้ง" เมื่อยังไม่ถูกสร้าง)
+  // ────────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!order) return
+    const paymentStatus = (order?.payment?.status || order?.status || "").toUpperCase()
+    const userId = getSafeUserId(user)
+    if (!isPaidLikeStatus(paymentStatus) || !userId) return
+
+    const items = Array.isArray(order.items)
+      ? order.items.filter((i) => (i.itemType || "").toUpperCase() === "COURSE")
+      : (order.course?.id ? [{ itemType: "COURSE", itemId: order.course.id, title: order.course.title }] : [])
+
+    if (!items.length) return
+
+    let cancelled = false
+    ;(async () => {
+      const next: Record<string, "loading" | "exists" | "missing" | "error"> = {}
+      for (const it of items) {
+        const cid = String(it.itemId)
+        next[cid] = "loading"
+      }
+      if (!cancelled) setEnrollmentStatus((prev) => ({ ...prev, ...next }))
+
+      for (const it of items) {
+        const cid = String(it.itemId)
+        try {
+          const res = await fetch(`/api/enrollments?userId=${encodeURIComponent(userId)}&courseId=${encodeURIComponent(cid)}`, { cache: "no-store" })
+          const json: any = await res.json().catch(() => ({}))
+          const exists = !!(json?.enrollment || json?.data || json?.id)
+          if (!cancelled) setEnrollmentStatus((prev) => ({ ...prev, [cid]: exists ? "exists" : "missing" }))
+        } catch {
+          if (!cancelled) setEnrollmentStatus((prev) => ({ ...prev, [cid]: "error" }))
+        }
+      }
+    })()
+
+    return () => { cancelled = true }
   }, [order, user])
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -453,7 +502,7 @@ export default function OrderSuccessPage() {
     }
   }, [order?.payment?.notes])
 
-  const canManualEnroll = isCompleted && !!courseId && isAuthenticated && !!getSafeUserId(user)
+  const canManualEnroll = isCompleted && isAuthenticated && !!getSafeUserId(user)
 
 
   const API_BASE =
@@ -708,31 +757,52 @@ export default function OrderSuccessPage() {
                       </Button>
                     )} */}
 
-                    {isCompleted && courseId && (
-                      <>
-                        <Button
-                          onClick={() => router.push(`/profile/my-courses/course/${courseId}`)}
-                          className="bg-yellow-400 hover:bg-yellow-500 text-white"
-                          aria-label={courseTitle ? `เข้าเรียน ${courseTitle}` : "เข้าเรียน"}
-                        >
-                          เข้าเรียน
-                        </Button>
-                        {canManualEnroll && (
-                          <Button
-                            variant="outline"
-                            onClick={async () => {
-                              setEnrollErr(null)
-                              try {
-                                await enrollUser(getSafeUserId(user)!, courseId, order.id)
-                              } catch (e: any) {
-                                setEnrollErr(e?.message || "Enroll ไม่สำเร็จ")
-                              }
-                            }}
-                          >
-                            ลองลงทะเบียนอีกครั้ง
-                          </Button>
-                        )}
-                      </>
+                    {isCompleted && courseItems.length > 0 && (
+                      <div className="flex flex-col gap-2 w-full">
+                        {courseItems.map((ci) => {
+                          const cid = String(ci.itemId)
+                          const title = ci.title || courseTitle || "คอร์สเรียน"
+                          const status = enrollmentStatus[cid]
+                          const showRetry = canManualEnroll && status === "missing"
+                          const err = enrollErrByCourse[cid]
+                          return (
+                            <div key={`course-actions-${cid}`} className="flex flex-wrap items-center gap-2">
+                              <Button
+                                onClick={() => router.push(`/profile/my-courses/course/${cid}`)}
+                                className="bg-yellow-400 hover:bg-yellow-500 text-white"
+                                aria-label={`เข้าเรียน ${title}`}
+                              >
+                                เข้าเรียน{courseItems.length > 1 ? ` • ${title}` : ""}
+                              </Button>
+                              {showRetry && (
+                                <Button
+                                  variant="outline"
+                                  onClick={async () => {
+                                    try {
+                                      await enrollUser(getSafeUserId(user)!, cid, order.id)
+                                      setEnrollErrByCourse((prev) => ({ ...prev, [cid]: null }))
+                                      setEnrollmentStatus((prev) => ({ ...prev, [cid]: "exists" }))
+                                    } catch (e: any) {
+                                      setEnrollErrByCourse((prev) => ({ ...prev, [cid]: e?.message || "Enroll ไม่สำเร็จ" }))
+                                    }
+                                  }}
+                                >
+                                  ลองลงทะเบียนอีกครั้ง
+                                </Button>
+                              )}
+                              {status === "loading" && (
+                                <span className="text-xs text-gray-500">กำลังตรวจสอบสิทธิ์เข้าเรียน…</span>
+                              )}
+                              {status === "error" && (
+                                <span className="text-xs text-red-600">ตรวจสอบสิทธิ์ไม่สำเร็จ</span>
+                              )}
+                              {typeof err === "string" && err && (
+                                <span className="text-xs text-red-600">{err}</span>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
                     )}
 
                     {isCompleted && (ebookItems.length > 0 || order?.ebook) && (ebookFileUrl || ebookLink) && (

@@ -7,7 +7,7 @@ import { useToast } from "@/components/ui/use-toast"
 
 export type CartItem = {
   id: string
-  cartId?: string
+  cartId?: string | null
   itemType: "COURSE" | "EBOOK" | string
   itemId: string
   title: string
@@ -108,12 +108,14 @@ const { toast } = useToast()
     const mapped = items
       .filter(Boolean)
       .map((item) => {
+        const { id: _ignoredId, ...rest } = item
         const quantity = Math.max(1, Number(item.quantity ?? 1) || 1)
         const rawTotal = item.totalPrice != null ? Number(item.totalPrice) : undefined
         const rawUnit = item.unitPrice != null ? Number(item.unitPrice) : undefined
         const estimatedUnit = rawUnit != null && !Number.isNaN(rawUnit) ? rawUnit : rawTotal != null ? rawTotal / quantity : Number(item.price ?? 0) || 0
 
         return {
+          ...rest,
           id: item.id || item.cartItemId || `${item.itemType || "ITEM"}-${item.itemId}`,
           cartId: item.cartId ?? cartId ?? null,
           itemType: String(item.itemType || raw?.itemType || "COURSE").toUpperCase(),
@@ -125,7 +127,6 @@ const { toast } = useToast()
           coverImageUrl: item.coverImageUrl || item.course?.coverImageUrl || item.ebook?.coverImageUrl || null,
           createdAt: item.createdAt,
           updatedAt: item.updatedAt,
-          ...item,
         }
       })
 
