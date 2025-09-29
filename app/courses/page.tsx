@@ -70,6 +70,7 @@ type ApiResponse = {
 
 const COURSES_API = "/api/courses"
 const PAGE_SIZE = 9
+const API_FETCH_LIMIT = 100
 
 export default function CoursesPage() {
   const [selectedLevel, setSelectedLevel] = useState<string>("all")
@@ -87,13 +88,17 @@ export default function CoursesPage() {
       try {
         setLoading(true)
         setError(null)
+        if (active) setData([])
         const collected: ApiCourse[] = []
         const seen = new Set<string>()
         let page = 1
         let lastReportedPage = 0
         const maxPages = 50
+        const subjectParam = selectedSubject === "all" ? null : selectedSubject
+
         while (page <= maxPages) {
-          const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) })
+          const params = new URLSearchParams({ page: String(page), limit: String(API_FETCH_LIMIT) })
+          if (subjectParam) params.set("subject", subjectParam)
           const res = await fetch(`${COURSES_API}?${params.toString()}`, { cache: "no-store" })
           if (!res.ok) throw new Error(`HTTP ${res.status}`)
           const json: ApiResponse & { pagination?: { page?: number; totalPages?: number } } = await res.json()
@@ -112,7 +117,7 @@ export default function CoursesPage() {
           const totalPages = Number(pagination?.totalPages)
           const done =
             !list.length ||
-            list.length < PAGE_SIZE ||
+            list.length < API_FETCH_LIMIT ||
             (Number.isFinite(totalPages) && reportedPage >= totalPages) ||
             repeatedPage
           if (done) break
@@ -129,7 +134,7 @@ export default function CoursesPage() {
     return () => {
       active = false
     }
-  }, [])
+  }, [selectedSubject])
 
   useEffect(() => {
     void searchParams; void data
@@ -147,12 +152,12 @@ export default function CoursesPage() {
   const subjects = useMemo(() => (
     [
       { id: "all", name: "ทุกวิชา" },
-      { id: "ฟิสิกส์", name: "ฟิสิกส์" },
-      { id: "คณิตศาสตร์", name: "คณิตศาสตร์" },
-      { id: "เคมี", name: "เคมี" },
-      { id: "ชีววิทยา", name: "ชีววิทยา" },
-      { id: "ภาษาอังกฤษ", name: "ภาษาอังกฤษ" },
-      { id: "ภาษาจีน", name: "ภาษาจีน" },
+      { id: "Physics", name: "ฟิสิกส์" },
+      { id: "Mathematics", name: "คณิตศาสตร์" },
+      { id: "Chemistry", name: "เคมี" },
+      { id: "Biology", name: "ชีววิทยา" },
+      { id: "English", name: "ภาษาอังกฤษ" },
+      { id: "Chinese", name: "ภาษาจีน" },
     ]
   ), [])
 
@@ -170,43 +175,43 @@ export default function CoursesPage() {
       const raw = s.trim()
       if (!raw) return null
       const key = raw.toLowerCase()
-      const enToTh: Record<string, string> = {
-        physics: "ฟิสิกส์",
-        physic: "ฟิสิกส์",
-        mathematics: "คณิตศาสตร์",
-        maths: "คณิตศาสตร์",
-        math: "คณิตศาสตร์",
-        chemistry: "เคมี",
-        chem: "เคมี",
-        biology: "ชีววิทยา",
-        bio: "ชีววิทยา",
-        english: "ภาษาอังกฤษ",
-        chinese: "ภาษาจีน",
-        mandarin: "ภาษาจีน",
+      const map: Record<string, string> = {
+        physics: "Physics",
+        physic: "Physics",
+        "ฟิสิกส์": "Physics",
+        mathematics: "Mathematics",
+        maths: "Mathematics",
+        math: "Mathematics",
+        "คณิตศาสตร์": "Mathematics",
+        chemistry: "Chemistry",
+        chem: "Chemistry",
+        "เคมี": "Chemistry",
+        biology: "Biology",
+        bio: "Biology",
+        "ชีววิทยา": "Biology",
+        english: "English",
+        "ภาษาอังกฤษ": "English",
+        chinese: "Chinese",
+        mandarin: "Chinese",
+        "ภาษาจีน": "Chinese",
       }
-      if (enToTh[key]) return enToTh[key]
-      const thai = ["ฟิสิกส์", "คณิตศาสตร์", "เคมี", "ชีววิทยา", "ภาษาอังกฤษ", "ภาษาจีน"]
-      if (thai.includes(raw)) return raw
-      return null
+      return map[key] ?? null
     }
 
-  
     const byField = normalize(c.subject)
     if (byField) return byField
 
-
-    const t = `${c.title || ""} ${c.description || ""}`
-    const tLower = t.toLowerCase()
-    const candidates: Array<{ kw: string[]; th: string }> = [
-      { kw: ["ฟิสิกส์", "physics", "physic"], th: "ฟิสิกส์" },
-      { kw: ["คณิตศาสตร์", "mathematics", "maths", "math"], th: "คณิตศาสตร์" },
-      { kw: ["เคมี", "chemistry", "chem"], th: "เคมี" },
-      { kw: ["ชีววิทยา", "biology", "bio"], th: "ชีววิทยา" },
-      { kw: ["ภาษาอังกฤษ", "english"], th: "ภาษาอังกฤษ" },
-      { kw: ["ภาษาจีน", "chinese", "mandarin"], th: "ภาษาจีน" },
+    const text = `${c.title || ""} ${c.description || ""}`.toLowerCase()
+    const candidates: Array<{ kw: string[]; id: string }> = [
+      { kw: ["ฟิสิกส์", "physics", "physic"], id: "Physics" },
+      { kw: ["คณิตศาสตร์", "mathematics", "maths", "math"], id: "Mathematics" },
+      { kw: ["เคมี", "chemistry", "chem"], id: "Chemistry" },
+      { kw: ["ชีววิทยา", "biology", "bio"], id: "Biology" },
+      { kw: ["ภาษาอังกฤษ", "english"], id: "English" },
+      { kw: ["ภาษาจีน", "chinese", "mandarin"], id: "Chinese" },
     ]
     for (const cnd of candidates) {
-      if (cnd.kw.some((k) => t.includes(k) || tLower.includes(k.toLowerCase()))) return cnd.th
+      if (cnd.kw.some((k) => text.includes(k.toLowerCase()))) return cnd.id
     }
     return null
   }
@@ -239,9 +244,8 @@ export default function CoursesPage() {
   const filteredCourses = useMemo(() => {
     let list = data || []
     if (selectedLevel !== "all") list = list.filter((c) => detectLevel(c) === selectedLevel)
-    if (selectedSubject !== "all") list = list.filter((c) => detectSubject(c) === selectedSubject)
     return list
-  }, [data, selectedLevel, selectedSubject])
+  }, [data, selectedLevel])
 
   const totalPages = useMemo(() => {
     return Math.max(1, Math.ceil((filteredCourses.length || 0) / PAGE_SIZE))
@@ -513,8 +517,15 @@ export default function CoursesPage() {
                       </div>
                     </div>
 
-                 
+                
                     <div className="p-6">
+                      {(() => {
+                        const courseSubjectId = detectSubject(course)
+                        const courseSubjectLabel = subjects.find((s) => s.id === courseSubjectId)?.name
+                        return courseSubjectLabel ? (
+                          <div className="mb-2 text-sm font-medium text-yellow-700">{courseSubjectLabel}</div>
+                        ) : null
+                      })()}
                       <h3 className="text-xl font-bold text-gray-900 mb-2 text-balance line-clamp-2">{course.title}</h3>
                       <p className="text-gray-600 mb-4 text-pretty line-clamp-2">{course.description}</p>
 

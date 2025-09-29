@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, Loader2, Star } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { useCart } from "@/components/cart-provider"
 import LoginModal from "@/components/login-modal"
 
 type Ebook = {
@@ -97,6 +98,7 @@ export default function BookDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const { isAuthenticated, user } = useAuth()
+  const { addItem, items: cartItems, syncing: cartSyncing } = useCart()
 
   const [book, setBook] = useState<Ebook | null>(null)
   const [loading, setLoading] = useState(true)
@@ -104,6 +106,7 @@ export default function BookDetailPage() {
 
   const [couponCode, setCouponCode] = useState("")
   const [creating, setCreating] = useState(false)
+  const [addingToCart, setAddingToCart] = useState(false)
 
   const [reviews, setReviews] = useState<ApiReview[]>([])
   const [reviewsLoading, setReviewsLoading] = useState(false)
@@ -122,6 +125,10 @@ export default function BookDetailPage() {
   const [reviewRestriction, setReviewRestriction] = useState<string | null>(null)
 
   const [loginOpen, setLoginOpen] = useState(false)
+  const inCart = useMemo(
+    () => cartItems.some((item) => item.itemType === "EBOOK" && String(item.itemId) === String(id)),
+    [cartItems, id]
+  )
 
   useEffect(() => {
     let active = true
@@ -427,8 +434,30 @@ export default function BookDetailPage() {
                       >
                         {creating ? "กำลังไปหน้าชำระเงิน..." : "ไปหน้าชำระเงิน"}
                       </Button>
-                      <Button variant="outline" className="w-full rounded-xl">
-                        เพิ่มในรายการโปรด
+                      <Button
+                        variant="outline"
+                        className="w-full rounded-xl"
+                        disabled={creating || addingToCart || cartSyncing || !book || inCart}
+                        onClick={async () => {
+                          if (!book) return
+                          if (!isAuthenticated) { setLoginOpen(true); return }
+                          if (inCart) return
+                          try {
+                            setAddingToCart(true)
+                            await addItem({
+                              itemType: "EBOOK",
+                              itemId: book.id,
+                              title: book.title,
+                              unitPrice: effectivePrice,
+                            })
+                          } catch (error) {
+                            console.error("add ebook to cart error", error)
+                          } finally {
+                            setAddingToCart(false)
+                          }
+                        }}
+                      >
+                        {inCart ? "อยู่ในตะกร้าแล้ว" : addingToCart || cartSyncing ? "กำลังเพิ่ม..." : "เพิ่มลงตะกร้า"}
                       </Button>
                     </div>
 

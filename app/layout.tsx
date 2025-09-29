@@ -4,6 +4,7 @@ import { Sarabun } from "next/font/google"
 import "./globals.css"
 import { Navigation } from "@/components/navigation"
 import { AuthProvider } from "@/components/auth-provider"
+import { CartProvider } from "@/components/cart-provider"
 import { Toaster } from "@/components/ui/toaster"
 
 const sarabun = Sarabun({
@@ -33,9 +34,11 @@ export default function RootLayout({
     <html lang="th">
       <body className={`font-sans ${sarabun.variable} antialiased`}>
         <AuthProvider>
-          <Navigation />
-          <main className="pt-16 lg:pt-20">{children}</main>
-          <Toaster />
+          <CartProvider>
+            <Navigation />
+            <main className="pt-16 lg:pt-20">{children}</main>
+            <Toaster />
+          </CartProvider>
         </AuthProvider>
       </body>
     </html>

@@ -175,11 +175,8 @@ export default function CheckoutCoursePage() {
   const confirmOrder = async () => {
     if (!course) return
     if (!isAuthenticated) { router.push(`/courses/${encodeURIComponent(String(id))}`); return }
+    setShippingError(null)
     try {
-      setCreating(true)
-      setShippingError(null)
-
-
       if (course.isPhysical) {
         const s = shipping
         const missing = [
@@ -192,22 +189,21 @@ export default function CheckoutCoursePage() {
         ].filter(Boolean) as string[]
         if (missing.length > 0) {
           setShippingError(`กรุณากรอก: ${missing.join(", ")}`)
-          setCreating(false)
           return
         }
         const phoneDigits = s.phone.replace(/\D/g, "")
         if (phoneDigits.length !== 10) {
           setShippingError("กรุณากรอกเบอร์โทรให้เป็นตัวเลข 10 หลัก")
-          setCreating(false)
           return
         }
         const postalDigits = s.postalCode.replace(/\D/g, "")
         if (postalDigits.length !== 5) {
           setShippingError("กรุณากรอกรหัสไปรษณีย์เป็นตัวเลข 5 หลัก")
-          setCreating(false)
           return
         }
       }
+
+      setCreating(true)
 
       const userId = (user as any)?.id
       if (userId) {
@@ -235,9 +231,16 @@ export default function CheckoutCoursePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user?.id,
-          itemType: "course",
-          itemId: course.id,
+          userId: (user as any)?.id,
+          items: [
+            {
+              itemType: "COURSE",
+              itemId: course.id,
+              title: course.title,
+              quantity: 1,
+              unitPrice: price,
+            },
+          ],
           couponCode: couponCode || undefined,
           shippingAddress: course.isPhysical ? shipping : undefined,
         }),
@@ -305,11 +308,28 @@ export default function CheckoutCoursePage() {
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => router.back()}>ยกเลิก</Button>
               <Button className="bg-yellow-400 hover:bg-yellow-500 text-white" onClick={confirmOrder} disabled={creating}>
-                {creating ? "กำลังสร้างคำสั่งซื้อ..." : "ยืนยันการสั่งซื้อ"}
+                {creating ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    กำลังสร้างคำสั่งซื้อ...
+                  </span>
+                ) : (
+                  "ยืนยันการสั่งซื้อ"
+                )}
               </Button>
             </div>
           </CardContent>
         </Card>
+      )}
+      {creating && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="rounded-lg bg-white px-6 py-4 shadow-lg">
+            <div className="flex items-center gap-3 text-gray-800">
+              <Loader2 className="h-5 w-5 animate-spin text-yellow-500" />
+              <span>กำลังดำเนินการคำสั่งซื้อของคุณ...</span>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

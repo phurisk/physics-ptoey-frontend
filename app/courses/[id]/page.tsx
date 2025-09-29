@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import LoginModal from "@/components/login-modal"
 import { useAuth } from "@/components/auth-provider"
+import { useCart } from "@/components/cart-provider"
 
 import { Textarea } from "@/components/ui/textarea"
 import Player from "@vimeo/player"
@@ -173,10 +174,12 @@ export default function CourseDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { isAuthenticated, user } = useAuth()
+  const { addItem, items: cartItems, syncing: cartSyncing } = useCart()
   const [loginOpen, setLoginOpen] = useState(false)
   const [isEnrolled, setIsEnrolled] = useState(false)
   const [viewedIds, setViewedIds] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
+  const [addingToCart, setAddingToCart] = useState(false)
 
   const [couponCode, setCouponCode] = useState("")
   const [discount, setDiscount] = useState<number>(0)
@@ -198,6 +201,10 @@ export default function CourseDetailPage() {
   const [reviewsPage, setReviewsPage] = useState(1)
   const REVIEWS_LIMIT = 5
   const [hasMoreReviews, setHasMoreReviews] = useState(true)
+  const inCart = useMemo(
+    () => cartItems.some((item) => item.itemType === "COURSE" && String(item.itemId) === String(id)),
+    [cartItems, id]
+  )
 
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false)
   const [reviewRestriction, setReviewRestriction] = useState<string | null>(null)
@@ -1096,8 +1103,33 @@ export default function CourseDetailPage() {
                             {creating ? "กำลังสร้าง..." : "สมัครเรียนเลย"}
                           </Button>
                         )}
-                        <Button variant="outline" className="w-full rounded-xl h-12">
-                          เพิ่มในรายการโปรด
+                        <Button
+                          variant="outline"
+                          className="w-full rounded-xl h-12"
+                          disabled={creating || addingToCart || cartSyncing || !course || inCart}
+                          onClick={async () => {
+                            if (!course) return
+                            if (!isAuthenticated) {
+                              setLoginOpen(true)
+                              return
+                            }
+                            if (inCart) return
+                            try {
+                              setAddingToCart(true)
+                              await addItem({
+                                itemType: "COURSE",
+                                itemId: course.id,
+                                title: course.title,
+                                unitPrice: effectivePrice,
+                              })
+                            } catch (error) {
+                              console.error("add to cart error", error)
+                            } finally {
+                              setAddingToCart(false)
+                            }
+                          }}
+                        >
+                          {inCart ? "อยู่ในตะกร้าแล้ว" : addingToCart || cartSyncing ? "กำลังเพิ่ม..." : "เพิ่มลงตะกร้า"}
                         </Button>
                       </div>
 

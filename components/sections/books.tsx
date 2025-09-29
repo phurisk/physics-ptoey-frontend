@@ -199,8 +199,15 @@ export default function Books() {
       }
       const payload: any = {
         userId: user?.id,
-        itemType: "ebook",
-        itemId: selectedBook.id,
+        items: [
+          {
+            itemType: "EBOOK",
+            itemId: selectedBook.id,
+            title: selectedBook.title,
+            quantity: 1,
+            unitPrice: selectedBook.discountPrice || selectedBook.price,
+          },
+        ],
       };
       if (couponCode) payload.couponCode = couponCode;
       if (selectedBook.isPhysical) payload.shippingAddress = shipping;

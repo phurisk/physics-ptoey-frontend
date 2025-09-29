@@ -15,6 +15,7 @@ import { toast } from "@/hooks/use-toast"
 
 type Order = {
   id: string
+  orderNumber?: string | null
   orderType: "COURSE" | "EBOOK"
   status: string
   subtotal: number
@@ -27,16 +28,23 @@ type Order = {
   payment?: { id: string; status: string; ref?: string; amount?: number; slipUrl?: string }
   course?: { title: string; description?: string | null; instructor?: { name?: string | null } | null; coverImageUrl?: string | null }
   ebook?: { title: string; author?: string | null; coverImageUrl?: string | null }
+  items?: Array<{ id?: string; itemType?: string; itemId?: string; title?: string | null; quantity?: number | null; unitPrice?: number | null; totalPrice?: number | null }>
 }
 
 type OrdersResponse = { success: boolean; data: Order[] }
+
+const formatCurrency = (value?: number | null) => {
+  const numeric = Number(value ?? 0)
+  const safe = Number.isFinite(numeric) ? numeric : 0
+  return `฿${safe.toLocaleString()}`
+}
 
 export default function Orders() {
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
-  const [courseCovers, setCourseCovers] = useState<Record<string, string>>({})
+  const [itemAssets, setItemAssets] = useState<Record<string, string>>({})
 
   const [openUpload, setOpenUpload] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -66,40 +74,85 @@ export default function Orders() {
   }, [user?.id])
 
   useEffect(() => {
+    if (!orders.length) return
     let cancelled = false
-    const loadCovers = async () => {
-      const ids = Array.from(new Set(
-        orders
-          .filter((o) => o.orderType === 'COURSE')
-          .map((o) => (o as any).courseId)
-          .filter(Boolean) as string[]
-      ))
-      const missing = ids.filter((id) => !courseCovers[id])
-      if (!missing.length) return
-      try {
-        const results = await Promise.all(
-          missing.map(async (id) => {
-            try {
-              const res = await fetch(`/api/courses/${encodeURIComponent(id)}`, { cache: 'no-store' })
-              const json: any = await res.json().catch(() => ({}))
-              const cover = json?.data?.coverImageUrl || ''
-              return [id, cover] as const
-            } catch {
-              return [id, ''] as const
-            }
-          })
-        )
-        if (!cancelled) {
-          const next = { ...courseCovers }
-          for (const [id, cover] of results) next[id] = cover
-          setCourseCovers(next)
-        }
-      } catch {}
+
+    const collectItems = (order: Order) => {
+      const raw = Array.isArray(order.items) ? order.items.filter(Boolean) : []
+      if (raw.length) return raw
+
+      const fallback: NonNullable<Order["items"]> = []
+      if (order.course || (order as any).courseId) {
+        fallback.push({
+          itemType: "COURSE",
+          itemId: (order as any).courseId,
+          title: order.course?.title,
+          quantity: 1,
+          totalPrice: order.total,
+        })
+      }
+      if (order.ebook || (order as any).ebookId) {
+        fallback.push({
+          itemType: "EBOOK",
+          itemId: (order as any).ebookId,
+          title: order.ebook?.title,
+          quantity: 1,
+          totalPrice: order.total,
+        })
+      }
+      return fallback
     }
-    if (orders.length) loadCovers()
+
+    const loadAssets = async () => {
+      const toFetch: Array<{ key: string; type: string; id: string }> = []
+
+      for (const order of orders) {
+        const items = collectItems(order)
+        for (const item of items) {
+          const type = String(item?.itemType || order.orderType || "").toUpperCase()
+          const itemId = item?.itemId || (type === "COURSE" ? (order as any).courseId : (order as any).ebookId) || ""
+          if (!itemId) continue
+          const key = `${type}:${itemId}`
+          if (itemAssets[key] === undefined) {
+            toFetch.push({ key, type, id: itemId })
+          }
+        }
+      }
+
+      if (!toFetch.length) return
+
+      const results = await Promise.all(
+        toFetch.map(async ({ key, type, id }) => {
+          try {
+            const endpoint = type === "EBOOK"
+              ? `/api/ebooks/${encodeURIComponent(id)}`
+              : `/api/courses/${encodeURIComponent(id)}`
+            const res = await fetch(endpoint, { cache: "no-store" })
+            const json: any = await res.json().catch(() => ({}))
+            const cover = json?.data?.coverImageUrl || json?.data?.imageUrl || json?.data?.thumbnailUrl || ""
+            return [key, cover] as const
+          } catch {
+            return [key, ""] as const
+          }
+        })
+      )
+
+      if (!cancelled && results.length) {
+        setItemAssets((prev) => {
+          const next = { ...prev }
+          for (const [key, cover] of results) {
+            if (next[key] === undefined) {
+              next[key] = cover || ""
+            }
+          }
+          return next
+        })
+      }
+    }
+
+    loadAssets()
     return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orders])
+  }, [orders, itemAssets])
 
   const orderStatusText = (status?: string, paymentStatus?: string) => {
     const s = (status || "").toUpperCase()
@@ -113,6 +166,22 @@ export default function Orders() {
     if (s === "PENDING_VERIFICATION") return "รอตรวจสอบสลิป"
     if (s === "PENDING") return "รอการชำระ"
     return status || "-"
+  }
+
+  const slipStatusText = (paymentStatus?: string) => {
+    const ps = (paymentStatus || "").toUpperCase()
+    if (ps === "COMPLETED") return "ชำระแล้ว"
+    if (ps === "PENDING_VERIFICATION") return "รอตรวจสอบ"
+    if (ps === "REJECTED") return "ปฏิเสธ"
+    if (ps === "PENDING") return "รอการชำระ"
+    return "ยังไม่ได้อัพโหลด/รอชำระ"
+  }
+
+  const itemTypeLabel = (itemType?: string) => {
+    const t = (itemType || "").toUpperCase()
+    if (t === "COURSE") return "คอร์สเรียน"
+    if (t === "EBOOK") return "E-Book"
+    return "สินค้า"
   }
 
  
@@ -211,19 +280,6 @@ export default function Orders() {
       {!loading && !error && orders.length > 0 && (
         <div className="space-y-3">
           {orders.map((o) => {
-            const isEbook = o.orderType === "EBOOK"
-            const title =
-              o.orderType === "COURSE"
-                ? (o.course?.title || "คอร์สเรียน")
-                : (o.ebook?.title || "หนังสือ")
-            const courseId = (o as any).courseId as string | undefined
-            const thumb = isEbook
-              ? (o.ebook?.coverImageUrl || "/placeholder.svg")
-              : (courseId && courseCovers[courseId]) || "/placeholder.svg"
-
-
-            const aspectClass = isEbook ? "aspect-[3/4]" : "aspect-video"
-
             const statusLabel = orderStatusText(o.status, o.payment?.status)
             const orderState = (o.status || "").toUpperCase()
             const payState = (o.payment?.status || "").toUpperCase()
@@ -232,57 +288,58 @@ export default function Orders() {
             const needsSlipUpload = !isCancelled && ["PENDING", "PENDING_VERIFICATION"].includes(effectiveState)
             const isPaid = !isCancelled && effectiveState === "COMPLETED"
             const payStatus = o.payment?.status
+            const displayId = o.orderNumber || o.id
+            const createdAt = o.createdAt ? new Date(o.createdAt).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" }) : ""
+
+            const rawItems = Array.isArray(o.items) ? o.items.filter(Boolean) : []
+            const fallbackItems: NonNullable<Order["items"]> = []
+            if (!rawItems.length) {
+              if (o.course || (o as any).courseId) {
+                fallbackItems.push({
+                  itemType: "COURSE",
+                  itemId: (o as any).courseId,
+                  title: o.course?.title,
+                  quantity: 1,
+                  totalPrice: o.total,
+                  unitPrice: o.total,
+                })
+              }
+              if (o.ebook || (o as any).ebookId) {
+                fallbackItems.push({
+                  itemType: "EBOOK",
+                  itemId: (o as any).ebookId,
+                  title: o.ebook?.title,
+                  quantity: 1,
+                  totalPrice: o.total,
+                  unitPrice: o.total,
+                })
+              }
+            }
+            const items = (rawItems.length ? rawItems : fallbackItems).map((item, idx) => ({
+              ...item,
+              _key: item.id || `${item.itemType || o.orderType}-${item.itemId || idx}`,
+            }))
 
             return (
               <Card key={o.id} className="shadow-sm">
-                <CardContent className="p-4">
-
-                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-[8rem_1fr_auto] sm:items-center">
-              
-                    <div className={`relative w-full sm:w-auto ${aspectClass} rounded-md bg-white ring-1 ring-black/5 overflow-hidden`}>
-                      <Image
-                        src={thumb}
-                        alt={title}
-                        fill
-                    
-                        className="object-cover"
-                        sizes="(max-width: 640px) 100vw, 8rem"
-                        priority={false}
-                      />
-                    </div>
-
-                 
-                    <div className="flex-1 min-w-0">
+                <CardContent className="space-y-4 p-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <div className="font-medium text-gray-900 truncate mr-2">{title}</div>
+                        <div className="text-base font-semibold text-gray-900">คำสั่งซื้อ #{displayId}</div>
                         <Badge className={`whitespace-nowrap ${statusTone(o.status, o.payment?.status)}`}>{statusLabel}</Badge>
                       </div>
-
-                      <div className="text-sm text-gray-600 mt-1">
-                        ยอดรวม ฿{o.total.toLocaleString()}
-                      </div>
-
-                   
-                      <div className="mt-1 text-xs text-gray-500">
-                        สถานะตรวจสลิป:{" "}
-                        {payStatus === "COMPLETED"
-                          ? "ชำระแล้ว"
-                          : payStatus === "PENDING_VERIFICATION"
-                            ? "รอตรวจสอบ"
-                            : payStatus === "REJECTED"
-                              ? "ปฏิเสธ"
-                              : "ยังไม่ได้อัพโหลด/รอชำระ"}
-                      </div>
-
+                      {createdAt && <div className="text-xs text-gray-500">สั่งซื้อเมื่อ {createdAt}</div>}
+                      <div className="text-sm text-gray-700">ยอดรวม {formatCurrency(o.total)} บาท</div>
+                      <div className="text-xs text-gray-500">สถานะตรวจสลิป: {slipStatusText(payStatus)}</div>
                       {o.payment?.ref && (
                         <div className="text-xs text-gray-500">เลขอ้างอิง: {o.payment.ref}</div>
                       )}
                     </div>
 
-               
-                    <div className="flex flex-col gap-2 sm:flex-col sm:justify-self-end w-full">
-                      <Link href={`/order-success/${o.id}`} className="w-full sm:w-auto">
-                        <Button variant="outline" className="w-full sm:w-28">
+                    <div className="flex w-full flex-col gap-2 md:w-auto md:items-end">
+                      <Link href={`/order-success/${o.id}`} className="w-full md:w-auto">
+                        <Button variant="outline" className="w-full md:w-[7.5rem]">
                           ดูรายละเอียด
                         </Button>
                       </Link>
@@ -290,18 +347,76 @@ export default function Orders() {
                       {needsSlipUpload ? (
                         <Button
                           onClick={() => onOpenUpload(o)}
-                          className="bg-yellow-400 hover:bg-yellow-500 text-white w-full sm:w-28"
+                          className="bg-yellow-400 hover:bg-yellow-500 text-white w-full md:w-[7.5rem]"
                         >
                           อัพโหลดสลิป
                         </Button>
                       ) : isPaid ? (
-                        <Badge className="bg-green-600 text-white w-full sm:w-auto justify-center">ชำระเงินแล้ว</Badge>
+                        <Badge className="bg-green-600 text-white w-full md:w-auto justify-center">ชำระเงินแล้ว</Badge>
                       ) : (
-                        <Badge className={`${statusTone(o.status, o.payment?.status)} w-full sm:w-auto justify-center`}>{statusLabel}</Badge>
+                        <Badge className={`${statusTone(o.status, o.payment?.status)} w-full md:w-auto justify-center`}>{statusLabel}</Badge>
                       )}
                     </div>
-
                   </div>
+
+                  {items.length > 0 && (
+                    <div className="space-y-3 border-t border-amber-100/60 pt-3">
+                      {items.map((item, idx) => {
+                        const type = String(item.itemType || o.orderType || "")
+                        const resolvedType = type.toUpperCase()
+                        const itemId = item.itemId || (resolvedType === "COURSE" ? (o as any).courseId : (o as any).ebookId) || ""
+                        const assetKey = `${resolvedType}:${itemId}`
+                        const cover = (itemId && itemAssets[assetKey])
+                          || (resolvedType === "COURSE" ? o.course?.coverImageUrl : o.ebook?.coverImageUrl)
+                          || "/placeholder.svg"
+                        const aspectClass = resolvedType === "EBOOK" ? "aspect-[3/4]" : "aspect-video"
+                        const quantity = Number(item.quantity ?? 1)
+                        const totalPrice = Number(item.totalPrice ?? (item.unitPrice ?? 0) * quantity)
+                        const unitPrice = quantity > 0 ? Number(item.unitPrice ?? totalPrice / quantity) : Number(item.unitPrice ?? 0)
+                        const title = item.title || (resolvedType === "COURSE" ? o.course?.title : o.ebook?.title) || itemTypeLabel(resolvedType)
+
+                        const sizeClass = resolvedType === "EBOOK"
+                          ? "w-24 sm:w-32 md:w-36"
+                          : "w-28 sm:w-40 md:w-48"
+
+                        return (
+                          <div
+                            key={`${item._key}-${idx}`}
+                            className="flex flex-col gap-3 rounded-lg border bg-white/80 p-3 sm:grid sm:grid-cols-[auto,1fr,auto] sm:items-center sm:gap-4 md:gap-6"
+                          >
+                            <div
+                              className={`relative ${sizeClass} ${aspectClass} overflow-hidden rounded-md bg-gray-100 ring-1 ring-black/5 mx-auto sm:mx-0`}
+                            >
+                              <Image
+                                src={cover}
+                                alt={title}
+                                fill
+                                className="object-cover"
+                                sizes="(max-width: 480px) 30vw, (max-width: 1024px) 25vw, 12rem"
+                              />
+                            </div>
+                            <div className="min-w-0 space-y-1 sm:order-2 sm:min-w-[18rem]">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <div className="font-medium text-gray-900 line-clamp-2">{title}</div>
+                                <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
+                                  {itemTypeLabel(resolvedType)}
+                                </Badge>
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                จำนวน: {quantity} {quantity > 1 ? "ชิ้น" : "รายการ"}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                ราคาต่อหน่วย: {formatCurrency(unitPrice)}
+                              </div>
+                            </div>
+                            <div className="text-right text-sm font-semibold text-gray-900 self-end sm:order-3 sm:self-center">
+                              {formatCurrency(totalPrice)}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )

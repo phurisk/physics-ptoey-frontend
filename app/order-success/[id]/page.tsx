@@ -11,15 +11,30 @@ import Image from "next/image"
 import { CheckCircle2, Clock, AlertCircle, FileText, RefreshCw, MapPin } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 
+type OrderItem = {
+  id?: string
+  itemType: "COURSE" | "EBOOK" | string
+  itemId: string
+  title?: string | null
+  quantity?: number | null
+  unitPrice?: number | null
+  totalPrice?: number | null
+  createdAt?: string
+}
+
 type Order = {
   id: string
-  orderType: "COURSE" | "EBOOK"
+  orderNumber?: string | null
+  orderType?: "COURSE" | "EBOOK"
   status: string
   subtotal: number
   shippingFee: number
+  tax?: number | null
+  discount?: number | null
   couponDiscount: number
   total: number
   createdAt: string
+  couponCode?: string | null
   course?: { id: string; title: string; isPhysical?: boolean }
   ebook?: {
     id: string
@@ -32,14 +47,21 @@ type Order = {
   payment?: {
     id: string
     status: string
+     method?: string | null
     ref?: string
     amount?: number
+    paidAt?: string | null
     slipUrl?: string
     notes?: string
-    uploadedAt?: string
+    uploadedAt?: string | null
+    verifiedAt?: string | null
+    verifiedBy?: string | null
+    senderBank?: string | null
+    senderName?: string | null
   }
   shipping?: { shippingMethod?: string; status?: string }
   shippingAddress?: { name?: string; phone?: string; address?: string; district?: string; province?: string; postalCode?: string }
+  items?: OrderItem[]
 }
 
 type OrderResponse = { success: boolean; data?: Order; error?: string }
@@ -51,6 +73,28 @@ function getSafeUserId(user: any): string | undefined {
 function isPaidLikeStatus(s?: string) {
   const x = (s || "").toUpperCase()
   return ["COMPLETED", "PAID", "APPROVED", "SUCCESS"].includes(x)
+}
+
+function formatCurrency(value?: number | null) {
+  const numeric = Number(value ?? 0)
+  const safeNumber = Number.isFinite(numeric) ? numeric : 0
+  return `฿${safeNumber.toLocaleString()}`
+}
+
+function toItemTypeLabel(itemType?: string) {
+  const t = (itemType || "").toUpperCase()
+  if (t === "COURSE") return "คอร์สเรียน"
+  if (t === "EBOOK") return "หนังสือ / E-Book"
+  return itemType || "สินค้า"
+}
+
+function toPaymentMethodLabel(method?: string | null) {
+  const m = (method || "").toUpperCase()
+  if (m === "BANK_TRANSFER") return "โอนผ่านธนาคาร"
+  if (m === "CREDIT_CARD") return "บัตรเครดิต"
+  if (m === "PROMPTPAY") return "พร้อมเพย์"
+  if (!method) return "-"
+  return method
 }
 
 export default function OrderSuccessPage() {
@@ -75,6 +119,37 @@ export default function OrderSuccessPage() {
   const [enrollErr, setEnrollErr] = useState<string | null>(null)
   const triedEnrollRef = useRef(false)
 
+  const displayItems = useMemo<OrderItem[]>(() => {
+    if (!order) return []
+    const rawItems = Array.isArray(order.items) ? order.items.filter(Boolean) : []
+    if (rawItems.length > 0) return rawItems as OrderItem[]
+
+    const fallback: OrderItem[] = []
+    if (order.course?.id) {
+      fallback.push({
+        id: `course-${order.course.id}`,
+        itemType: "COURSE",
+        itemId: order.course.id,
+        title: order.course.title,
+        quantity: 1,
+        unitPrice: order.total ?? order.subtotal,
+        totalPrice: order.total ?? order.subtotal,
+      })
+    }
+    if (order.ebook?.id) {
+      fallback.push({
+        id: `ebook-${order.ebook.id}`,
+        itemType: "EBOOK",
+        itemId: order.ebook.id,
+        title: order.ebook.title,
+        quantity: 1,
+        unitPrice: order.total ?? order.subtotal,
+        totalPrice: order.total ?? order.subtotal,
+      })
+    }
+    return fallback
+  }, [order])
+
   // ────────────────────────────────────────────────────────────────────────────
   // API helpers
   // ────────────────────────────────────────────────────────────────────────────
@@ -89,7 +164,6 @@ export default function OrderSuccessPage() {
     return json.data!
   }
 
-  // Normalize shipping from either order.shippingAddress (frontend JSON) or order.shipping (backend relation)
   const normalizedShipping = useMemo(() => {
     const s1: any = (order as any)?.shippingAddress
     if (s1 && (s1.name || s1.address || s1.district || s1.province || s1.postalCode)) {
@@ -139,11 +213,10 @@ export default function OrderSuccessPage() {
     throw new Error("ยังไม่อนุมัติการชำระเงิน")
   }
 
-  // ยิง enroll กับ 2 เอ็นพอยต์ (singular → plural)
   async function enrollUser(userId: string, courseId: string, orderId?: string) {
     const payload = { userId, courseId, orderId }
 
-    // helper ยิง API แล้วอ่าน error จริง
+   
     const doPost = async (url: string) => {
       const res = await fetch(url, {
         method: "POST",
@@ -153,8 +226,6 @@ export default function OrderSuccessPage() {
       const text = await res.text().catch(() => "")
       let json: any = null
       try { json = text ? JSON.parse(text) : null } catch {}
-      // /api/enrollment => { success: boolean, ... }
-      // /api/enrollments => { enrollment, message } (ไม่มี success)
       const okLike = res.ok && (json?.success !== false)
       if (!okLike) {
         const msg = json?.error || json?.message || (text && text.slice(0, 300)) || `HTTP ${res.status}`
@@ -211,11 +282,9 @@ export default function OrderSuccessPage() {
       ;(async () => {
         try {
           await enrollUser(userId, courseId, order.id)
-          // enroll สำเร็จ — เลือกพาไปหน้าเรียนหรือปล่อยให้กดปุ่ม "เข้าเรียน"
-          // router.push(`/courses/${courseId}`)
         } catch (e: any) {
           setEnrollErr(e?.message || "Enroll ไม่สำเร็จ")
-          triedEnrollRef.current = false // ให้ผู้ใช้กด manual retry ได้
+          triedEnrollRef.current = false 
         }
       })()
     }
@@ -240,11 +309,11 @@ export default function OrderSuccessPage() {
         const msg = json?.error || (text && text.slice(0, 300)) || `HTTP ${res.status}`
         throw new Error(msg)
       }
-      // แจ้งผลสำเร็จแบบย่อ ปิดป๊อปอัปอัตโนมัติ แล้วรีเฟรชคำสั่งซื้อ
+      
       setUploadMsg("อัพโหลดสลิปสำเร็จ กำลังรอตรวจสอบ…")
       setOpenUpload(false)
       setFile(null)
-      await refreshOrder() // อัปเดตสถานะให้เห็นว่า "รอตรวจสอบสลิป"
+      await refreshOrder() 
     } catch (e: any) {
       setUploadMsg(e?.message ?? "อัพโหลดไม่สำเร็จ")
     } finally {
@@ -252,7 +321,6 @@ export default function OrderSuccessPage() {
     }
   }
 
-  // Build preview image when user picks a file
   useEffect(() => {
     if (!file) {
       if (filePreview) {
@@ -293,25 +361,83 @@ export default function OrderSuccessPage() {
     return <Badge variant="secondary">{status}</Badge>
   }
 
-  // Prefer payment status when present
   const paymentStatus = (order?.payment?.status || order?.status || "").toUpperCase()
   const isPending = ["PENDING", "PENDING_VERIFICATION"].includes(paymentStatus)
   const isCompleted = isPaidLikeStatus(paymentStatus) || isPaidLikeStatus(order?.status)
-  const courseId = order?.orderType === "COURSE" ? order?.course?.id : undefined
-  const ebookFileUrl =
-    order?.orderType === "EBOOK" && order?.ebook
-      ? order.ebook.fileUrl || order.ebook.previewUrl || null
-      : null
+
+  const courseItems = useMemo(() => displayItems.filter((item) => (item.itemType || "").toUpperCase() === "COURSE"), [displayItems])
+  const courseId = courseItems[0]?.itemId || order?.course?.id
+  const courseTitle = courseItems[0]?.title || order?.course?.title
+
+  const ebookItems = useMemo(() => displayItems.filter((item) => (item.itemType || "").toUpperCase() === "EBOOK"), [displayItems])
+  const primaryEbookItem = ebookItems[0]
+  const ebookFileUrl = useMemo(() => {
+    if (order?.ebook?.fileUrl || order?.ebook?.previewUrl) {
+      return order.ebook.fileUrl || order.ebook.previewUrl || null
+    }
+    const fileFromItem = (primaryEbookItem as any)?.fileUrl || (primaryEbookItem as any)?.previewUrl
+    return fileFromItem || null
+  }, [order?.ebook?.fileUrl, order?.ebook?.previewUrl, primaryEbookItem])
+
   const slipUrl = order?.payment?.slipUrl
+
+  const itemTypeSummary = useMemo(() => {
+    if (displayItems.length === 0) {
+      return order?.orderType ? toItemTypeLabel(order.orderType) : "-"
+    }
+    const labels = Array.from(
+      new Set(
+        displayItems.map((item) => toItemTypeLabel(item.itemType))
+      )
+    )
+    if (labels.length === 1) return labels[0]
+    return `หลายประเภท (${labels.join(", ")})`
+  }, [displayItems, order?.orderType])
+
+  const orderDisplayId = order?.orderNumber || order?.id || ""
+
+  const summaryRows = useMemo(() => {
+    if (!order) return [] as Array<{ label: string; value: string; accent?: boolean }>
+    const subtotal = Number(order.subtotal ?? 0)
+    const discount = Number(order.discount ?? 0)
+    const couponDiscount = Number(order.couponDiscount ?? 0)
+    const shippingFee = Number(order.shippingFee ?? 0)
+    const tax = Number(order.tax ?? 0)
+    const total = Number(order.total ?? 0)
+
+    const rows: Array<{ label: string; value: string; accent?: boolean }> = [
+      { label: "ยอดรวมสินค้า", value: formatCurrency(subtotal) },
+    ]
+
+    if (discount !== 0) {
+      const sign = discount < 0 ? "+" : "-"
+      rows.push({ label: "ส่วนลดเพิ่มเติม", value: `${sign}${formatCurrency(Math.abs(discount))}` })
+    }
+
+    if (couponDiscount > 0) {
+      rows.push({ label: "ส่วนลดคูปอง", value: `-${formatCurrency(couponDiscount)}` })
+    }
+
+    if (shippingFee > 0) {
+      rows.push({ label: "ค่าจัดส่ง", value: formatCurrency(shippingFee) })
+    }
+
+    if (tax !== 0) {
+      const sign = tax < 0 ? "-" : "+"
+      rows.push({ label: "ภาษี", value: `${sign}${formatCurrency(Math.abs(tax))}` })
+    }
+
+    rows.push({ label: "ยอดชำระสุทธิ", value: formatCurrency(total), accent: true })
+    return rows
+  }, [order])
 
   const needsShipping = useMemo(() => {
     if (!order) return false
+    if (normalizedShipping) return true
     if ((order as any)?.shipping) return true
-    // Do not infer from shipping fee; rely on item physical flags only
-    if (order.orderType === "EBOOK") return order.ebook?.isPhysical === true
-    if (order.orderType === "COURSE") return (order as any)?.course?.isPhysical === true
-    return false
-  }, [order])
+    if (typeof order.shippingFee === "number" && order.shippingFee > 0) return true
+    return displayItems.some((item) => (item as any)?.isPhysical)
+  }, [order, normalizedShipping, displayItems])
 
   const slipInfo = useMemo(() => {
     try {
@@ -327,8 +453,7 @@ export default function OrderSuccessPage() {
     }
   }, [order?.payment?.notes])
 
-  const canManualEnroll =
-    isCompleted && order?.orderType === "COURSE" && courseId && isAuthenticated && !!getSafeUserId(user)
+  const canManualEnroll = isCompleted && !!courseId && isAuthenticated && !!getSafeUserId(user)
 
 
   const API_BASE =
@@ -339,18 +464,18 @@ export default function OrderSuccessPage() {
     ;(async () => {
       try {
         const completed = isPaidLikeStatus(order?.status) || isPaidLikeStatus(order?.payment?.status)
-        if (!order || !completed || order.orderType !== 'EBOOK') return
+        if (!order || !completed) return
+        const ebookId = order.ebook?.id || primaryEbookItem?.itemId
+        if (!ebookId) return
         if (ebookFileUrl) { setEbookLink(ebookFileUrl); return }
-        const eid = order.ebook?.id
-        if (!eid) return
-        const res = await fetch(`/api/ebooks/${encodeURIComponent(String(eid))}`, { cache: 'no-store' })
+        const res = await fetch(`/api/ebooks/${encodeURIComponent(String(ebookId))}`, { cache: 'no-store' })
         const json = await res.json().catch(() => ({} as any))
         const link = json?.data?.previewUrl || null
         if (!cancelled) setEbookLink(link)
       } catch { }
     })()
     return () => { cancelled = true }
-  }, [order, ebookFileUrl])
+  }, [order, ebookFileUrl, primaryEbookItem?.itemId])
 
   // ────────────────────────────────────────────────────────────────────────────
   // Render
@@ -434,7 +559,7 @@ export default function OrderSuccessPage() {
                       ) : (
                         <AlertCircle className="h-6 w-6 text-red-600" />
                       )}
-                      <CardTitle className="text-lg truncate max-w-[250px] md:max-w-full ">คำสั่งซื้อ #{order.id}</CardTitle>
+                      <CardTitle className="text-lg truncate max-w-[250px] md:max-w-full ">คำสั่งซื้อ #{orderDisplayId}</CardTitle>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm text-gray-600">สถานะ:</span>
@@ -443,15 +568,15 @@ export default function OrderSuccessPage() {
                   </div>
                 </CardHeader>
 
-                <CardContent className="space-y-5">
+                <CardContent className="space-y-6">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1">
                       <div className="text-sm text-gray-600">ประเภทสินค้า</div>
-                      <div className="font-medium text-gray-900">{order.orderType === "COURSE" ? "คอร์สเรียน" : "หนังสือ"}</div>
+                      <div className="font-medium text-gray-900">{itemTypeSummary}</div>
                     </div>
                     <div className="space-y-1">
                       <div className="text-sm text-gray-600">ยอดรวม</div>
-                      <div className="font-semibold text-gray-900">฿{order.total.toLocaleString()}</div>
+                      <div className="font-semibold text-gray-900">{formatCurrency(order.total)}</div>
                     </div>
                     <div className="space-y-1">
                       <div className="text-sm text-gray-600">วันที่สั่งซื้อ</div>
@@ -460,19 +585,87 @@ export default function OrderSuccessPage() {
                     <div className="space-y-1">
                       <div className="text-sm text-gray-600">หมายเลขคำสั่งซื้อ</div>
                       <div className="text-gray-900 inline-flex flex-wrap items-center gap-2">
-                        <span className="font-medium">#{order.id}</span>
-                        <Button size="sm" variant="outline" onClick={() => navigator.clipboard?.writeText(String(order.id))}>คัดลอก</Button>
+                        <span className="font-medium">#{orderDisplayId}</span>
+                        <Button size="sm" variant="outline" onClick={() => navigator.clipboard?.writeText(String(orderDisplayId))}>คัดลอก</Button>
                       </div>
+                      {order.orderNumber && order.orderNumber !== order.id && (
+                        <div className="text-xs text-gray-500 break-all">รหัสอ้างอิงระบบ: {order.id}</div>
+                      )}
                     </div>
-                    <div className="space-y-1 sm:col-span-2">
-                      <div className="text-sm text-gray-600">สินค้า</div>
-                      <div className="font-medium text-gray-900">{order.course?.title || order.ebook?.title}</div>
-                      {order.payment?.ref && (
-                        <div className="text-sm text-gray-600 inline-flex flex-wrap items-center gap-2">
-                          เลขอ้างอิง: {order.payment.ref}
+                    <div className="space-y-1">
+                      <div className="text-sm text-gray-600">ช่องทางชำระเงิน</div>
+                      <div className="text-gray-900">{toPaymentMethodLabel(order.payment?.method)}</div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-sm text-gray-600">ยอดที่ชำระ</div>
+                      <div className="text-gray-900">{formatCurrency(order.payment?.amount ?? order.total)}</div>
+                      {order.payment?.paidAt && (
+                        <div className="text-xs text-gray-500">ชำระเมื่อ: {new Date(order.payment.paidAt).toLocaleString("th-TH")}</div>
+                      )}
+                    </div>
+                    {order.payment?.ref && (
+                      <div className="space-y-1 sm:col-span-2">
+                        <div className="text-sm text-gray-600">เลขอ้างอิงการชำระ</div>
+                        <div className="inline-flex flex-wrap items-center gap-2 text-gray-900">
+                          <span className="font-medium break-all">{order.payment.ref}</span>
                           <Button size="sm" variant="outline" onClick={() => navigator.clipboard?.writeText(String(order.payment!.ref))}>คัดลอก</Button>
                         </div>
-                      )}
+                      </div>
+                    )}
+                    {order.couponCode && (
+                      <div className="space-y-1 sm:col-span-2">
+                        <div className="text-sm text-gray-600">คูปองที่ใช้</div>
+                        <div className="inline-flex flex-wrap items-center gap-2">
+                          <Badge className="border border-amber-200 bg-amber-100 text-amber-700">{order.couponCode}</Badge>
+                          {Number(order.couponDiscount) > 0 && (
+                            <span className="text-xs text-gray-600">ลด {formatCurrency(order.couponDiscount)}</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {displayItems.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="text-sm font-medium text-gray-700">รายการสินค้า</div>
+                      <div className="divide-y rounded-lg border bg-gray-50/60">
+                        {displayItems.map((item) => {
+                          const qty = Number(item.quantity || 1)
+                          const unit = Number(item.unitPrice ?? item.totalPrice ?? 0)
+                          const total = Number(item.totalPrice ?? unit * qty)
+                          const key = item.id || `${item.itemType}-${item.itemId}`
+                          return (
+                            <div key={key} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="space-y-1">
+                                <div className="font-medium text-gray-900">{item.title || toItemTypeLabel(item.itemType)}</div>
+                                <div className="text-xs text-gray-500">ประเภท: {toItemTypeLabel(item.itemType)}</div>
+                                <div className="text-xs text-gray-500">จำนวน: {qty}</div>
+                              </div>
+                              <div className="text-right text-sm">
+                                <div className="font-semibold text-gray-900">{formatCurrency(total)}</div>
+                                {qty > 1 && <div className="text-xs text-gray-500">({formatCurrency(unit)} / ชิ้น)</div>}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2 sm:max-w-md">
+                    <div className="text-sm font-medium text-gray-700">สรุปราคา</div>
+                    <div className="overflow-hidden rounded-lg border bg-white">
+                      {summaryRows.map((row, idx) => {
+                        const isLast = idx === summaryRows.length - 1
+                        const common = row.accent ? "py-3 text-sm font-semibold text-gray-900" : "py-2 text-sm text-gray-700"
+                        const border = !isLast ? "border-b" : ""
+                        return (
+                          <div key={`${row.label}-${idx}`} className={`flex items-center justify-between px-4 ${common} ${border}`}>
+                            <span>{row.label}</span>
+                            <span>{row.value}</span>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
 
@@ -495,6 +688,16 @@ export default function OrderSuccessPage() {
                       ) : (
                         <div className="text-xs text-gray-500">ไม่ได้เพิ่มที่อยู่จัดส่ง</div>
                       )}
+                      {(order as any)?.shipping?.status && (
+                        <div className="text-xs text-gray-500">
+                          สถานะจัดส่ง: {(order as any).shipping.status}
+                        </div>
+                      )}
+                      {(order as any)?.shipping?.shippingMethod && (
+                        <div className="text-xs text-gray-500">
+                          ช่องทางจัดส่ง: {(order as any).shipping.shippingMethod}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -505,9 +708,13 @@ export default function OrderSuccessPage() {
                       </Button>
                     )} */}
 
-                    {isCompleted && order.orderType === "COURSE" && courseId && (
+                    {isCompleted && courseId && (
                       <>
-                        <Button onClick={() => router.push(`/profile/my-courses/course/${courseId}`)} className="bg-yellow-400 hover:bg-yellow-500 text-white">
+                        <Button
+                          onClick={() => router.push(`/profile/my-courses/course/${courseId}`)}
+                          className="bg-yellow-400 hover:bg-yellow-500 text-white"
+                          aria-label={courseTitle ? `เข้าเรียน ${courseTitle}` : "เข้าเรียน"}
+                        >
                           เข้าเรียน
                         </Button>
                         {canManualEnroll && (
@@ -528,12 +735,12 @@ export default function OrderSuccessPage() {
                       </>
                     )}
 
-                    {isCompleted && order.orderType === "EBOOK" && (ebookFileUrl || ebookLink) && (
+                    {isCompleted && (ebookItems.length > 0 || order?.ebook) && (ebookFileUrl || ebookLink) && (
                       <>
                         <Button
                           className="bg-yellow-400 hover:bg-yellow-500 text-white"
                           onClick={() => {
-                            const name = `${order.ebook?.title || "ebook"}.pdf`
+                            const name = `${order.ebook?.title || primaryEbookItem?.title || "ebook"}.pdf`
                             const url = `/api/proxy-view?url=${encodeURIComponent(ebookFileUrl || ebookLink || "")}&filename=${encodeURIComponent(name)}`
                             window.open(url, "_blank")
                           }}
@@ -543,7 +750,7 @@ export default function OrderSuccessPage() {
                         <Button
                           variant="outline"
                           onClick={() => {
-                            const name = `${order.ebook?.title || "ebook"}.pdf`
+                            const name = `${order.ebook?.title || primaryEbookItem?.title || "ebook"}.pdf`
                             const url = `/api/proxy-download-pdf?url=${encodeURIComponent(ebookFileUrl || ebookLink || "")}&filename=${encodeURIComponent(name)}`
                             window.open(url, "_blank")
                           }}

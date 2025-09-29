@@ -4,10 +4,11 @@ import { useState, useEffect } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Menu, X, Loader2 } from "lucide-react"
+import { Menu, X, Loader2, ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import LoginModal from "@/components/login-modal"
 import { useAuth } from "@/components/auth-provider"
+import { useCart } from "@/components/cart-provider"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +25,7 @@ export function Navigation() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const pathname = usePathname()
   const { isAuthenticated, user, logout, loading } = useAuth()
+  const { itemCount } = useCart()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   useEffect(() => {
@@ -113,6 +115,19 @@ export function Navigation() {
                   {item.label}
                 </Link>
               ))}
+
+              <Link
+                href="/cart"
+                className="relative ml-4 flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:border-[#004B7D] hover:text-[#004B7D]"
+                aria-label="ตะกร้าสินค้า"
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {itemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[22px] rounded-full bg-[#004B7D] px-1.5 py-[2px] text-center text-xs font-semibold text-white">
+                    {itemCount > 99 ? "99+" : itemCount}
+                  </span>
+                )}
+              </Link>
 
               {loading || isLoggingOut ? (
                 <Button
@@ -207,6 +222,17 @@ export function Navigation() {
                       {item.label}
                     </Link>
                   ))}
+                  <Link
+                    href="/cart"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center justify-between rounded-md bg-gray-100 px-4 py-3 text-base font-medium text-gray-700 transition hover:bg-gray-200"
+                  >
+                    <span>ตะกร้าสินค้า</span>
+                    <span className="flex items-center gap-2 text-sm text-gray-500">
+                      <ShoppingCart className="h-4 w-4" />
+                      {itemCount}
+                    </span>
+                  </Link>
 
                   {loading || isLoggingOut ? (
                     <Button
