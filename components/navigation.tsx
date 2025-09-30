@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import Link from "next/link"
-import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { Menu, X, Loader2, ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -103,15 +102,7 @@ export function Navigation() {
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 lg:h-20">
             <Link href="/" className="flex items-center pl-2">
-              <Image
-                src="/new-logo.png"
-                alt="Logo"
-                width={160}
-                height={160}
-                priority
-                className="h-16 w-auto lg:h-20"
-                sizes="(max-width: 1024px) 128px, 160px"
-              />
+              <img src="/new-logo.png" alt="Logo" className="h-16 lg:h-20" />
             </Link>
 
             <div className="hidden lg:flex items-center space-x-1 pr-10">

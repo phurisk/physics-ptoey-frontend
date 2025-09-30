@@ -107,13 +107,7 @@ export default function AboutTeacher() {
                 >
                   <div className="flex items-start gap-4">
                     <div className="bg-white rounded-lg p-2 shadow-sm flex items-center justify-center w-20 h-20">
-                      <Image
-                        src="/logo/โรงเรียนจุฬาภรณราชวิทยาลัย.png"
-                        alt="โรงเรียนจุฬาภรณราชวิทยาลัย"
-                        width={50}
-                        height={50}
-                        className="h-12 w-12 object-contain"
-                      />
+                      <img src="/logo/โรงเรียนจุฬาภรณราชวิทยาลัย.png" alt="โรงเรียนจุฬาภรณราชวิทยาลัย" width={50} height={50} />
                     </div>
                     <div className="flex-1">
                       <h5 className="font-semibold text-gray-900 mb-1">มัธยมศึกษา</h5>
@@ -132,13 +126,7 @@ export default function AboutTeacher() {
                 >
                   <div className="flex items-start gap-4">
                     <div className="bg-white rounded-lg p-2 shadow-sm flex items-center justify-center w-20 h-20">
-                      <Image
-                        src="/logo/science_chula.png"
-                        alt="โรงเรียนจุฬาภรณราชวิทยาลัย"
-                        width={100}
-                        height={100}
-                        className="h-16 w-16 object-contain"
-                      />
+                      <img src="/logo/science_chula.png" alt="โรงเรียนจุฬาภรณราชวิทยาลัย" width={100} height={100} />
                     </div>
                     <div className="flex-1">
                       <h5 className="font-semibold text-gray-900 mb-1">ปริญญาตรี</h5>
@@ -157,13 +145,7 @@ export default function AboutTeacher() {
                 >
                   <div className="flex items-start gap-4">
                     <div className="bg-white rounded-lg p-2 shadow-sm flex items-center justify-center w-20 h-20">
-                      <Image
-                        src="/logo/CHULA_ENG.png"
-                        alt="โรงเรียนจุฬาภรณราชวิทยาลัย"
-                        width={100}
-                        height={100}
-                        className="h-16 w-16 object-contain"
-                      />
+                      <img src="/logo/CHULA_ENG.png" alt="โรงเรียนจุฬาภรณราชวิทยาลัย" width={100} height={100} />
                     </div>
                     <div className="flex-1">
                       <h5 className="font-semibold text-gray-900 mb-1">ปริญญาโท</h5>
@@ -182,13 +164,7 @@ export default function AboutTeacher() {
                 >
                   <div className="flex items-start gap-4">
                     <div className="bg-white rounded-lg p-2 shadow-sm flex items-center justify-center w-20 h-20">
-                      <Image
-                        src="/logo/มสท.png"
-                        alt="โรงเรียนจุฬาภรณราชวิทยาลัย"
-                        width={100}
-                        height={100}
-                        className="h-16 w-16 object-contain"
-                      />
+                      <img src="/logo/มสท.png" alt="โรงเรียนจุฬาภรณราชวิทยาลัย" width={100} height={100} />
                     </div>
                     <div className="flex-1">
                       <h5 className="font-semibold text-gray-900 mb-1">ปริญญาโท</h5>

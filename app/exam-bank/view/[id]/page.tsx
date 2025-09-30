@@ -1,9 +1,8 @@
 "use client"
 
 import { use, useEffect, useMemo, useState } from "react"
-import dynamic from "next/dynamic"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/sections/footer"
 import { Button } from "@/components/ui/button"
@@ -11,15 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import LoginModal from "@/components/login-modal"
 import { useAuth } from "@/components/auth-provider"
-const PdfViewer = dynamic(() => import("@/components/pdf/pdf-viewer"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-[60vh] items-center justify-center gap-2 rounded-b-2xl bg-white text-gray-600">
-      <Loader2 className="h-5 w-5 animate-spin" />
-      <span>กำลังเตรียมตัวแสดงไฟล์...</span>
-    </div>
-  ),
-})
+import PdfViewer from "@/components/pdf/pdf-viewer"
 
 type ExamDetail = {
   id: string

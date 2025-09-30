@@ -12,7 +12,7 @@ const sarabun = Sarabun({
   weight: ["400", "500", "600", "700"],
   variable: "--font-sarabun",
   display: "swap",
-  preload: true,
+  preload: false,
 })
 
 export const metadata: Metadata = {
