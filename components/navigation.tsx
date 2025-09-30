@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import NextImage from "next/image"
 import { AnimatePresence, motion } from "framer-motion"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -103,7 +102,7 @@ export function Navigation() {
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 lg:h-20">
             <Link href="/" className="flex items-center pl-2">
-              <NextImage src="/new-logo.png" alt="Logo" width={120} height={80} className="h-16 lg:h-20 w-auto" priority />
+              <img src="/new-logo.png" alt="Logo" className="h-16 lg:h-20" />
             </Link>
 
             <div className="hidden lg:flex items-center space-x-1 pr-10">
