@@ -235,23 +235,51 @@ const { toast } = useToast()
           })
         }
         const normalized = normalizePayload(res?.data)
-        if (normalized.items.length || normalized.itemCount === 0) {
-          setState({
-            items: normalized.items,
-            cartId: normalized.cartId,
-            itemCount: normalized.itemCount,
-            subtotal: normalized.subtotal,
+        setState((prev) => {
+          const prevItems = Array.isArray(prev.items) ? prev.items : []
+          const removedItem = prevItems.find((item) => String(item.id) === String(target.cartItemId))
+          const removedQuantity = removedItem?.quantity ?? 1
+          const removedSubtotal = removedItem ? Number(removedItem.totalPrice ?? removedItem.unitPrice * removedItem.quantity) : 0
+
+          const baseState: CartState = {
+            items: prevItems,
+            cartId: normalized.cartId ?? prev.cartId,
+            itemCount: prev.itemCount,
+            subtotal: prev.subtotal,
             loaded: true,
             loading: false,
             error: null,
-          })
-        } else {
-          setState((prev) => ({
-              ...prev,
-            items: prev.items.filter((item) => String(item.id) !== String(target.cartItemId)),
-            itemCount: Math.max(0, prev.itemCount - 1),
-          }))
-        }
+          }
+
+          if (normalized.items.length > 0) {
+            return {
+              ...baseState,
+              items: normalized.items,
+              itemCount: normalized.itemCount,
+              subtotal: normalized.subtotal,
+            }
+          }
+
+          const fallbackItems = prevItems.filter((item) => String(item.id) !== String(target.cartItemId))
+          const fallbackCount = Math.max(0, (prev.itemCount || prevItems.reduce((sum, item) => sum + (item.quantity || 1), 0)) - removedQuantity)
+          const fallbackSubtotal = Math.max(0, (prev.subtotal || prevItems.reduce((sum, item) => sum + Number(item.totalPrice ?? item.unitPrice * item.quantity), 0)) - removedSubtotal)
+
+          if (normalized.itemCount === 0 && (fallbackItems.length === 0 || fallbackCount === 0)) {
+            return {
+              ...baseState,
+              items: [],
+              itemCount: 0,
+              subtotal: 0,
+            }
+          }
+
+          return {
+            ...baseState,
+            items: fallbackItems,
+            itemCount: fallbackCount,
+            subtotal: fallbackSubtotal,
+          }
+        })
         toast({ title: "ลบสินค้าแล้ว", description: "นำสินค้าออกจากตะกร้าเรียบร้อย" })
       } catch (error: any) {
         const message = error?.response?.data?.error || error?.message || "ลบสินค้าไม่สำเร็จ"

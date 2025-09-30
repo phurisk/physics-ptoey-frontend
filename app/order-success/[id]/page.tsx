@@ -429,6 +429,7 @@ export default function OrderSuccessPage() {
   }, [order?.ebook?.fileUrl, order?.ebook?.previewUrl, primaryEbookItem])
 
   const slipUrl = order?.payment?.slipUrl
+  const hasUploadedSlip = !!slipUrl
 
   const itemTypeSummary = useMemo(() => {
     if (displayItems.length === 0) {
@@ -555,9 +556,9 @@ export default function OrderSuccessPage() {
             {(() => {
               const s = (order?.status || "").toUpperCase()
               const ps = (order?.payment?.status || "").toUpperCase()
-              const step2Done = isPaidLikeStatus(s) || isPaidLikeStatus(ps)
+              const step2Done = hasUploadedSlip || isPaidLikeStatus(s) || isPaidLikeStatus(ps)
               const step2Active = ["PENDING", "PENDING_VERIFICATION"].includes(s) || step2Done
-              const step3Done = step2Done
+              const step3Done = hasUploadedSlip || isPaidLikeStatus(s) || isPaidLikeStatus(ps)
               const step2Label = (!step2Done && (s === "PENDING_VERIFICATION" || ps === "PENDING_VERIFICATION")) ? "ตรวจสอบ" : "ชำระเงิน"
               return (
                 <div className="flex items-center gap-3">
@@ -618,6 +619,11 @@ export default function OrderSuccessPage() {
                 </CardHeader>
 
                 <CardContent className="space-y-6">
+                  {hasUploadedSlip && !isCompleted && (
+                    <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                      การสมัครเสร็จสมบูรณ์ <span className="block text-xs sm:text-sm text-green-600">(ระบบกำลังตรวจสอบสลิป ภายใน 24 ชั่วโมงเพื่อเข้าเรียน)</span>
+                    </div>
+                  )}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1">
                       <div className="text-sm text-gray-600">ประเภทสินค้า</div>
