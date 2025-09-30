@@ -7,7 +7,9 @@ const API_PROXY_TARGET = process.env.API_PROXY_TARGET || "http://localhost:3005"
 const nextConfig = {
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
-  images: { unoptimized: true },
+  images: {
+    formats: ["image/avif", "image/webp"],
+  },
 
   webpack(config, { isServer }) {
     config.resolve = config.resolve || {}
