@@ -66,6 +66,21 @@ function buildContentBlocks(content: string): Array<TextBlock | HtmlBlock> {
   return paragraphs.map((value) => ({ type: "text", value }))
 }
 
+function splitParagraphs(text?: string) {
+  if (!text) return []
+  let segments = text
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+  if (segments.length <= 1) {
+    segments = text
+      .split(/\n+/)
+      .map((paragraph) => paragraph.trim())
+      .filter(Boolean)
+  }
+  return segments
+}
+
 async function fetchArticle(slug: string): Promise<ArticleItem | null> {
   const normalizedSlug = normalizeSlug(slug)
   const baseUrl = process.env.API_BASE_URL?.replace(/\/$/, "") || ""
@@ -176,11 +191,17 @@ export default async function ArticleDetailPage({ params }: PageProps) {
     }
   }
   const hasCombinedBlocks = combinedBlocks.length > 0
+  const excerptParagraphs = splitParagraphs(article.excerpt)
+  const fallbackParagraphs = excerptParagraphs.length
+    ? excerptParagraphs
+    : article.excerpt
+      ? [article.excerpt.trim()].filter(Boolean)
+      : []
 
   return (
     <section className="bg-gradient-to-b from-amber-50/70 via-white to-white pb-20">
       <div className="relative isolate overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_#fde68a,_transparent_60%)] opacity-70" />
+        <div className="absolute inset-0 -z-10  opacity-70" />
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="aspect-[81/38] relative mt-10 md:mt-14 overflow-hidden rounded-3xl bg-gray-900 text-white shadow-xl">
             {article.imageDesktop && (
@@ -221,9 +242,15 @@ export default async function ArticleDetailPage({ params }: PageProps) {
                 {article.title}
               </h1>
               {article.excerpt ? (
-                <p className="mt-4 max-w-3xl text-lg text-amber-100/90 text-pretty">
-                  {article.excerpt}
-                </p>
+                <div className="mt-4 max-w-3xl space-y-3 text-lg text-amber-100/90 text-pretty">
+                  {(fallbackParagraphs.length ? fallbackParagraphs : [article.excerpt.trim()].filter(Boolean)).map(
+                    (paragraph, paragraphIdx) => (
+                      <p key={`hero-excerpt-${paragraphIdx}`} className="indent-8">
+                        {paragraph}
+                      </p>
+                    )
+                  )}
+                </div>
               ) : null}
               <div className="mt-8 flex flex-wrap items-center gap-4 text-sm text-amber-100/80">
                 <div className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2">
@@ -239,10 +266,10 @@ export default async function ArticleDetailPage({ params }: PageProps) {
                   แชร์ความรู้ให้เพื่อน ๆ
                 </div>
               </div>
-            </div>
+            </div>  
           </div>
 
-          <article className="mt-12 space-y-10 rounded-3xl bg-white p-6 shadow-xl sm:p-10">
+          <article className="mt-5 space-y-10 rounded-3xl bg-white p-6 sm:p-10">
             {hasCombinedBlocks ? (
               combinedBlocks.map((block, idx) => {
                 if (block.type === "section") {
@@ -267,9 +294,16 @@ export default async function ArticleDetailPage({ params }: PageProps) {
                           </h2>
                         ) : null}
                         {content.description ? (
-                          <p className="text-lg leading-relaxed text-gray-700 text-pretty">
-                            {content.description}
-                          </p>
+                          <div className="space-y-4 text-lg leading-relaxed text-gray-700 text-pretty">
+                            {splitParagraphs(content.description).map((paragraph, paragraphIdx) => (
+                              <p
+                                key={`${content.id}-paragraph-${paragraphIdx}`}
+                                className="indent-8"
+                              >
+                                {paragraph}
+                              </p>
+                            ))}
+                          </div>
                         ) : null}
                       </div>
                     </section>
@@ -286,17 +320,31 @@ export default async function ArticleDetailPage({ params }: PageProps) {
                   )
                 }
 
+                const paragraphs = splitParagraphs(block.value)
                 return (
-                  <p
+                  <div
                     key={`text-block-${idx}`}
-                    className="text-lg leading-relaxed text-gray-700 text-pretty"
+                    className="space-y-4 text-lg leading-relaxed text-gray-700 text-pretty"
                   >
-                    {block.value}
-                  </p>
+                    {(paragraphs.length ? paragraphs : [block.value.trim()]).map((paragraph, paragraphIdx) => (
+                      <p
+                        key={`text-block-${idx}-paragraph-${paragraphIdx}`}
+                        className="indent-8"
+                      >
+                        {paragraph}
+                      </p>
+                    ))}
+                  </div>
                 )
               })
             ) : (
-              <p className="text-lg leading-relaxed text-gray-700 text-pretty">{article.excerpt}</p>
+              <div className="space-y-4 text-lg leading-relaxed text-gray-700 text-pretty">
+                {fallbackParagraphs.map((paragraph, paragraphIdx) => (
+                  <p key={`excerpt-paragraph-${paragraphIdx}`} className="indent-8">
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
             )}
           </article>
         </div>

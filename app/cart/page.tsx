@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Loader2, Minus, Plus, Trash2 } from "lucide-react"
+import { Loader2, Minus, Plus, Trash2, ShoppingCart,CreditCardIcon } from "lucide-react"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -249,12 +249,9 @@ export default function CartPage() {
     <div className="mx-auto max-w-6xl px-4 py-10">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">ตะกร้าสินค้า</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2"><ShoppingCart className="text-[#004B7D] w-9 h-9" />ตะกร้าสินค้า</h1>
           <p className="text-sm text-gray-500">เลือกคอร์สหรืออีบุ๊กที่คุณต้องการ ก่อนดำเนินการชำระเงิน</p>
         </div>
-        <Link href="/courses" className="text-sm text-[#004B7D] hover:underline">
-          เลือกซื้อสินค้าเพิ่ม
-        </Link>
       </div>
 
       {!isAuthenticated && (
@@ -320,8 +317,9 @@ export default function CartPage() {
                       <Button
                         variant="ghost"
                         className="h-9 w-9 rounded-full"
-                        disabled={syncing}
-                        onClick={() => void increase(item.id)}
+                        disabled
+                        title="จำกัดจำนวนสูงสุด 1 รายการต่อบุคคล"
+                        aria-label={`เพิ่มจำนวน ${item.title} สูงสุด 1 รายการต่อบุคคล`}
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
@@ -430,8 +428,9 @@ export default function CartPage() {
                     <Loader2 className="h-4 w-4 animate-spin" /> กำลังดำเนินการ...
                   </span>
                 ) : (
-                  "ไปขั้นตอนชำระเงิน"
-                )}
+                  "ไปขั้นตอนชำระเงิน" 
+                )} 
+                <CreditCardIcon/>
               </Button>
               <Button variant="outline" className="w-full" onClick={() => router.push("/courses")}>เลือกสินค้าเพิ่ม</Button>
             </CardFooter>
