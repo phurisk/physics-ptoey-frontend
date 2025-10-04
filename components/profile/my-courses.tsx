@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { BookOpen, Clock, Check, Loader2 } from "lucide-react"
@@ -53,8 +53,11 @@ export default function MyCourses() {
   const [error, setError] = useState<string | null>(null)
   const [courses, setCourses] = useState<PaidCourse[]>([])
 
- 
+
   const [progressMap, setProgressMap] = useState<Record<string, { percent: number; complete: boolean }>>({})
+  const [reloadKey, setReloadKey] = useState(0)
+  const ensuringRef = useRef(false)
+  const ensuredCourseIdsRef = useRef<Set<string>>(new Set())
 
 
   useEffect(() => {
@@ -74,7 +77,15 @@ export default function MyCourses() {
         })
         const json: MyCoursesResponse = res.data || { success: false, courses: [], count: 0 }
         if ((res.status < 200 || res.status >= 300) || json.success === false) throw new Error((json as any)?.error || "โหลดคอร์สไม่สำเร็จ")
-        if (active) setCourses(json.courses || [])
+        if (active) {
+          setCourses(json.courses || [])
+          if (Array.isArray(json.courses)) {
+            json.courses.forEach((c) => {
+              if (c?.id) ensuredCourseIdsRef.current.add(c.id)
+            })
+          }
+          setError(null)
+        }
       } catch (e: any) {
         if (active) setError(e?.message ?? "โหลดคอร์สไม่สำเร็จ")
       } finally {
@@ -85,7 +96,80 @@ export default function MyCourses() {
     return () => {
       active = false
     }
-  }, [user?.id, authLoading])
+  }, [user?.id, authLoading, reloadKey])
+
+  useEffect(() => {
+    if (!user?.id || authLoading) return
+    if (loading) return
+    if (ensuringRef.current) return
+
+    const ensureEnrollments = async () => {
+      ensuringRef.current = true
+      try {
+        const res = await http.get(`/api/orders`, { params: { userId: user.id } })
+        const payload = res.data
+        const orders: any[] = Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload)
+            ? payload
+            : []
+
+        if (!Array.isArray(orders) || orders.length === 0) return
+
+        const existingCourseIds = new Set(courses.map((c) => c.id))
+        let createdAny = false
+
+        for (const order of orders) {
+          const paymentStatus = String(order?.payment?.status ?? "").toUpperCase()
+          const orderStatus = String(order?.status ?? "").toUpperCase()
+          const isPaid = ["COMPLETED", "APPROVED"].includes(paymentStatus) || orderStatus === "COMPLETED"
+          if (!isPaid) continue
+
+          const courseIds = new Set<string>()
+
+          if (order?.course?.id) courseIds.add(String(order.course.id))
+
+          if (Array.isArray(order?.items)) {
+            for (const item of order.items) {
+              const type = String(item?.itemType ?? "").toUpperCase()
+              if (type !== "COURSE") continue
+              const cid = item?.itemId ?? item?.courseId
+              if (cid) courseIds.add(String(cid))
+            }
+          }
+
+          if (courseIds.size === 0) continue
+
+          for (const courseId of courseIds) {
+            if (!courseId) continue
+            if (existingCourseIds.has(courseId)) {
+              ensuredCourseIdsRef.current.add(courseId)
+              continue
+            }
+            if (ensuredCourseIdsRef.current.has(courseId)) continue
+
+            try {
+              await http.post(`/api/enrollments`, { userId: user.id, courseId })
+              ensuredCourseIdsRef.current.add(courseId)
+              createdAny = true
+            } catch (err) {
+              console.error("Failed to create missing enrollment", err)
+            }
+          }
+        }
+
+        if (createdAny) {
+          setReloadKey((key) => key + 1)
+        }
+      } catch (err) {
+        console.error("Failed to sync enrollments from orders", err)
+      } finally {
+        ensuringRef.current = false
+      }
+    }
+
+    ensureEnrollments()
+  }, [user?.id, authLoading, loading, courses])
 
 
   useEffect(() => {
