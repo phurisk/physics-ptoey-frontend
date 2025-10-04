@@ -32,6 +32,7 @@ export default function CartPage() {
   const [shippingError, setShippingError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [coverMap, setCoverMap] = useState<Record<string, string>>({})
+  const [physicalMap, setPhysicalMap] = useState<Record<string, boolean>>({})
   const [couponDiscount, setCouponDiscount] = useState(0)
   const [couponError, setCouponError] = useState<string | null>(null)
   const [validatingCoupon, setValidatingCoupon] = useState(false)
@@ -46,15 +47,23 @@ export default function CartPage() {
     return items.reduce((sum, item) => sum + (item.unitPrice || 0) * (item.quantity || 1), 0)
   }, [cartSubtotal, items])
   const totalAfterDiscount = useMemo(() => Math.max(0, subtotal - couponDiscount), [subtotal, couponDiscount])
-  const anyPhysical = useMemo(
-    () =>
-      items.some(
-        (item) =>
-          item.itemType.toUpperCase().includes("PHYSICAL") ||
-          Boolean((item as any)?.isPhysical)
-      ),
-    [items]
-  )
+  const anyPhysical = useMemo(() => {
+    return items.some((item) => {
+      const type = String(item?.itemType || item?.type || "").toUpperCase()
+      if (type.includes("PHYSICAL")) return true
+      if (item?.isPhysical) return true
+      if (item?.course?.isPhysical) return true
+      const courseType = String(item?.course?.type || "").toUpperCase()
+      if (courseType.includes("PHYSICAL")) return true
+      const productType = String(item?.productType || "").toUpperCase()
+      if (productType.includes("PHYSICAL")) return true
+      if (type === "COURSE") {
+        const key = `COURSE:${item?.itemId}`
+        if (physicalMap[key]) return true
+      }
+      return false
+    })
+  }, [items, physicalMap])
 
   useEffect(() => {
     let cancelled = false
@@ -63,13 +72,16 @@ export default function CartPage() {
       const ebookIds = new Set<string>()
 
       items.forEach((item) => {
-        if (item.coverImageUrl) return
-        const key = `${item.itemType}:${item.itemId}`
-        if (coverMap[key]) return
-        if (String(item.itemType).toUpperCase() === "COURSE") {
-          if (item.itemId) courseIds.add(item.itemId)
-        } else if (String(item.itemType).toUpperCase() === "EBOOK") {
-          if (item.itemId) ebookIds.add(item.itemId)
+        const type = String(item.itemType).toUpperCase()
+        const key = `${type}:${item.itemId}`
+        if (type === "COURSE") {
+          if (item.itemId && (physicalMap[key] === undefined || (!item.coverImageUrl && !coverMap[key]))) {
+            courseIds.add(item.itemId)
+          }
+        } else if (type === "EBOOK") {
+          if (item.itemId && !item.coverImageUrl && !coverMap[key]) {
+            ebookIds.add(item.itemId)
+          }
         }
       })
 
@@ -80,17 +92,29 @@ export default function CartPage() {
               try {
                 const res = await fetch(`/api/courses/${encodeURIComponent(courseId)}`, { cache: "no-store" })
                 const json = await res.json().catch(() => ({}))
-                return [courseId, json?.data?.coverImageUrl || ""] as const
+                const data = json?.data || {}
+                return {
+                  id: courseId,
+                  cover: data?.coverImageUrl || "",
+                  isPhysical: Boolean(data?.isPhysical),
+                }
               } catch {
-                return [courseId, ""] as const
+                return { id: courseId, cover: "", isPhysical: false }
               }
             })
           )
           if (!cancelled) {
             setCoverMap((prev) => {
               const next = { ...prev }
-              results.forEach(([id, cover]) => {
+              results.forEach(({ id, cover }) => {
                 if (cover) next[`COURSE:${id}`] = cover
+              })
+              return next
+            })
+            setPhysicalMap((prev) => {
+              const next = { ...prev }
+              results.forEach(({ id, isPhysical }) => {
+                if (isPhysical) next[`COURSE:${id}`] = true
               })
               return next
             })
@@ -126,7 +150,7 @@ export default function CartPage() {
     return () => {
       cancelled = true
     }
-  }, [items])
+  }, [items, coverMap, physicalMap])
 
   useEffect(() => {
     setCouponDiscount(0)
@@ -383,6 +407,80 @@ export default function CartPage() {
                 {couponError && <p className="text-xs text-red-500">{couponError}</p>}
                 {couponSuccess && !couponError && <p className="text-xs text-green-600">{couponSuccess}</p>}
               </div>
+              {anyPhysical && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-700">ที่อยู่จัดส่ง</h3>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600" htmlFor="shipping-name">
+                      ชื่อ-นามสกุลผู้รับ
+                    </label>
+                    <Input
+                      id="shipping-name"
+                      placeholder="เช่น นายสมชาย ใจดี"
+                      value={shipping.name}
+                      onChange={(event) => setShipping({ ...shipping, name: event.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600" htmlFor="shipping-phone">
+                      เบอร์โทรติดต่อ
+                    </label>
+                    <Input
+                      id="shipping-phone"
+                      placeholder="เช่น 0812345678"
+                      value={shipping.phone}
+                      onChange={(event) => setShipping({ ...shipping, phone: event.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600" htmlFor="shipping-address">
+                      ที่อยู่จัดส่ง
+                    </label>
+                    <Input
+                      id="shipping-address"
+                      placeholder="เช่น 123/45 หมู่บ้านตัวอย่าง แขวงบางรัก เขตบางรัก"
+                      value={shipping.address}
+                      onChange={(event) => setShipping({ ...shipping, address: event.target.value })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-gray-600" htmlFor="shipping-district">
+                        แขวง / ตำบล
+                      </label>
+                      <Input
+                        id="shipping-district"
+                        placeholder="เช่น สีลม"
+                        value={shipping.district}
+                        onChange={(event) => setShipping({ ...shipping, district: event.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-gray-600" htmlFor="shipping-province">
+                        เขต / อำเภอ
+                      </label>
+                      <Input
+                        id="shipping-province"
+                        placeholder="เช่น บางรัก"
+                        value={shipping.province}
+                        onChange={(event) => setShipping({ ...shipping, province: event.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-gray-600" htmlFor="shipping-postal">
+                        รหัสไปรษณีย์
+                      </label>
+                      <Input
+                        id="shipping-postal"
+                        placeholder="เช่น 10500"
+                        value={shipping.postalCode}
+                        onChange={(event) => setShipping({ ...shipping, postalCode: event.target.value })}
+                      />
+                    </div>
+                  </div>
+                  {shippingError && <p className="text-xs text-red-500">{shippingError}</p>}
+                </div>
+              )}
               <Separator />
               <div className="flex items-center justify-between text-sm text-gray-600">
                 <span>ยอดรวม</span>
@@ -404,23 +502,6 @@ export default function CartPage() {
                 <span>฿{totalAfterDiscount.toLocaleString()}</span>
               </div>
             </CardContent>
-            {anyPhysical && (
-              <>
-                <Separator className="mx-6" />
-                <CardContent className="space-y-2">
-                  <h3 className="text-sm font-semibold text-gray-700">ที่อยู่จัดส่ง</h3>
-                  <Input placeholder="ชื่อผู้รับ" value={shipping.name} onChange={(event) => setShipping({ ...shipping, name: event.target.value })} />
-                  <Input placeholder="เบอร์โทร" value={shipping.phone} onChange={(event) => setShipping({ ...shipping, phone: event.target.value })} />
-                  <Input placeholder="ที่อยู่" value={shipping.address} onChange={(event) => setShipping({ ...shipping, address: event.target.value })} />
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <Input placeholder="แขวง / ตำบล" value={shipping.district} onChange={(event) => setShipping({ ...shipping, district: event.target.value })} />
-                    <Input placeholder="เขต / อำเภอ" value={shipping.province} onChange={(event) => setShipping({ ...shipping, province: event.target.value })} />
-                    <Input placeholder="รหัสไปรษณีย์" value={shipping.postalCode} onChange={(event) => setShipping({ ...shipping, postalCode: event.target.value })} />
-                  </div>
-                  {shippingError && <p className="text-xs text-red-500">{shippingError}</p>}
-                </CardContent>
-              </>
-            )}
             <CardFooter className="flex flex-col gap-3">
               <Button className="w-full bg-[#004B7D] hover:bg-[#00395d]" size="lg" onClick={handleCheckout} disabled={syncing || submitting}>
                 {submitting ? (
