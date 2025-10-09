@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Calendar, Users, Clock, Video, ImageIcon, Radio } from "lucide-react"
+import Player from "@vimeo/player"
 
 type Post = {
   id: string
@@ -23,6 +24,7 @@ function getYouTubeEmbed(url: string) {
     autoplay: "1",
     mute: "1",
     playsinline: "1",
+    enablejsapi: "1",
   })
   return `https://www.youtube-nocookie.com/embed/${id}?${params.toString()}`
 }
@@ -49,14 +51,22 @@ function extractFirstUrl(text?: string | null) {
 export default function LiveSchedulePage() {
   const [videoSrc, setVideoSrc] = useState<string | null>(null)
   const [loadingVideo, setLoadingVideo] = useState(true)
+  const [videoFetched, setVideoFetched] = useState(false)
+  const [videoReloadKey, setVideoReloadKey] = useState(0)
+  const [videoEnded, setVideoEnded] = useState(false)
+  const iframeRef = useRef<HTMLIFrameElement | null>(null)
+  const vimeoPlayerRef = useRef<Player | null>(null)
   const [summaries, setSummaries] = useState<Post[]>([])
   const [loadingSummaries, setLoadingSummaries] = useState(true)
+  const isVimeo = useMemo(() => (videoSrc || "").includes("player.vimeo.com"), [videoSrc])
+  const isYouTube = useMemo(() => (videoSrc || "").includes("youtube") || (videoSrc || "").includes("youtu"), [videoSrc])
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       try {
         setLoadingVideo(true)
+        if (videoReloadKey > 0) setVideoSrc(null)
         const params = new URLSearchParams({ postType: "วิดีโอรอบสด", limit: "1" })
         const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
         const json = await res.json().catch(() => ({}))
@@ -66,13 +76,86 @@ export default function LiveSchedulePage() {
         const embed = url ? getYouTubeEmbed(url) || getVimeoEmbed(url) : null
         if (!cancelled) setVideoSrc(embed)
       } finally {
-        if (!cancelled) setLoadingVideo(false)
+        if (!cancelled) {
+          setLoadingVideo(false)
+          setVideoFetched(true)
+        }
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [videoReloadKey])
+
+  useEffect(() => {
+    setVideoEnded(false)
+  }, [videoSrc, videoReloadKey])
+
+  useEffect(() => {
+    if (!videoSrc || !isVimeo || !iframeRef.current) {
+      if (vimeoPlayerRef.current) {
+        vimeoPlayerRef.current.unload().catch(() => {})
+        vimeoPlayerRef.current = null
+      }
+      return
+    }
+
+    const player = new Player(iframeRef.current, { dnt: true })
+    vimeoPlayerRef.current = player
+
+    const handleEnded = async () => {
+      setVideoEnded(true)
+      try {
+        await player.unload()
+      } catch {}
+    }
+
+    player.on("ended", handleEnded)
+
+    return () => {
+      player.off("ended", handleEnded)
+      player.unload().catch(() => {})
+      if (vimeoPlayerRef.current === player) {
+        vimeoPlayerRef.current = null
+      }
+    }
+  }, [isVimeo, videoSrc, videoReloadKey])
+
+  useEffect(() => {
+    if (!videoSrc || !isYouTube) return
+
+    const handleMessage = (event: MessageEvent) => {
+      if (!iframeRef.current || event.source !== iframeRef.current.contentWindow) return
+      let data = event.data
+      if (typeof data === "string") {
+        try {
+          data = JSON.parse(data)
+        } catch {
+          return
+        }
+      }
+      if (!data || typeof data !== "object") return
+
+      if (data.event === "onReady") {
+        iframeRef.current.contentWindow?.postMessage(
+          JSON.stringify({
+            event: "command",
+            func: "addEventListener",
+            args: ["onStateChange"],
+          }),
+          "*"
+        )
+      }
+      if (data.event === "onStateChange" && data.info === 0) {
+        setVideoEnded(true)
+      }
+    }
+
+    window.addEventListener("message", handleMessage)
+    return () => {
+      window.removeEventListener("message", handleMessage)
+    }
+  }, [isYouTube, videoSrc, videoReloadKey])
 
   useEffect(() => {
     let cancelled = false
@@ -118,6 +201,15 @@ export default function LiveSchedulePage() {
   }, [])
 
   const lineUrl = "https://line.me/ti/p/@csw9917j"
+  const showVideoSection = loadingVideo || videoFetched
+
+  const handleRetryVideo = () => {
+    setLoadingVideo(true)
+    setVideoFetched(false)
+    setVideoSrc(null)
+    setVideoEnded(false)
+    setVideoReloadKey((value) => value + 1)
+  }
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-white via-yellow-50/30 to-white">
@@ -146,43 +238,58 @@ export default function LiveSchedulePage() {
           </div>
         </div>
 
-        <div className="mb-12">
-          <div className="bg-white rounded-2xl shadow-lg p-0 border border-gray-100">
-            <div className="aspect-video bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl overflow-hidden relative group">
-              {loadingVideo && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin"></div>
-                    <p className="text-white/80 text-sm">กำลังโหลดวิดีโอ...</p>
+        {showVideoSection && (
+          <div className="mb-12 flex items-center justify-center">
+            <div className="bg-white rounded-2xl shadow-lg p-0 border border-gray-100">
+              <div className="aspect-video w-200 bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl overflow-hidden relative group">
+                {loadingVideo && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-12 h-12 border-4 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin"></div>
+                      <p className="text-white/80 text-sm">กำลังโหลดวิดีโอ...</p>
+                    </div>
                   </div>
-                </div>
-              )}
-              {videoSrc && (
-                <iframe
-                  src={videoSrc}
-                  className="w-full h-full transition-opacity duration-300"
-                  allowFullScreen
-                  referrerPolicy="no-referrer"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  title="วิดีโอรอบสด"
-                />
-              )}
-              {!videoSrc && !loadingVideo && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <Video className="w-16 h-16 text-white/40 mx-auto mb-4" />
-                    <p className="text-white/80 text-lg font-medium">ไม่พบวิดีโอแนะนำรอบสด</p>
-                    <p className="text-white/60 text-sm mt-2">กรุณาลองใหม่อีกครั้งในภายหลัง</p>
+                )}
+                {videoSrc && (
+                  <iframe
+                    key={videoReloadKey}
+                    ref={iframeRef}
+                    src={videoSrc}
+                    className="w-full h-full transition-opacity duration-300"
+                    allowFullScreen
+                    referrerPolicy="no-referrer"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    title="วิดีโอรอบสด"
+                  />
+                )}
+                {videoSrc && videoEnded && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-black/85 text-white px-6 text-center">
+                    <div className="space-y-2">
+                      <p className="text-lg font-semibold">ชมวิดีโอตัวอย่างจบแล้ว</p>
+                      <p className="text-sm text-white/80">กดปุ่มด้านล่างเพื่อชมซ้ำ</p>
+                    </div>
+                    <Button onClick={handleRetryVideo} className="bg-yellow-400 hover:bg-yellow-500 text-black">
+                      ดูอีกครั้ง
+                    </Button>
                   </div>
+                )}
+                {!videoSrc && !loadingVideo && (
+                  <div className="absolute inset-0 flex items-center justify-center text-white/90 text-center">
+                    <div>
+                      <Video className="w-16 h-16 text-white/70 mx-auto mb-4" />
+                      <p className="text-lg font-medium">ไม่พบวิดีโอแนะนำรอบสด</p>
+                      <p className="text-sm text-white/70 mt-2">กรุณาลองใหม่อีกครั้งในภายหลัง</p>
+                    </div>
+                  </div>
+                )}
+                <div className="inline-flex items-center gap-2 bg-yellow-500/10 text-yellow-600 px-4 py-2 rounded-full text-sm font-medium mb-4 mt-2">
+                  <Radio className="w-4 h-4" />
+                  ถ่ายทอดสดจากโรงเรียน
                 </div>
-              )}
-              <div className="inline-flex items-center gap-2 bg-yellow-500/10 text-yellow-600 px-4 py-2 rounded-full text-sm font-medium mb-4 mt-2">
-                <Radio className="w-4 h-4" />
-                ถ่ายทอดสดจากโรงเรียน
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         <div className="mb-12">
           {loadingSummaries ? (

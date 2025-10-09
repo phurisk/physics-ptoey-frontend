@@ -923,6 +923,34 @@ export default function OrderSuccessPage() {
                         <span className="font-semibold">฿{order.total.toLocaleString()}</span>
                       </div>
                     </div>
+                    <div className="flex flex-col items-center gap-2 pt-2">
+                      <div className="flex w-65 flex-col overflow-hidden rounded-md border bg-white">
+                        <div className="bg-white p-2">
+                          <Image
+                            src="/slip_qr/promptpay.png"
+                            alt="PromptPay"
+                            width={192}
+                            height={64}
+                            className="h-auto w-full object-contain"
+                          />
+                        </div>
+                        <div className="bg-white px-2 pb-2">
+                          <Image
+                            src="/slip_qr/QR_Pic.png"
+                            alt="QR Code สำหรับการโอนเงิน"
+                            width={192}
+                            height={192}
+                            className="h-auto w-full object-contain"
+                          />
+                        </div>
+                        <div className="space-y-1 bg-white px-2 pb-3 text-center text-xs text-gray-600">
+                          <div>กวดวิชาภาษาฟิสิกส์อาจารย์เต้ย</div>
+                          <div>บัญชี บจก. เดอะนิวตัน เอ็ดดูเคชั่น</div>
+                          <div>เลขอ้างอิง: KPS004KB000002221165</div>
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-600 text-center">สแกน QR เพื่อโอนเงิน</span>
+                    </div>
                     <div className="text-xs text-gray-500">หลังโอนแล้ว กรุณาอัพโหลดสลิป ระบบจะตรวจสอบใช้เวลาโดยประมาณ 5-10 นาที</div>
                     <div className="pt-1">
                       <Button className="bg-yellow-400 hover:bg-yellow-500 text-white w-full" onClick={() => setOpenUpload(true)}>

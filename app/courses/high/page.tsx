@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, BookOpen, Clock } from "lucide-react";
 import { useRecommendedCourses } from "@/hooks/use-recommended-courses";
+import Player from "@vimeo/player";
 
 type Post = { id: string; content?: string | null };
 
@@ -16,7 +17,7 @@ function y(url: string) {
     /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\n?#]+)/
   )?.[1];
   return m
-    ? `https://www.youtube-nocookie.com/embed/${m}?rel=0&modestbranding=1`
+    ? `https://www.youtube-nocookie.com/embed/${m}?rel=0&modestbranding=1&enablejsapi=1&playsinline=1`
     : null;
 }
 function v(url: string) {
@@ -36,6 +37,11 @@ function firstUrl(t?: string | null) {
 export default function HighCoursesPage() {
   const [video, setVideo] = useState<string | null>(null);
   const [lv, setLv] = useState(true);
+  const [videoFetched, setVideoFetched] = useState(false);
+  const [videoReloadKey, setVideoReloadKey] = useState(0);
+  const [videoEnded, setVideoEnded] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const vimeoPlayerRef = useRef<Player | null>(null);
   const { courses, loading: lc } = useRecommendedCourses("ม.ปลาย");
   const [sums, setSums] = useState<
     {
@@ -46,12 +52,15 @@ export default function HighCoursesPage() {
     }[]
   >([]);
   const [ls, setLs] = useState(true);
+  const isVimeo = useMemo(() => (video || "").includes("player.vimeo.com"), [video]);
+  const isYouTube = useMemo(() => (video || "").includes("youtube") || (video || "").includes("youtu"), [video]);
 
   useEffect(() => {
     let c = false;
     (async () => {
       try {
         setLv(true);
+        if (videoReloadKey > 0) setVideo(null);
         const p = new URLSearchParams({
           postType: "วิดีโอแนะนำ-ม.ปลาย",
           limit: "1",
@@ -70,13 +79,16 @@ export default function HighCoursesPage() {
         const e = u ? y(u) || v(u) : null;
         if (!c) setVideo(e);
       } finally {
-        if (!c) setLv(false);
+        if (!c) {
+          setLv(false);
+          setVideoFetched(true);
+        }
       }
     })();
     return () => {
       c = true;
     };
-  }, []);
+  }, [videoReloadKey]);
 
   useEffect(() => {
     let c = false;
@@ -137,6 +149,85 @@ export default function HighCoursesPage() {
   }, []);
 
   const line = "https://line.me/ti/p/@csw9917j";
+  const showVideoSection = lv || videoFetched;
+
+  useEffect(() => {
+    setVideoEnded(false);
+  }, [video, videoReloadKey]);
+
+  useEffect(() => {
+    if (!video || !isVimeo || !iframeRef.current) {
+      if (vimeoPlayerRef.current) {
+        vimeoPlayerRef.current.unload().catch(() => {});
+        vimeoPlayerRef.current = null;
+      }
+      return;
+    }
+
+    const player = new Player(iframeRef.current, { dnt: true });
+    vimeoPlayerRef.current = player;
+
+    const handleEnded = async () => {
+      setVideoEnded(true);
+      try {
+        await player.unload();
+      } catch {}
+    };
+
+    player.on("ended", handleEnded);
+
+    return () => {
+      player.off("ended", handleEnded);
+      player.unload().catch(() => {});
+      if (vimeoPlayerRef.current === player) {
+        vimeoPlayerRef.current = null;
+      }
+    };
+  }, [isVimeo, video, videoReloadKey]);
+
+  useEffect(() => {
+    if (!video || !isYouTube) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      if (!iframeRef.current || event.source !== iframeRef.current.contentWindow) return;
+      let data = event.data;
+      if (typeof data === "string") {
+        try {
+          data = JSON.parse(data);
+        } catch {
+          return;
+        }
+      }
+      if (!data || typeof data !== "object") return;
+
+      if (data.event === "onReady") {
+        iframeRef.current.contentWindow?.postMessage(
+          JSON.stringify({
+            event: "command",
+            func: "addEventListener",
+            args: ["onStateChange"],
+          }),
+          "*"
+        );
+      }
+      if (data.event === "onStateChange" && data.info === 0) {
+        setVideoEnded(true);
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => {
+      window.removeEventListener("message", handleMessage);
+    };
+  }, [isYouTube, video, videoReloadKey]);
+
+  const handleRetryVideo = () => {
+    setLv(true);
+    setVideoFetched(false);
+    setVideo(null);
+    setVideoEnded(false);
+    setVideoReloadKey((n) => n + 1);
+  };
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-white via-yellow-50/30 to-white">
@@ -150,47 +241,62 @@ export default function HighCoursesPage() {
           </p>
         </div>
 
-        <div className="mb-16">
-          <div className="aspect-video bg-gray-900 rounded-2xl overflow-hidden relative shadow-2xl border-4 border-yellow-500/20">
-            {video && (
-              <iframe
-                src={video}
-                className="w-full h-full"
-                allowFullScreen
-                referrerPolicy="no-referrer"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                title="วิดีโอแนะนำ ม.ปลาย"
-              />
-            )}
-            {!video && !lv && (
-              <div className="absolute inset-0 flex items-center justify-center text-white/90">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg
-                      className="w-8 h-8 text-white"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                      />
-                    </svg>
+        {showVideoSection && (
+          <div className="mb-16 flex items-center justify-center">
+            <div className="aspect-video w-200 bg-gray-900 rounded-2xl overflow-hidden relative">
+              {video && (
+                <iframe
+                  key={videoReloadKey}
+                  ref={iframeRef}
+                  src={video}
+                  className="w-full h-full"
+                  allowFullScreen
+                  referrerPolicy="no-referrer"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  title="วิดีโอแนะนำ ม.ปลาย"
+                />
+              )}
+              {video && videoEnded && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-black/85 text-white px-6 text-center">
+                  <div className="space-y-2">
+                    <p className="text-lg font-semibold">ชมวิดีโอตัวอย่างจบแล้ว</p>
+                    <p className="text-sm text-white/80">กดปุ่มด้านล่างเพื่อชมซ้ำ</p>
                   </div>
-                  <p className="text-lg">ไม่พบวิดีโอแนะนำ</p>
+                  <Button onClick={handleRetryVideo} className="bg-yellow-400 hover:bg-yellow-500 text-black">
+                    ดูอีกครั้ง
+                  </Button>
                 </div>
-              </div>
-            )}
-            {lv && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
-              </div>
-            )}
+              )}
+              {lv && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
+                </div>
+              )}
+              {!video && !lv && (
+                <div className="absolute inset-0 flex items-center justify-center text-white/90">
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg
+                        className="w-8 h-8 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </div>
+                    <p className="text-lg">ไม่พบวิดีโอแนะนำ</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="mb-16">
           {ls ? (

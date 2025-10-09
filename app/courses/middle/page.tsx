@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -9,12 +9,15 @@ import { Badge } from "@/components/ui/badge"
 import { Users, BookOpen, Clock } from "lucide-react"
 import { useRecommendedCourses } from "@/hooks/use-recommended-courses"
 import { number } from "framer-motion"
+import Player from "@vimeo/player"
 
 type Post = { id: string; title?: string; content?: string | null }
 
 function getYouTubeEmbed(url: string) {
   const id = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\n?#]+)/)?.[1]
-  return id ? `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1` : null
+  return id
+    ? `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1&enablejsapi=1&playsinline=1`
+    : null
 }
 function getVimeoEmbed(url: string) {
   const id = url.match(/(?:vimeo\.com|player\.vimeo\.com)\/(?:video\/)?(\d+)/)?.[1]
@@ -29,17 +32,25 @@ function extractFirstUrl(text?: string | null) {
 export default function MiddleCoursesPage() {
   const [videoSrc, setVideoSrc] = useState<string | null>(null)
   const [loadingVideo, setLoadingVideo] = useState(true)
+  const [videoFetched, setVideoFetched] = useState(false)
+  const [videoReloadKey, setVideoReloadKey] = useState(0)
+  const [videoEnded, setVideoEnded] = useState(false)
+  const iframeRef = useRef<HTMLIFrameElement | null>(null)
+  const vimeoPlayerRef = useRef<Player | null>(null)
   const { courses, loading: loadingCourses } = useRecommendedCourses("ม.ต้น")
   const [summaries, setSummaries] = useState<
     { id: string; desktop?: string | null; mobile?: string | null; title?: string }[]
   >([])
   const [loadingSummaries, setLoadingSummaries] = useState(true)
+  const isVimeo = useMemo(() => (videoSrc || "").includes("player.vimeo.com"), [videoSrc])
+  const isYouTube = useMemo(() => (videoSrc || "").includes("youtube") || (videoSrc || "").includes("youtu"), [videoSrc])
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       try {
         setLoadingVideo(true)
+        if (videoReloadKey > 0) setVideoSrc(null)
         const params = new URLSearchParams({ postType: "วิดีโอแนะนำ-ม.ต้น", limit: "1" })
         const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
         const json = await res.json().catch(() => ({}))
@@ -49,13 +60,86 @@ export default function MiddleCoursesPage() {
         const embed = url ? getYouTubeEmbed(url) || getVimeoEmbed(url) : null
         if (!cancelled) setVideoSrc(embed)
       } finally {
-        if (!cancelled) setLoadingVideo(false)
+        if (!cancelled) {
+          setLoadingVideo(false)
+          setVideoFetched(true)
+        }
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [videoReloadKey])
+
+  useEffect(() => {
+    setVideoEnded(false)
+  }, [videoSrc, videoReloadKey])
+
+  useEffect(() => {
+    if (!videoSrc || !isVimeo || !iframeRef.current) {
+      if (vimeoPlayerRef.current) {
+        vimeoPlayerRef.current.unload().catch(() => {})
+        vimeoPlayerRef.current = null
+      }
+      return
+    }
+
+    const player = new Player(iframeRef.current, { dnt: true })
+    vimeoPlayerRef.current = player
+
+    const handleEnded = async () => {
+      setVideoEnded(true)
+      try {
+        await player.unload()
+      } catch {}
+    }
+
+    player.on("ended", handleEnded)
+
+    return () => {
+      player.off("ended", handleEnded)
+      player.unload().catch(() => {})
+      if (vimeoPlayerRef.current === player) {
+        vimeoPlayerRef.current = null
+      }
+    }
+  }, [isVimeo, videoSrc, videoReloadKey])
+
+  useEffect(() => {
+    if (!videoSrc || !isYouTube) return
+
+    const handleMessage = (event: MessageEvent) => {
+      if (!iframeRef.current || event.source !== iframeRef.current.contentWindow) return
+      let data = event.data
+      if (typeof data === "string") {
+        try {
+          data = JSON.parse(data)
+        } catch {
+          return
+        }
+      }
+      if (!data || typeof data !== "object") return
+
+      if (data.event === "onReady") {
+        iframeRef.current.contentWindow?.postMessage(
+          JSON.stringify({
+            event: "command",
+            func: "addEventListener",
+            args: ["onStateChange"],
+          }),
+          "*"
+        )
+      }
+      if (data.event === "onStateChange" && data.info === 0) {
+        setVideoEnded(true)
+      }
+    }
+
+    window.addEventListener("message", handleMessage)
+    return () => {
+      window.removeEventListener("message", handleMessage)
+    }
+  }, [isYouTube, videoSrc, videoReloadKey])
 
   useEffect(() => {
     let cancelled = false
@@ -100,6 +184,15 @@ export default function MiddleCoursesPage() {
   }, [])
 
   const lineUrl = "https://line.me/ti/p/@csw9917j"
+  const showVideoSection = loadingVideo || videoFetched
+
+  const handleRetryVideo = () => {
+    setLoadingVideo(true)
+    setVideoFetched(false)
+    setVideoSrc(null)
+    setVideoEnded(false)
+    setVideoReloadKey((value) => value + 1)
+  }
 
   return (
     <section className="min-h-screen bg-gradient-to-br from-white via-yellow-50/30 to-white">
@@ -111,37 +204,52 @@ export default function MiddleCoursesPage() {
           </p>
         </div>
 
-        <div className="mb-16">
-          <div className="aspect-video bg-gray-900 rounded-2xl overflow-hidden relative shadow-2xl border-4 border-yellow-500/20">
-            {videoSrc && (
-              <iframe
-                src={videoSrc}
-                className="w-full h-full"
-                allowFullScreen
-                referrerPolicy="no-referrer"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                title="วิดีโอแนะนำ ม.ต้น"
-              />
-            )}
-            {!videoSrc && !loadingVideo && (
-              <div className="absolute inset-0 flex items-center justify-center text-white opacity-80 bg-gray-900/50">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
+        {showVideoSection && (
+          <div className="mb-16 flex items-center justify-center">
+            <div className="aspect-video w-200 bg-gray-900 rounded-2xl overflow-hidden relative">
+              {videoSrc && (
+                <iframe
+                  key={videoReloadKey}
+                  ref={iframeRef}
+                  src={videoSrc}
+                  className="w-full h-full"
+                  allowFullScreen
+                  referrerPolicy="no-referrer"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  title="วิดีโอแนะนำ ม.ต้น"
+                />
+              )}
+              {videoSrc && videoEnded && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-black/85 text-white px-6 text-center">
+                  <div className="space-y-2">
+                    <p className="text-lg font-semibold">ชมวิดีโอแนะนำจบแล้ว</p>
+                    <p className="text-sm text-white/80">กดปุ่มด้านล่างเพื่อชมซ้ำ</p>
                   </div>
-                  <p className="text-lg">ไม่พบวิดีโอแนะนำ</p>
+                  <Button onClick={handleRetryVideo} className="bg-yellow-400 hover:bg-yellow-500 text-black">
+                    ดูอีกครั้ง
+                  </Button>
                 </div>
-              </div>
-            )}
-            {loadingVideo && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
-              </div>
-            )}
+              )}
+              {loadingVideo && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
+                </div>
+              )}
+              {!videoSrc && !loadingVideo && (
+                <div className="absolute inset-0 flex items-center justify-center text-white/90">
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <p className="text-lg">ไม่พบวิดีโอแนะนำ</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="mb-16">
           {loadingSummaries ? (
