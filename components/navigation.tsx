@@ -105,12 +105,12 @@ export function Navigation() {
               <img src="/new-logo.png" alt="Logo" className="h-16 lg:h-20" />
             </Link>
 
-            <div className="hidden lg:flex items-center space-x-1 pr-10">
+            <div className="hidden lg:flex items-center space-x-1 lg:pr-4 xl:pr-10">
               {menuItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`px-4 py-2 text-lg md:text-sm xl:text-lg font-medium transition-colors duration-200 ${pathname === item.href ? "text-[#004B7D] border-b-2 border-[#004B7D]" : "text-gray-700 hover:text-[#004B7D] "}`}
+                  className={`px-3 xl:px-4 py-2 text-sm xl:text-lg font-medium whitespace-nowrap transition-colors duration-200 ${pathname === item.href ? "text-[#004B7D] border-b-2 border-[#004B7D]" : "text-gray-700 hover:text-[#004B7D] "}`}
                 >
                   {item.label}
                 </Link>
@@ -118,7 +118,7 @@ export function Navigation() {
 
               <Link
                 href="/cart"
-                className="relative ml-4 flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:border-[#004B7D] hover:text-[#004B7D]"
+                className="relative lg:ml-2 xl:ml-4 flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:border-[#004B7D] hover:text-[#004B7D]"
                 aria-label="ตะกร้าสินค้า"
               >
                 <ShoppingCart className="h-5 w-5" />
@@ -132,21 +132,21 @@ export function Navigation() {
               {loading || isLoggingOut ? (
                 <Button
                   disabled
-                  className="ml-5 px-4 py-6 bg-gray-200 text-gray-600 rounded-lg text-base font-semibold cursor-not-allowed"
+                  className="lg:ml-3 xl:ml-5 px-3 py-4 xl:px-4 xl:py-6 bg-gray-200 text-gray-600 rounded-lg text-sm xl:text-base font-semibold cursor-not-allowed"
                 >
                   <Loader2 className="mr-2 h-4 w-4 animate-spin " /> {isLoggingOut ? "กำลังออกจากระบบ…" : "กำลังเข้าสู่ระบบ…"}
                 </Button>
               ) : !isAuthenticated ? (
                 <Button
                   onClick={handleLoginClick}
-                  className="ml-5 px-4 py-6 bg-[linear-gradient(180deg,#4eb5ed_0%,#01579b)] hover:bg-[linear-gradient(180deg,#01579b,#00acc1)] text-white rounded-lg text-base font-bold transition-colors duration-200 cursor-pointer"
+                  className="lg:ml-3 xl:ml-5 px-3 py-4 xl:px-4 xl:py-6 bg-[linear-gradient(180deg,#4eb5ed_0%,#01579b)] hover:bg-[linear-gradient(180deg,#01579b,#00acc1)] text-white rounded-lg text-sm xl:text-base font-bold transition-colors duration-200 cursor-pointer"
                 >
                   สมัครเรียนออนไลน์
                 </Button>
               ) : (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="ml-4 inline-flex items-center gap-2 focus:outline-none">
+                    <button className="lg:ml-2 xl:ml-4 inline-flex items-center gap-2 focus:outline-none">
                       <Avatar key={avatarSrc || "fallback"}>
                         {avatarSrc && avatarChecked ? (
                           <AvatarImage
