@@ -47,8 +47,18 @@ http.interceptors.response.use(
   async (error) => {
     const { response, config } = error || {}
     if (!response || !config) throw error
+    const status = response.status
+    const requestUrl = String((config as any).url || "")
+    const isRefreshEndpoint = requestUrl.includes("/api/external/auth/refresh")
 
-    if (response.status === 401 && !(config as any).__isRetryRequest) {
+    if (status === 401 && !(config as any).__isRetryRequest) {
+      if (isRefreshEndpoint) {
+        clearAuth()
+        queue.forEach((p) => p.reject(error))
+        queue = []
+        throw error
+      }
+
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           queue.push({ resolve, reject })
@@ -93,4 +103,3 @@ http.interceptors.response.use(
 )
 
 export default http
-
