@@ -8,6 +8,7 @@ import Script from "next/script"
 import { articles as fallbackArticles } from "@/lib/dummy-data"
 
 const PAGE_SIZE = 9
+const FETCH_LIMIT = 200
 
 export const metadata = {
   title: "บทความทั้งหมด | Physics Ptoey",
@@ -43,7 +44,7 @@ export default async function ArticlesIndexPage({ searchParams }: Props) {
   const raw = searchParams?.page ?? "1"
   const page = Math.max(1, Number.isNaN(Number(raw)) ? 1 : Number(raw))
 
-  const params = new URLSearchParams({ postType: "บทความ" })
+  const params = new URLSearchParams({ postType: "บทความ", limit: String(FETCH_LIMIT) })
   const apiUrl = `${(process.env.API_BASE_URL || "").replace(/\/$/, "")}/api/posts?${params.toString()}`
   let ok = false
   let status = 0

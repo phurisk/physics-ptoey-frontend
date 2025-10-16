@@ -56,7 +56,7 @@ export default function StudentWorksPage() {
     ;(async () => {
       try {
         setLoading(true)
-        const params = new URLSearchParams({ postType: "ผลงานนักเรียน" })
+        const params = new URLSearchParams({ postType: "ผลงานนักเรียน", limit: "20" })
         const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
         if (res.ok) {
           console.log("[StudentWorks] Fetch /api/posts: OK", res.status)

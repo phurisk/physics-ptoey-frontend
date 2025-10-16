@@ -53,7 +53,7 @@ export default function StudentWorksPage() {
     ;(async () => {
       try {
         setLoading(true)
-        const params = new URLSearchParams({ postType: "แผนการเรียน" })
+        const params = new URLSearchParams({ postType: "แผนการเรียน", limit: "20" })
         const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
         const json: any = await res.json().catch(() => null)
         const list = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []

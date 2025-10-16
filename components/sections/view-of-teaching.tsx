@@ -48,11 +48,12 @@ export default function ViewOfTeachingSection({
     const controller = new AbortController()
     ;(async () => {
       try {
-        const res = await http.get(`/api/posts`, { signal: controller.signal })
+        const targetName = "บรรยากาศการเรียน"
+        const params = new URLSearchParams({ postType: targetName, limit: "12" })
+        const res = await http.get(`/api/posts?${params.toString()}`, { signal: controller.signal })
         const json: any = res?.data ?? null
         const list = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
 
-        const targetName = "บรรยากาศการเรียน"
         const now = new Date()
         const typed = list.filter((p: any) => p?.postType?.name === targetName)
         const activePublished = typed.filter((p: any) => {

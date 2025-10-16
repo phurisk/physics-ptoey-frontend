@@ -84,7 +84,7 @@ export default function Reviews() {
     let mounted = true
     ;(async () => {
       try {
-        const params = new URLSearchParams({ postType: "รีวิวจากน้องๆ" })
+        const params = new URLSearchParams({ postType: "รีวิวจากน้องๆ", limit: "24" })
         const res = await http.get(`/api/posts?${params.toString()}`)
 
         const json: any = res.data || null

@@ -52,7 +52,7 @@ export default function Articles() {
     let mounted = true
     ;(async () => {
       try {
-        const params = new URLSearchParams({ postType: "บทความ" })
+        const params = new URLSearchParams({ postType: "บทความ", featured: "true", limit: "12" })
         const res = await http.get(`/api/posts?${params.toString()}`)
         if (!mounted) return
 

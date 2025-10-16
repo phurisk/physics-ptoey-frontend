@@ -190,7 +190,7 @@ export default function AboutPage() {
     let mounted = true
       ; (async () => {
         try {
-          const params = new URLSearchParams({ postType: "บรรยากาศการเรียน" })
+          const params = new URLSearchParams({ postType: "บรรยากาศการเรียน", limit: "20" })
           const res = await fetch(`/api/posts?${params.toString()}`, { cache: "no-store" })
           if (res.ok) {
             console.log("[About] Fetch /api/posts: OK", res.status)

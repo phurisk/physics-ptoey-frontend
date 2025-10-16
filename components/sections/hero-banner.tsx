@@ -39,11 +39,12 @@ export default function HeroBanner() {
     let isMounted = true
     async function loadBannerPosts() {
       try {
-        const res = await http.get(`/api/posts`)
+        const targetName = "ป้ายประกาศหลัก"
+        const params = new URLSearchParams({ postType: targetName, limit: "10" })
+        const res = await http.get(`/api/posts?${params.toString()}`)
         const json: any = res.data || null
 
         const items = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
-        const targetName = "ป้ายประกาศหลัก"
         const typed = items.filter((p: any) => p?.postType?.name === targetName)
 
         const now = new Date()

@@ -32,6 +32,8 @@ type ArticleItem = {
   postContents: ArticleContentBlock[]
 }
 
+const FETCH_LIMIT = 200
+
 function deriveExcerpt(input?: string, max = 160) {
   if (!input) return ""
   const text = String(input)
@@ -84,7 +86,7 @@ function splitParagraphs(text?: string) {
 async function fetchArticle(slug: string): Promise<ArticleItem | null> {
   const normalizedSlug = normalizeSlug(slug)
   const baseUrl = process.env.API_BASE_URL?.replace(/\/$/, "") || ""
-  const params = new URLSearchParams({ postType: "บทความ" })
+  const params = new URLSearchParams({ postType: "บทความ", limit: String(FETCH_LIMIT) })
   const apiUrl = baseUrl ? `${baseUrl}/api/posts?${params.toString()}` : `/api/posts?${params.toString()}`
   try {
     const res = await fetch(apiUrl, { cache: "no-store" })

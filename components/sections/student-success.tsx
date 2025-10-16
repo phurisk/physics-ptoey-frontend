@@ -86,7 +86,7 @@ export default function StudentSuccess() {
     let mounted = true
     ;(async () => {
       try {
-        const params = new URLSearchParams({ postType: "ความสำเร็จลูกศิษย์" })
+        const params = new URLSearchParams({ postType: "ความสำเร็จลูกศิษย์", limit: "24" })
         const res = await http.get(`/api/posts?${params.toString()}`)
         const json: any = res.data || null
         const items = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []

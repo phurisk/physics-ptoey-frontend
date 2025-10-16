@@ -128,7 +128,7 @@ export default function TeachingVideos() {
     let mounted = true
     ;(async () => {
       try {
-        const params = new URLSearchParams({ postType: "วิดีโอแนะนำ-หน้าแรก" })
+        const params = new URLSearchParams({ postType: "วิดีโอแนะนำ-หน้าแรก", limit: "12" })
         const res = await http.get(`/api/posts?${params.toString()}`)
         const json: any = res.data ?? null
         const list: any[] = Array.isArray(json)
