@@ -7,7 +7,24 @@ const API_PROXY_TARGET = process.env.API_PROXY_TARGET || "http://localhost:3005"
 const nextConfig = {
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
-  images: { unoptimized: true },
+  images: { 
+    unoptimized: true,
+    domains: ['img.youtube.com', 'i.ytimg.com']
+  },
+
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Permissions-Policy',
+            value: 'autoplay=*, fullscreen=*, picture-in-picture=*'
+          },
+        ],
+      },
+    ]
+  },
 
   webpack(config, { isServer }) {
     config.resolve = config.resolve || {}

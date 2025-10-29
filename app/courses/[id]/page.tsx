@@ -19,6 +19,7 @@ import { useCart } from "@/components/cart-provider"
 import { Textarea } from "@/components/ui/textarea"
 import Player from "@vimeo/player"
 import { AspectRatio } from "@/components/ui/aspect-ratio"
+import SimpleYouTubePlayer from "@/components/simple-youtube-player"
 
 const API_BASE = (process.env.NEXT_PUBLIC_ELEARNING_BASE_URL || "").replace(/\/$/, "");
 
@@ -39,7 +40,15 @@ function Skeleton({ className = "" }: { className?: string }) {
 
 function getYouTubeEmbedUrl(url: string) {
   const id = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\n?#]+)/)?.[1]
-  return id ? `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1` : null
+  if (!id) return null
+  const params = new URLSearchParams({
+    rel: '0',
+    modestbranding: '1',
+    enablejsapi: '1',
+    playsinline: '1',
+    origin: typeof window !== 'undefined' ? window.location.origin : ''
+  })
+  return `https://www.youtube-nocookie.com/embed/${id}?${params.toString()}`
 }
 function getVimeoEmbedUrl(url: string) {
   const id = url.match(/(?:vimeo\.com|player\.vimeo\.com)\/(?:video\/)?(\d+)/)?.[1]
@@ -721,33 +730,54 @@ export default function CourseDetailPage() {
                     <AspectRatio ratio={16 / 9}>
                       <div className="group relative h-full w-full overflow-hidden rounded-2xl ring-1 ring-black/5 shadow-lg bg-black">
                     {introSrc ? (
-                      <>
-                        <iframe
-                          key={isIntroVimeo ? `intro-${introEmbedKey}` : "intro"}
-                          ref={introFrameRef}
-                          src={introSrc}
-                          className={`absolute inset-0 h-full w-full transition-opacity ${isIntroVimeo && introReplayVisible ? "pointer-events-none opacity-0" : "opacity-100"}`}
-                          width="100%"
-                          height="100%"
-                          style={{ border: 0, display: "block" }}
-                          allowFullScreen
-                          referrerPolicy="no-referrer"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                          title={`${course.title} - แนะนำคอร์ส`}
-                          loading="lazy"
-                        />
-                        {isIntroVimeo && introReplayVisible && (
-                          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-black/90 text-white p-4">
-                            <div className="text-center space-y-2">
-                              <p className="text-lg font-semibold">ชมวิดีโอตัวอย่างจบแล้ว</p>
-                              <p className="text-sm text-white/80">กดปุ่มด้านล่างเพื่อชมซ้ำ</p>
-                            </div>
-                            <Button onClick={handleIntroReplay} className="bg-yellow-400 hover:bg-yellow-500 text-black">
-                              ดูอีกครั้ง
-                            </Button>
-                          </div>
-                        )}
-                      </>
+                      (() => {
+                        // Extract YouTube ID from intro video URL
+                        const extractYouTubeId = (url: string) => {
+                          const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+                          return match ? match[1] : null;
+                        };
+
+                        const youtubeId = extractYouTubeId(introSrc);
+
+                        if (youtubeId) {
+                          return (
+                            <SimpleYouTubePlayer 
+                              videoId={youtubeId} 
+                              title={`${course.title} - แนะนำคอร์ส`}
+                            />
+                          );
+                        }
+
+                        // Fallback for non-YouTube videos (Vimeo, etc.)
+                        return (
+                          <>
+                            <iframe
+                              key={isIntroVimeo ? `intro-${introEmbedKey}` : "intro"}
+                              ref={introFrameRef}
+                              src={introSrc}
+                              className={`absolute inset-0 h-full w-full transition-opacity ${isIntroVimeo && introReplayVisible ? "pointer-events-none opacity-0" : "opacity-100"}`}
+                              width="100%"
+                              height="100%"
+                              style={{ border: 0, display: "block" }}
+                              allowFullScreen
+                              allow="autoplay; fullscreen"
+                              title={`${course.title} - แนะนำคอร์ส`}
+                              loading="lazy"
+                            />
+                            {isIntroVimeo && introReplayVisible && (
+                              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-black/90 text-white p-4">
+                                <div className="text-center space-y-2">
+                                  <p className="text-lg font-semibold">ชมวิดีโอตัวอย่างจบแล้ว</p>
+                                  <p className="text-sm text-white/80">กดปุ่มด้านล่างเพื่อชมซ้ำ</p>
+                                </div>
+                                <Button onClick={handleIntroReplay} className="bg-yellow-400 hover:bg-yellow-500 text-black">
+                                  ดูอีกครั้ง
+                                </Button>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()
                     ) : (
                       <>
                         <Image

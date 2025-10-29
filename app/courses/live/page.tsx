@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Calendar, Users, Clock, Video, ImageIcon, Radio } from "lucide-react"
 import Player from "@vimeo/player"
+import SimpleYouTubePlayer from "@/components/simple-youtube-player"
 
 type Post = {
   id: string
@@ -25,6 +26,7 @@ function getYouTubeEmbed(url: string) {
     mute: "1",
     playsinline: "1",
     enablejsapi: "1",
+    origin: typeof window !== 'undefined' ? window.location.origin : ''
   })
   return `https://www.youtube-nocookie.com/embed/${id}?${params.toString()}`
 }
@@ -250,18 +252,37 @@ export default function LiveSchedulePage() {
                     </div>
                   </div>
                 )}
-                {videoSrc && (
-                  <iframe
-                    key={videoReloadKey}
-                    ref={iframeRef}
-                    src={videoSrc}
-                    className="w-full h-full transition-opacity duration-300"
-                    allowFullScreen
-                    referrerPolicy="no-referrer"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    title="วิดีโอรอบสด"
-                  />
-                )}
+                {videoSrc && (() => {
+                  // Extract YouTube ID from video URL
+                  const extractYouTubeId = (url: string) => {
+                    const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+                    return match ? match[1] : null;
+                  };
+
+                  const youtubeId = extractYouTubeId(videoSrc);
+
+                  if (youtubeId) {
+                    return (
+                      <SimpleYouTubePlayer 
+                        videoId={youtubeId} 
+                        title="วิดีโอรอบสด"
+                      />
+                    );
+                  }
+
+                  // Fallback for non-YouTube videos
+                  return (
+                    <iframe
+                      key={videoReloadKey}
+                      ref={iframeRef}
+                      src={videoSrc}
+                      className="w-full h-full transition-opacity duration-300"
+                      allowFullScreen
+                      allow="autoplay; fullscreen"
+                      title="วิดีโอรอบสด"
+                    />
+                  );
+                })()}
                 {videoSrc && videoEnded && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-black/85 text-white px-6 text-center">
                     <div className="space-y-2">

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users, BookOpen, Clock } from "lucide-react";
 import { useRecommendedCourses } from "@/hooks/use-recommended-courses";
 import Player from "@vimeo/player";
+import SimpleYouTubePlayer from "@/components/simple-youtube-player";
 
 type Post = { id: string; content?: string | null };
 
@@ -244,56 +245,70 @@ export default function HighCoursesPage() {
         {showVideoSection && (
           <div className="mb-16 flex items-center justify-center">
             <div className="aspect-video w-200 bg-gray-900 rounded-2xl overflow-hidden relative">
-              {video && (
-                <iframe
-                  key={videoReloadKey}
-                  ref={iframeRef}
-                  src={video}
-                  className="w-full h-full"
-                  allowFullScreen
-                  referrerPolicy="no-referrer"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  title="วิดีโอแนะนำ ม.ปลาย"
-                />
-              )}
-              {video && videoEnded && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-black/85 text-white px-6 text-center">
-                  <div className="space-y-2">
-                    <p className="text-lg font-semibold">ชมวิดีโอตัวอย่างจบแล้ว</p>
-                    <p className="text-sm text-white/80">กดปุ่มด้านล่างเพื่อชมซ้ำ</p>
-                  </div>
-                  <Button onClick={handleRetryVideo} className="bg-yellow-400 hover:bg-yellow-500 text-black">
-                    ดูอีกครั้ง
-                  </Button>
-                </div>
-              )}
-              {lv && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
-                </div>
-              )}
-              {!video && !lv && (
-                <div className="absolute inset-0 flex items-center justify-center text-white/90">
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <svg
-                        className="w-8 h-8 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                        />
-                      </svg>
+              {(() => {
+                // Extract YouTube ID from video URL
+                const extractYouTubeId = (url: string) => {
+                  const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+                  return match ? match[1] : null;
+                };
+
+                const youtubeId = video ? extractYouTubeId(video) : null;
+
+                if (youtubeId) {
+                  return (
+                    <SimpleYouTubePlayer 
+                      videoId={youtubeId} 
+                      title="วิดีโอแนะนำ ม.ปลาย"
+                    />
+                  );
+                }
+
+                // Fallback for non-YouTube videos or loading states
+                if (video && !youtubeId) {
+                  return (
+                    <iframe
+                      key={videoReloadKey}
+                      ref={iframeRef}
+                      src={video}
+                      className="w-full h-full"
+                      allowFullScreen
+                      allow="autoplay; fullscreen"
+                      title="วิดีโอแนะนำ ม.ปลาย"
+                    />
+                  );
+                }
+
+                if (lv) {
+                  return (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
                     </div>
-                    <p className="text-lg">ไม่พบวิดีโอแนะนำ</p>
+                  );
+                }
+
+                return (
+                  <div className="absolute inset-0 flex items-center justify-center text-white/90">
+                    <div className="text-center">
+                      <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg
+                          className="w-8 h-8 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                          />
+                        </svg>
+                      </div>
+                      <p className="text-lg">ไม่พบวิดีโอแนะนำ</p>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           </div>
         )}
