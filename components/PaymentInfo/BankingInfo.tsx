@@ -18,10 +18,7 @@ export default function BankingInfo() {
           <Button size="sm" variant="outline" onClick={() => navigator.clipboard?.writeText("บริษัท เดอะนิวตัน เอ็ดดูเคชั่น จำกัด")}>คัดลอก</Button>
         </div>
       </div>
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-        <span className="text-gray-700">คอร์ส</span>
-        <span className="font-semibold text-green-600">PHYSICS P'TOEY</span>
-      </div>
+     
     </div>
   );
 }
