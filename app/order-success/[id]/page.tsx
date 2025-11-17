@@ -1195,6 +1195,7 @@ export default function OrderSuccessPage() {
                           alt="สลิปโอนเงิน"
                           fill
                           className="object-cover"
+                          sizes="(max-width: 640px) 50vw, 160px"
                         />
                       </div>
                       <a
@@ -1265,6 +1266,7 @@ export default function OrderSuccessPage() {
                           alt="ธนาคารกสิกรไทย"
                           fill
                           className="object-contain"
+                          sizes="140px"
                         />
                       </div>
                       <Badge className="bg-yellow-400 text-white">

@@ -302,7 +302,13 @@ export default function MyBooksPage() {
                   <Card key={k} className="overflow-hidden">
                     <CardContent className="p-0">
                       <div className="aspect-[2/3] relative bg-white">
-                        <Image src={cover} alt={title} fill className="object-contain" />
+                        <Image
+                          src={cover}
+                          alt={title}
+                          fill
+                          className="object-contain"
+                          sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 16rem"
+                        />
                       </div>
                       <div className="p-4 space-y-3">
                         <div className="font-semibold text-gray-900 line-clamp-2">{title}</div>
