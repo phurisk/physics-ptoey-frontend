@@ -307,6 +307,7 @@ export default function TeachingVideos() {
                     alt={video.title}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 640px"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.src = '/placeholder.svg?height=200&width=350';

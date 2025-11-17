@@ -371,6 +371,7 @@ export default function Books() {
                         alt={book.title}
                         fill
                         className="object-cover group-hover:scale-102 transition-transform duration-300"
+                        sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 25vw"
                       />
 
                       <Badge

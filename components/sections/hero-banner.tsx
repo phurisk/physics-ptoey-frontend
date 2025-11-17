@@ -11,15 +11,18 @@ type Slide = {
   mobile: string   
 }
 
+const fallbackSlideData: Slide[] = (fallbackSlides || []).map((s: any, idx: number) => ({
+  id: s?.id ?? idx,
+  desktop: s?.image || "",
+  mobile: s?.image || "",
+}))
+
 export default function HeroBanner() {
   const [currentSlide, setCurrentSlide] = useState(0)
-  const [slides, setSlides] = useState<Slide[]>([])
-  const [loading, setLoading] = useState(true)
-
- 
+  const [slides, setSlides] = useState<Slide[]>(() => fallbackSlideData)
+  const [loading, setLoading] = useState(fallbackSlideData.length === 0)
   const [isMobile, setIsMobile] = useState(false)
 
- 
   useEffect(() => {
     if (typeof window === "undefined") return
     const mql = window.matchMedia("(max-width: 767px)")
@@ -66,25 +69,9 @@ export default function HeroBanner() {
         if (mapped.length > 0) {
           setSlides(mapped)
           setCurrentSlide(0)
-        } else {
-          const fb: Slide[] = (fallbackSlides || []).map((s: any, idx: number) => ({
-            id: s?.id ?? idx,
-            desktop: s?.image || "",
-            mobile: s?.image || "",
-          }))
-          setSlides(fb)
-          setCurrentSlide(0)
         }
       } catch {
-        if (isMounted) {
-          const fb: Slide[] = (fallbackSlides || []).map((s: any, idx: number) => ({
-            id: s?.id ?? idx,
-            desktop: s?.image || "",
-            mobile: s?.image || "",
-          }))
-          setSlides(fb)
-          setCurrentSlide(0)
-        }
+        // keep fallback slides
       } finally {
         if (isMounted) setLoading(false)
       }
@@ -122,7 +109,7 @@ export default function HeroBanner() {
               alt="Hero Banner"
               fill
               className="object-contain banner-image"
-              sizes="100vw"
+              sizes="(max-width: 767px) 100vw, (max-width: 1280px) 90vw, 1280px"
               quality={70}
               fetchPriority={currentSlide === 0 ? "high" : undefined}
               priority={currentSlide === 0}
