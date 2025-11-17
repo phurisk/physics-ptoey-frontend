@@ -7,19 +7,26 @@ const API_PROXY_TARGET = process.env.API_PROXY_TARGET || "http://localhost:3005"
 const nextConfig = {
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
-  images: { 
-    unoptimized: true,
-    domains: ['img.youtube.com', 'i.ytimg.com']
+  images: {
+    formats: ["image/avif", "image/webp"],
+    qualities: [60, 70, 80, 90],
+    remotePatterns: [
+      { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
+      { protocol: "https", hostname: "*.vercel.app" },
+      { protocol: "https", hostname: "res.cloudinary.com" },
+      { protocol: "https", hostname: "img.youtube.com" },
+    ],
+    domains: ["img.youtube.com", "i.ytimg.com"],
   },
 
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: "/(.*)",
         headers: [
           {
-            key: 'Permissions-Policy',
-            value: 'autoplay=*, fullscreen=*, picture-in-picture=*'
+            key: "Permissions-Policy",
+            value: "autoplay=*, fullscreen=*, picture-in-picture=*",
           },
         ],
       },
