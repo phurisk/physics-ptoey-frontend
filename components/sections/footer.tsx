@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { Mail, MapPin, Clock } from "lucide-react"
 import { SiFacebook, SiInstagram, SiTiktok, SiLine } from "react-icons/si"
 
@@ -48,7 +49,14 @@ export function Footer() {
           <div className="lg:col-span-2">
             <div className="flex items-center space-x-2 mb-6">
               <div className="w-12 h-12 rounded-lg flex items-center justify-center">
-                <img src="/new-logo.png" alt="Logo" className="w-full h-full" />
+                <Image
+                  src="/new-logo.png"
+                  alt="Logo"
+                  width={48}
+                  height={48}
+                  className="w-full h-full object-contain"
+                  sizes="48px"
+                />
               </div>
               <div>
                 <h3 className="text-xl font-bold">ฟิสิกส์พี่เต้ย</h3>

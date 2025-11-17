@@ -287,6 +287,7 @@ export default function MiddleCoursesPage() {
                           alt={item.title || "summary"}
                           fill
                           className="object-contain hidden md:block"
+                          sizes="(max-width: 1024px) 100vw, 283px"
                         />
                       )}
                       {item.mobile ? (
@@ -295,9 +296,16 @@ export default function MiddleCoursesPage() {
                           alt={item.title || "summary"}
                           fill
                           className="object-contain md:hidden"
+                          sizes="(max-width: 768px) 100vw, 200px"
                         />
                       ) : !item.desktop ? (
-                        <Image src="/placeholder.svg" alt="summary" fill className="object-contain" />
+                        <Image
+                          src="/placeholder.svg"
+                          alt="summary"
+                          fill
+                          className="object-contain"
+                          sizes="(max-width: 768px) 100vw, 200px"
+                        />
                       ) : null}
                     </div>
                   </CardContent>
@@ -353,12 +361,13 @@ export default function MiddleCoursesPage() {
               <Card key={course.id} className="h-full hover:shadow-xl transition-shadow duration-300 group pt-0">
                 <CardContent className="p-0">
                   <div className="aspect-video relative overflow-hidden rounded-t-lg">
-                    <Image
-                      src={course.coverImageUrl || "/placeholder.svg?height=200&width=350"}
-                      alt={course.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                      <Image
+                        src={course.coverImageUrl || "/placeholder.svg?height=200&width=350"}
+                        alt={course.title}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      />
                     <div className="absolute top-4 left-4">
                       <Badge className="bg-yellow-400 text-white">{course.category?.name ?? "คอร์ส"}</Badge>
                     </div>

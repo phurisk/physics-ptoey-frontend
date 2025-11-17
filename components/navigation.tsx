@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { Menu, X, Loader2, ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -60,22 +61,28 @@ export function Navigation() {
   const [avatarChecked, setAvatarChecked] = useState(false)
 
   useEffect(() => {
+    let active = true
     setAvatarChecked(false)
     if (!rawAvatarUrl || typeof rawAvatarUrl !== "string") {
       setAvatarSrc(null)
       setAvatarChecked(true)
       return
     }
-    const img = new Image()
+    const img = new window.Image()
     img.onload = () => {
+      if (!active) return
       setAvatarSrc(rawAvatarUrl)
       setAvatarChecked(true)
     }
     img.onerror = () => {
+      if (!active) return
       setAvatarSrc(null)
       setAvatarChecked(true)
     }
     img.src = rawAvatarUrl
+    return () => {
+      active = false
+    }
   }, [rawAvatarUrl])
 
   const displayName =
@@ -102,7 +109,15 @@ export function Navigation() {
         <div className="mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 lg:h-20">
             <Link href="/" className="flex items-center pl-2">
-              <img src="/new-logo.png" alt="Logo" className="h-16 lg:h-20" />
+              <Image
+                src="/new-logo.png"
+                alt="Logo"
+                width={80}
+                height={80}
+                className="h-16 lg:h-20 w-auto"
+                sizes="(max-width: 1024px) 64px, 80px"
+                priority
+              />
             </Link>
 
             <div className="hidden lg:flex items-center space-x-1 lg:pr-4 xl:pr-10">

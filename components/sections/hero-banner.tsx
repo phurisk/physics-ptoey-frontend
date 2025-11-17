@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import { bannerSlides as fallbackSlides } from "@/lib/dummy-data"
 import http from "@/lib/http"
 
 type Slide = {
@@ -11,16 +10,10 @@ type Slide = {
   mobile: string   
 }
 
-const fallbackSlideData: Slide[] = (fallbackSlides || []).map((s: any, idx: number) => ({
-  id: s?.id ?? idx,
-  desktop: s?.image || "",
-  mobile: s?.image || "",
-}))
-
 export default function HeroBanner() {
   const [currentSlide, setCurrentSlide] = useState(0)
-  const [slides, setSlides] = useState<Slide[]>(() => fallbackSlideData)
-  const [loading, setLoading] = useState(fallbackSlideData.length === 0)
+  const [slides, setSlides] = useState<Slide[]>([])
+  const [loading, setLoading] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
@@ -69,9 +62,11 @@ export default function HeroBanner() {
         if (mapped.length > 0) {
           setSlides(mapped)
           setCurrentSlide(0)
+        } else {
+          setSlides([])
         }
       } catch {
-        // keep fallback slides
+        if (isMounted) setSlides([])
       } finally {
         if (isMounted) setLoading(false)
       }

@@ -785,6 +785,7 @@ export default function CourseDetailPage() {
                           alt={course.title}
                           fill
                           className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          sizes="(max-width: 768px) 100vw, 640px"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/25 to-transparent" />
                         <div className="absolute inset-0 flex items-center justify-center">

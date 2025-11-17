@@ -9,7 +9,7 @@ import { Toaster } from "@/components/ui/toaster"
 
 const sarabun = Sarabun({
   subsets: ["thai", "latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "700"],
   variable: "--font-sarabun",
   display: "swap",
   preload: false,

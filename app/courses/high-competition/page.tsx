@@ -437,15 +437,16 @@ export default function HighCompetitionCoursesPage() {
               >
                 <CardContent className="p-0">
                   <div className="aspect-video relative overflow-hidden rounded-t-lg">
-                    <Image
-                      src={
-                        course.coverImageUrl ||
-                        "/placeholder.svg?height=200&width=350"
-                      }
-                      alt={course.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                        <Image
+                          src={
+                            course.coverImageUrl ||
+                            "/placeholder.svg?height=200&width=350"
+                          }
+                          alt={course.title}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        />
                     <div className="absolute top-4 left-4">
                       <Badge className="bg-yellow-400 text-white">
                         {course.category?.name ?? "คอร์ส"}

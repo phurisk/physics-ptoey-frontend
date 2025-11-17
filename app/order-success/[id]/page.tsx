@@ -859,7 +859,13 @@ export default function OrderSuccessPage() {
                   {slipUrl && (
                     <div className="flex flex-wrap items-center gap-4">
                       <div className="relative h-24 w-40 overflow-hidden rounded border">
-                        <Image src={slipUrl} alt="สลิปโอนเงิน" fill className="object-cover" />
+                        <Image
+                          src={slipUrl}
+                          alt="สลิปโอนเงิน"
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 640px) 50vw, 160px"
+                        />
                       </div>
                       <a href={slipUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">
                         เปิดสลิปต้นฉบับ
@@ -899,7 +905,13 @@ export default function OrderSuccessPage() {
                   <CardContent className="space-y-4">
                     <div className="flex flex-wrap items-center gap-3">
                       <div className="relative h-6 w-[140px]">
-                        <Image src="/kbank-logo.png" alt="ธนาคารกสิกรไทย" fill className="object-contain" />
+                        <Image
+                          src="/kbank-logo.png"
+                          alt="ธนาคารกสิกรไทย"
+                          fill
+                          className="object-contain"
+                          sizes="140px"
+                        />
                       </div>
                       <Badge className="bg-yellow-400 text-white">โอนผ่าน Mobile Banking</Badge>
                     </div>
