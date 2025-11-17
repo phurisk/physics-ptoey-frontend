@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Image from "next/image"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Root as VisuallyHidden } from "@radix-ui/react-visually-hidden"
 import http from "@/lib/http"
@@ -119,7 +119,9 @@ export default function PopupPromotion() {
 
         <div className="p-5 space-y-4">
           {data?.description && (
-            <p className="text-sm text-gray-600 leading-relaxed">{data.description}</p>
+            <DialogDescription asChild>
+              <p className="text-sm text-gray-600 leading-relaxed">{data.description}</p>
+            </DialogDescription>
           )}
 
           <div className="flex items-center justify-between gap-3 flex-wrap">
