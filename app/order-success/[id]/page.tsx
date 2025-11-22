@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import Image from "next/image"
-import { CheckCircle2, Clock, AlertCircle, FileText, RefreshCw, MapPin } from "lucide-react"
+import { CheckCircle2, Clock, AlertCircle, FileText, RefreshCw, MapPin, Download } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 
 type OrderItem = {
@@ -846,6 +846,55 @@ export default function OrderSuccessPage() {
 
             
             <div>
+              {(isCompleted || hasUploadedSlip) && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
+                  <div className="flex flex-col items-center gap-6">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="h-8 w-8 text-green-600" />
+                      <div className="text-center">
+                        <h3 className="text-lg font-semibold text-green-800">
+                          {isCompleted ? "การชำระเงินสำเร็จ!" : "อัพโหลดสลิปสำเร็จ!"}
+                        </h3>
+                        <p className="text-green-700 text-sm">
+                          {isCompleted ? "คำสั่งซื้อของคุณได้รับการยืนยันแล้ว" : "กำลังตรวจสอบสลิป กรุณารอสักครู่"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="relative group">
+                        <Image
+                          src="/slip_qr/qr_pt_group.jpg"
+                          alt="Line QR Code"
+                          width={200}
+                          height={200}
+                          className="object-contain"
+                        />
+                        <button
+                          onClick={() => {
+                            const link = document.createElement("a")
+                            link.href = "/slip_qr/qr_pt_group.jpg"
+                            link.download = "qr-pt-group.jpg"
+                            document.body.appendChild(link)
+                            link.click()
+                            document.body.removeChild(link)
+                          }}
+                          className="absolute top-2 right-2 bg-white hover:bg-green-50 p-2 rounded-full shadow-md transition-all duration-200 border border-green-200"
+                          title="ดาวน์โหลด QR Code"
+                        >
+                          <Download className="h-4 w-4 text-green-700" />
+                        </button>
+                      </div>
+                      <div className="text-center space-y-2">
+                        <p className="text-green-800 text-sm">ติดต่อสอบถามเพิ่มเติมพี่เต้ย</p>
+                        <p className="text-green-700 text-xs">
+                          สแกน QR Code หรือตั้งบันทึกไว้เพื่อคุยกับพี่เต้ยได้เลย
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
               <Card>
                 <CardHeader>
                   <CardTitle>สถานะการตรวจสลิป</CardTitle>
