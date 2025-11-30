@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { useAuth } from "@/components/auth-provider"
 import http from "@/lib/http"
 import { toast } from "@/hooks/use-toast"
+import { CreditCard, FileText } from "lucide-react"
 
 type Order = {
   id: string
@@ -285,11 +286,13 @@ export default function Orders() {
             const payState = (o.payment?.status || "").toUpperCase()
             const isCancelled = ["CANCELLED", "REJECTED"].includes(orderState)
             const effectiveState = payState || orderState
-            const needsSlipUpload = !isCancelled && ["PENDING", "PENDING_VERIFICATION"].includes(effectiveState)
+            const isPending = !isCancelled && ["PENDING", "PENDING_VERIFICATION"].includes(effectiveState)
             const isPaid = !isCancelled && effectiveState === "COMPLETED"
             const payStatus = o.payment?.status
             const displayId = o.orderNumber || o.id
             const createdAt = o.createdAt ? new Date(o.createdAt).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" }) : ""
+            const primaryLabel = isPending ? "ดำเนินการชำระเงินต่อ" : "ดูรายละเอียด"
+            const PrimaryIcon = isPending ? CreditCard : FileText
 
             const rawItems = Array.isArray(o.items) ? o.items.filter(Boolean) : []
             const fallbackItems: NonNullable<Order["items"]> = []
@@ -339,19 +342,17 @@ export default function Orders() {
 
                     <div className="flex w-full flex-col gap-2 md:w-auto md:items-end">
                       <Link href={`/order-success/${o.id}`} className="w-full md:w-auto">
-                        <Button variant="outline" className="w-full md:w-[7.5rem]">
-                          ดูรายละเอียด
+                        <Button
+                          variant={isPending ? "default" : "outline"}
+                          className={`w-full md:w-[10.5rem] justify-center gap-2 ${isPending ? "bg-yellow-500 hover:bg-yellow-600 text-white" : ""}`}
+                        >
+                          <PrimaryIcon className="h-4 w-4" />
+                          {primaryLabel}
                         </Button>
                       </Link>
 
-                      {needsSlipUpload ? (
-                        <Button
-                          onClick={() => onOpenUpload(o)}
-                          className="bg-yellow-400 hover:bg-yellow-500 text-white w-full md:w-[7.5rem]"
-                        >
-                          อัพโหลดสลิป
-                        </Button>
-                      ) : isPaid ? (
+                      {/* ปุ่มอัพโหลดสลิปถูกปิดไว้ชั่วคราวเพื่อลดความสับสน */}
+                      {isPaid ? (
                         <Badge className="bg-green-600 text-white w-full md:w-auto justify-center">ชำระเงินแล้ว</Badge>
                       ) : (
                         <Badge className={`${statusTone(o.status, o.payment?.status)} w-full md:w-auto justify-center`}>{statusLabel}</Badge>
