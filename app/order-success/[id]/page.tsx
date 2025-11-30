@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import Image from "next/image"
-import { CheckCircle2, Clock, AlertCircle, FileText, RefreshCw, MapPin, Download } from "lucide-react"
+import { CheckCircle2, Clock, AlertCircle, FileText, RefreshCw, MapPin, Download, Upload } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 
 type OrderItem = {
@@ -88,15 +88,6 @@ function toItemTypeLabel(itemType?: string) {
   return itemType || "สินค้า"
 }
 
-function toPaymentMethodLabel(method?: string | null) {
-  const m = (method || "").toUpperCase()
-  if (m === "BANK_TRANSFER") return "โอนผ่านธนาคาร"
-  if (m === "CREDIT_CARD") return "บัตรเครดิต"
-  if (m === "PROMPTPAY") return "พร้อมเพย์"
-  if (!method) return "-"
-  return method
-}
-
 export default function OrderSuccessPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
@@ -115,6 +106,7 @@ export default function OrderSuccessPage() {
   const [shipping, setShipping] = useState({ name: "", phone: "", address: "", district: "", province: "", postalCode: "" })
   const [shippingMsg, setShippingMsg] = useState<string | null>(null)
   const [ebookLink, setEbookLink] = useState<string | null>(null)
+  const uploadSectionRef = useRef<HTMLDivElement | null>(null)
 
   const [enrollErr, setEnrollErr] = useState<string | null>(null)
   const triedEnrollRef = useRef(false)
@@ -413,6 +405,7 @@ export default function OrderSuccessPage() {
   const paymentStatus = (order?.payment?.status || order?.status || "").toUpperCase()
   const isPending = ["PENDING", "PENDING_VERIFICATION"].includes(paymentStatus)
   const isCompleted = isPaidLikeStatus(paymentStatus) || isPaidLikeStatus(order?.status)
+  const isAwaitingPayment = !isCompleted && isPending
 
   const courseItems = useMemo(() => displayItems.filter((item) => (item.itemType || "").toUpperCase() === "COURSE"), [displayItems])
   const courseId = courseItems[0]?.itemId || order?.course?.id
@@ -430,21 +423,20 @@ export default function OrderSuccessPage() {
 
   const slipUrl = order?.payment?.slipUrl
   const hasUploadedSlip = !!slipUrl
-
-  const itemTypeSummary = useMemo(() => {
-    if (displayItems.length === 0) {
-      return order?.orderType ? toItemTypeLabel(order.orderType) : "-"
+  const scrollToUpload = () => {
+    const el = uploadSectionRef.current
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" })
+      return
     }
-    const labels = Array.from(
-      new Set(
-        displayItems.map((item) => toItemTypeLabel(item.itemType))
-      )
-    )
-    if (labels.length === 1) return labels[0]
-    return `หลายประเภท (${labels.join(", ")})`
-  }, [displayItems, order?.orderType])
+    setOpenUpload(true)
+  }
 
   const orderDisplayId = order?.orderNumber || order?.id || ""
+  const orderCreatedAtText = order?.createdAt ? new Date(order.createdAt).toLocaleString("th-TH") : ""
+  const amountValue = order?.payment?.amount ?? order?.total ?? 0
+  const amountLabel = isAwaitingPayment ? "ยอดที่ต้องชำระ" : "ยอดที่ชำระ"
+  const amountHint = isAwaitingPayment ? "ชำระยอดนี้แล้วอัพโหลดสลิป" : "ยอดสุทธิของคำสั่งซื้อ"
 
   const summaryRows = useMemo(() => {
     if (!order) return [] as Array<{ label: string; value: string; accent?: boolean }>
@@ -455,9 +447,15 @@ export default function OrderSuccessPage() {
     const tax = Number(order.tax ?? 0)
     const total = Number(order.total ?? 0)
 
-    const rows: Array<{ label: string; value: string; accent?: boolean }> = [
-      { label: "ยอดรวมสินค้า", value: formatCurrency(subtotal) },
-    ]
+    const hasAdjustments = discount !== 0 || couponDiscount > 0 || shippingFee > 0 || tax !== 0
+    const rows: Array<{ label: string; value: string; accent?: boolean }> = []
+
+    // ถ้าไม่มีส่วนลด/ค่าจัดส่ง/ภาษี ให้แสดงเฉพาะยอดสุทธิ เพื่อไม่ให้เลขซ้ำ
+    if (!hasAdjustments && subtotal === total) {
+      return [{ label: "ยอดชำระสุทธิ", value: formatCurrency(total), accent: true }]
+    }
+
+    rows.push({ label: "ยอดรวมสินค้า", value: formatCurrency(subtotal) })
 
     if (discount !== 0) {
       const sign = discount < 0 ? "+" : "-"
@@ -596,7 +594,6 @@ export default function OrderSuccessPage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3">
-           
             <div className="lg:col-span-2">
               <Card>
                 <CardHeader>
@@ -624,60 +621,104 @@ export default function OrderSuccessPage() {
                       การสมัครเสร็จสมบูรณ์ <span className="block text-xs sm:text-sm text-green-600">(ระบบกำลังตรวจสอบสลิป ภายใน 24 ชั่วโมงเพื่อเข้าเรียน)</span>
                     </div>
                   )}
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-1">
-                      <div className="text-sm text-gray-600">ประเภทสินค้า</div>
-                      <div className="font-medium text-gray-900">{itemTypeSummary}</div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="text-sm text-gray-600">ยอดรวม</div>
-                      <div className="font-semibold text-gray-900">{formatCurrency(order.total)}</div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="text-sm text-gray-600">วันที่สั่งซื้อ</div>
-                      <div className="text-gray-900">{new Date(order.createdAt).toLocaleString("th-TH")}</div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="text-sm text-gray-600">หมายเลขคำสั่งซื้อ</div>
-                      <div className="text-gray-900 inline-flex flex-wrap items-center gap-2">
-                        <span className="font-medium">#{orderDisplayId}</span>
-                        <Button size="sm" variant="outline" onClick={() => navigator.clipboard?.writeText(String(orderDisplayId))}>คัดลอก</Button>
+                  <div className="space-y-3">
+                    <button
+                      type="button"
+                      onClick={scrollToUpload}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); scrollToUpload() } }}
+                      className="w-full text-left rounded-lg border border-amber-200 bg-amber-50 p-3 transition hover:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                    >
+                      <div className="text-xs text-amber-700">{amountLabel}</div>
+                      <div className="text-xl font-semibold text-gray-900">{formatCurrency(amountValue)}</div>
+                      <div className="text-[11px] text-amber-700/80">
+                        {amountHint}
+                        <span className="sm:hidden ml-1 text-[10px] text-amber-700/90">(แตะเลื่อนลง)</span>
                       </div>
-                      {order.orderNumber && order.orderNumber !== order.id && (
-                        <div className="text-xs text-gray-500 break-all">รหัสอ้างอิงระบบ: {order.id}</div>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <div className="text-sm text-gray-600">ช่องทางชำระเงิน</div>
-                      <div className="text-gray-900">{toPaymentMethodLabel(order.payment?.method)}</div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="text-sm text-gray-600">ยอดที่ชำระ</div>
-                      <div className="text-gray-900">{formatCurrency(order.payment?.amount ?? order.total)}</div>
-                      {order.payment?.paidAt && (
-                        <div className="text-xs text-gray-500">ชำระเมื่อ: {new Date(order.payment.paidAt).toLocaleString("th-TH")}</div>
-                      )}
-                    </div>
-                    {order.payment?.ref && (
-                      <div className="space-y-1 sm:col-span-2">
-                        <div className="text-sm text-gray-600">เลขอ้างอิงการชำระ</div>
-                        <div className="inline-flex flex-wrap items-center gap-2 text-gray-900">
-                          <span className="font-medium break-all">{order.payment.ref}</span>
-                          <Button size="sm" variant="outline" onClick={() => navigator.clipboard?.writeText(String(order.payment!.ref))}>คัดลอก</Button>
+                    </button>
+
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {order.couponCode && (
+                        <div className="flex flex-col gap-1 rounded-lg border bg-white p-3 sm:col-span-2 lg:col-span-3">
+                          <div className="text-xs text-gray-500">คูปองที่ใช้</div>
+                          <div className="inline-flex flex-wrap items-center gap-2">
+                            <Badge className="border border-amber-200 bg-amber-100 text-amber-700">{order.couponCode}</Badge>
+                            {Number(order.couponDiscount) > 0 && (
+                              <span className="text-xs text-gray-600">ลด {formatCurrency(order.couponDiscount)}</span>
+                            )}
+                          </div>
                         </div>
+                      )}
+                    </div>
+
+                    {/* Desktop info: แสดงแบน ๆ ไม่เป็นกล่อง */}
+                    <div className="hidden sm:grid gap-4 sm:grid-cols-2 lg:grid-cols-3 text-sm">
+                      <div className="space-y-1">
+                        <div className="text-xs text-gray-500">หมายเลขคำสั่งซื้อ</div>
+                        <div className="inline-flex flex-wrap items-center gap-2 text-gray-900">
+                          <span className="font-medium truncate">#{orderDisplayId}</span>
+                          <Button size="sm" variant="outline" onClick={() => navigator.clipboard?.writeText(String(orderDisplayId))}>คัดลอก</Button>
+                        </div>
+                        {order.orderNumber && order.orderNumber !== order.id && (
+                          <div className="text-[11px] text-gray-500 break-all">รหัสอ้างอิงระบบ: {order.id}</div>
+                        )}
                       </div>
-                    )}
-                    {order.couponCode && (
-                      <div className="space-y-1 sm:col-span-2">
-                        <div className="text-sm text-gray-600">คูปองที่ใช้</div>
-                        <div className="inline-flex flex-wrap items-center gap-2">
-                          <Badge className="border border-amber-200 bg-amber-100 text-amber-700">{order.couponCode}</Badge>
-                          {Number(order.couponDiscount) > 0 && (
-                            <span className="text-xs text-gray-600">ลด {formatCurrency(order.couponDiscount)}</span>
+
+                      {order.payment?.ref && (
+                        <div className="space-y-1">
+                          <div className="text-xs text-gray-500">เลขอ้างอิงการชำระ</div>
+                          <div className="inline-flex flex-wrap items-center gap-2 text-gray-900">
+                            <span className="font-medium break-all">{order.payment.ref}</span>
+                            <Button size="sm" variant="outline" onClick={() => navigator.clipboard?.writeText(String(order.payment!.ref))}>คัดลอก</Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {orderCreatedAtText && (
+                        <div className="space-y-1">
+                          <div className="text-xs text-gray-500">วันที่สั่งซื้อ</div>
+                          <div className="font-medium text-gray-900">{orderCreatedAtText}</div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Mobile: ยุบข้อมูลที่ซ้ำเป็น collapse */}
+                    <div className="sm:hidden">
+                      <details className="group rounded-lg border bg-white p-3 text-sm">
+                        <summary className="flex cursor-pointer items-center justify-between text-gray-900">
+                          <span className="font-medium">รายละเอียดคำสั่งซื้อ</span>
+                          <span className="text-xs text-gray-500">แตะเพื่อดู</span>
+                        </summary>
+                        <div className="mt-3 space-y-3">
+                          <div className="space-y-1">
+                            <div className="text-xs text-gray-500">หมายเลขคำสั่งซื้อ</div>
+                            <div className="inline-flex flex-wrap items-center gap-2 text-gray-900">
+                              <span className="font-medium truncate">#{orderDisplayId}</span>
+                              <Button size="sm" variant="outline" onClick={() => navigator.clipboard?.writeText(String(orderDisplayId))}>คัดลอก</Button>
+                            </div>
+                            {order.orderNumber && order.orderNumber !== order.id && (
+                              <div className="text-[11px] text-gray-500 break-all">รหัสอ้างอิงระบบ: {order.id}</div>
+                            )}
+                          </div>
+
+                          {order.payment?.ref && (
+                            <div className="space-y-1">
+                              <div className="text-xs text-gray-500">เลขอ้างอิงการชำระ</div>
+                              <div className="inline-flex flex-wrap items-center gap-2 text-gray-900">
+                                <span className="font-medium break-all">{order.payment.ref}</span>
+                                <Button size="sm" variant="outline" onClick={() => navigator.clipboard?.writeText(String(order.payment!.ref))}>คัดลอก</Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {orderCreatedAtText && (
+                            <div className="space-y-1">
+                              <div className="text-xs text-gray-500">วันที่สั่งซื้อ</div>
+                              <div className="font-medium text-gray-900">{orderCreatedAtText}</div>
+                            </div>
                           )}
                         </div>
-                      </div>
-                    )}
+                      </details>
+                    </div>
                   </div>
 
                   {displayItems.length > 0 && (
@@ -690,7 +731,10 @@ export default function OrderSuccessPage() {
                           const total = Number(item.totalPrice ?? unit * qty)
                           const key = item.id || `${item.itemType}-${item.itemId}`
                           return (
-                            <div key={key} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div
+                              key={key}
+                              className="flex flex-row flex-wrap items-start justify-between gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                            >
                               <div className="space-y-1">
                                 <div className="font-medium text-gray-900">{item.title || toItemTypeLabel(item.itemType)}</div>
                                 <div className="text-xs text-gray-500">ประเภท: {toItemTypeLabel(item.itemType)}</div>
@@ -844,10 +888,9 @@ export default function OrderSuccessPage() {
               </Card>
             </div>
 
-            
-            <div>
+            <div className="space-y-6">
               {(isCompleted || hasUploadedSlip) && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
                   <div className="flex flex-col items-center gap-6">
                     <div className="flex items-center gap-3">
                       <CheckCircle2 className="h-8 w-8 text-green-600" />
@@ -895,56 +938,71 @@ export default function OrderSuccessPage() {
                   </div>
                 </div>
               )}
-              <Card>
-                <CardHeader>
-                  <CardTitle>สถานะการตรวจสลิป</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="text-sm text-gray-700">สถานะคำสั่งซื้อ:</div>
-                    {statusBadge(paymentStatus)}
-                  </div>
-
-                  {slipUrl && (
-                    <div className="flex flex-wrap items-center gap-4">
-                      <div className="relative h-24 w-40 overflow-hidden rounded border">
-                        <Image
-                          src={slipUrl}
-                          alt="สลิปโอนเงิน"
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 640px) 50vw, 160px"
-                        />
+              <div ref={uploadSectionRef}>
+                <Card className={isPending ? "border-amber-200 shadow-sm" : ""}>
+                  <CardHeader>
+                    <CardTitle>สถานะการตรวจสลิป</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="text-sm text-gray-700">สถานะคำสั่งซื้อ:</div>
+                        {statusBadge(paymentStatus)}
                       </div>
-                      <a href={slipUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">
-                        เปิดสลิปต้นฉบับ
-                      </a>
+                      {isPending && (
+                        <Button
+                          size="sm"
+                          className="sm:hidden bg-yellow-400 hover:bg-yellow-500 text-white"
+                          onClick={() => setOpenUpload(true)}
+                        >
+                          <Upload className="h-4 w-4 mr-2" /> อัพโหลดสลิป
+                        </Button>
+                      )}
                     </div>
-                  )}
 
-                
-                  {slipInfo && (
-                    <div className="grid sm:grid-cols-2 gap-3 text-sm">
-                      <div>ผลตรวจ SlipOK: <span className="font-medium">{slipInfo.slipOKSuccess ? "สำเร็จ" : "ไม่สำเร็จ"}</span></div>
-                      {typeof slipInfo.detectedAmount !== "undefined" && slipInfo.detectedAmount !== null && (
-                        <div>จำนวนเงินที่ตรวจพบ: <span className="font-medium">฿{Number(slipInfo.detectedAmount).toLocaleString()}</span></div>
-                      )}
-                      {slipInfo.detectedDate && (
-                        <div>วันที่โอนที่ตรวจพบ: <span className="font-medium">{String(slipInfo.detectedDate)}</span></div>
-                      )}
-                      {slipInfo.summary && (
-                        <div className="sm:col-span-2 text-gray-700">
-                          สรุปการตรวจสอบ: ผ่าน {slipInfo.summary.passed || 0} • เตือน {slipInfo.summary.warnings || 0} • ไม่ผ่าน {slipInfo.summary.failed || 0}
+                    {slipUrl && (
+                      <div className="flex flex-wrap items-center gap-4">
+                        <div className="relative h-24 w-40 overflow-hidden rounded border">
+                          <Image
+                            src={slipUrl}
+                            alt="สลิปโอนเงิน"
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 640px) 50vw, 160px"
+                          />
                         </div>
-                      )}
-                    </div>
-                  )}
+                        <a href={slipUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 underline">
+                          เปิดสลิปต้นฉบับ
+                        </a>
+                      </div>
+                    )}
 
-                  {!slipUrl && (
-                    <div className="text-sm text-gray-600">ยังไม่มีสลิปกรอกเข้ามา กรุณาอัพโหลดหลักฐานการชำระเงิน</div>
-                  )}
-                </CardContent>
-              </Card>
+                  
+                    {slipInfo && (
+                      <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                        <div>ผลตรวจ SlipOK: <span className="font-medium">{slipInfo.slipOKSuccess ? "สำเร็จ" : "ไม่สำเร็จ"}</span></div>
+                        {typeof slipInfo.detectedAmount !== "undefined" && slipInfo.detectedAmount !== null && (
+                          <div>จำนวนเงินที่ตรวจพบ: <span className="font-medium">฿{Number(slipInfo.detectedAmount).toLocaleString()}</span></div>
+                        )}
+                        {slipInfo.detectedDate && (
+                          <div>วันที่โอนที่ตรวจพบ: <span className="font-medium">{String(slipInfo.detectedDate)}</span></div>
+                        )}
+                        {slipInfo.summary && (
+                          <div className="sm:col-span-2 text-gray-700">
+                            สรุปการตรวจสอบ: ผ่าน {slipInfo.summary.passed || 0} • เตือน {slipInfo.summary.warnings || 0} • ไม่ผ่าน {slipInfo.summary.failed || 0}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {!slipUrl && (
+                      <div className="text-sm text-gray-700">
+                        ยังไม่มีสลิปอัพโหลด <span className="font-medium text-amber-700">กด “อัพโหลดสลิป” เพื่อแนบหลักฐาน</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
 
               {(isPending || paymentStatus === "PENDING_VERIFICATION") && (
                 <Card className="mt-6">
@@ -1013,8 +1071,9 @@ export default function OrderSuccessPage() {
                       <span className="text-xs text-gray-600 text-center">สแกน QR เพื่อโอนเงิน</span>
                     </div>
                     <div className="text-xs text-gray-500">หลังโอนแล้ว กรุณาอัพโหลดสลิป ระบบจะตรวจสอบใช้เวลาโดยประมาณ 5-10 นาที</div>
-                    <div className="pt-1">
-                      <Button className="bg-yellow-400 hover:bg-yellow-500 text-white w-full" onClick={() => setOpenUpload(true)}>
+                    <div className="pt-1 hidden sm:block">
+                      <Button className="bg-yellow-400 hover:bg-yellow-500 text-white w-full gap-2" onClick={() => setOpenUpload(true)}>
+                        <Upload className="h-4 w-4" />
                         อัพโหลดสลิป
                       </Button>
                     </div>
