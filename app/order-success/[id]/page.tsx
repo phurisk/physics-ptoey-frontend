@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import Image from "next/image"
-import { CheckCircle2, Clock, AlertCircle, FileText, RefreshCw, MapPin, Download, Upload } from "lucide-react"
+import { CheckCircle2, Clock, AlertCircle, FileText, RefreshCw, MapPin, Download, Upload, Loader2 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { validateAndCompressImage } from "@/lib/image-compress"
 
 type OrderItem = {
   id?: string
@@ -102,6 +103,7 @@ export default function OrderSuccessPage() {
   const [filePreview, setFilePreview] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState<string | null>(null)
+  const [compressing, setCompressing] = useState(false)
   const [editingShipping, setEditingShipping] = useState(false)
   const [shipping, setShipping] = useState({ name: "", phone: "", address: "", district: "", province: "", postalCode: "" })
   const [shippingMsg, setShippingMsg] = useState<string | null>(null)
@@ -1090,10 +1092,64 @@ export default function OrderSuccessPage() {
                 <DialogTitle>อัพโหลดหลักฐานการชำระเงิน</DialogTitle>
               </DialogHeader>
               <div className="space-y-3">
-                <Input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                {compressing && (
+                  <div className="text-sm text-blue-600 flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    กำลังประมวลผลรูปภาพ...
+                  </div>
+                )}
+                <Input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={async (e) => {
+                    const selectedFile = e.target.files?.[0]
+                    if (!selectedFile) {
+                      setFile(null)
+                      return
+                    }
+                    
+                    console.log('📎 File selected:', selectedFile.name, `(${(selectedFile.size / 1024).toFixed(1)}KB)`)
+                    
+                    setCompressing(true)
+                    setUploadMsg(null)
+                    
+                    try {
+                      const result = await validateAndCompressImage(selectedFile, {
+                        maxWidth: 1280,
+                        maxHeight: 1280,
+                        quality: 0.75,
+                        convertToWebP: true,
+                        maxSizeMB: 3,
+                      })
+                      
+                      if (result.success && result.file) {
+                        console.log('✅ Using compressed file:', result.file.name, `(${(result.file.size / 1024).toFixed(1)}KB)`)
+                        setFile(result.file)
+                      } else {
+                        console.error('❌ Compression failed:', result.error)
+                        setUploadMsg(result.error || 'เกิดข้อผิดพลาด')
+                        setFile(null)
+                      }
+                    } catch (error) {
+                      console.error('❌ Compression error:', error)
+                      setUploadMsg('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ')
+                      setFile(null)
+                    } finally {
+                      setCompressing(false)
+                    }
+                  }}
+                  disabled={compressing}
+                />
                 {filePreview && (
                   <div className="mt-2">
-                    <div className="text-xs text-gray-600 mb-1">ตัวอย่างรูปที่เลือก</div>
+                    <div className="text-xs text-gray-600 mb-1 flex items-center justify-between">
+                      <span>ตัวอย่างรูปที่เลือก</span>
+                      {file && (
+                        <span className="text-green-600 font-medium">
+                          📦 {(file.size / 1024).toFixed(1)}KB {file.name.endsWith('.webp') && '(WebP)'}
+                        </span>
+                      )}
+                    </div>
                     <div className="relative border rounded-md overflow-hidden bg-gray-50">
                       <img src={filePreview} alt="ตัวอย่างสลิป" className="max-h-72 w-full object-contain" />
                     </div>
@@ -1106,8 +1162,12 @@ export default function OrderSuccessPage() {
                 )}
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setOpenUpload(false)}>ปิด</Button>
-                  <Button disabled={!file || uploading} onClick={uploadSlip} className="bg-yellow-400 hover:bg-yellow-500 text-white">
-                    {uploading ? "กำลังอัพโหลด..." : "อัพโหลดสลิป"}
+                  <Button 
+                    disabled={!file || uploading || compressing} 
+                    onClick={uploadSlip} 
+                    className="bg-yellow-400 hover:bg-yellow-500 text-white"
+                  >
+                    {uploading ? "กำลังอัพโหลด..." : compressing ? "กำลังประมวลผล..." : "อัพโหลดสลิป"}
                   </Button>
                 </div>
               </div>

@@ -135,11 +135,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Try to recover session from server cookie (LINE login)
-        const res = await http.get("/api/auth/me")
-        const data: any = res.data || {}
-        if (active && res.status >= 200 && res.status < 300 && data && data.success !== false && data.data) {
-          setUser(data.data)
-          try { localStorage.setItem("user", JSON.stringify(data.data)) } catch {}
+        try {
+          const res = await http.get("/api/auth/me")
+          const data: any = res.data || {}
+          if (active && res.status >= 200 && res.status < 300 && data && data.success !== false && data.data) {
+            setUser(data.data)
+            try { localStorage.setItem("user", JSON.stringify(data.data)) } catch {}
+          }
+        } catch (error) {
+          // Silently handle when backend is unavailable or returns an error
+          console.log("Could not recover session from server (backend may be offline)")
         }
       } catch (e) {
         console.error("Failed to initialize auth", e)

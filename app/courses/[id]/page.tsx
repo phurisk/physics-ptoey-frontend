@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea"
 import Player from "@vimeo/player"
 import { AspectRatio } from "@/components/ui/aspect-ratio"
 import SimpleYouTubePlayer from "@/components/simple-youtube-player"
+import { validateAndCompressImage } from "@/lib/image-compress"
 
 const API_BASE = (process.env.NEXT_PUBLIC_ELEARNING_BASE_URL || "").replace(/\/$/, "");
 
@@ -202,6 +203,7 @@ export default function CourseDetailPage() {
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState<string | null>(null)
   const [slipPreview, setSlipPreview] = useState<string | null>(null)
+  const [compressing, setCompressing] = useState(false)
 
   // ---------- Reviews state ----------
   const [reviews, setReviews] = useState<ApiReview[]>([])
@@ -1334,15 +1336,66 @@ export default function CourseDetailPage() {
             <div className="text-sm text-gray-700">
               ยอดชำระ: ฿{(orderInfo?.total ?? 0).toLocaleString()}
             </div>
+            {compressing && (
+              <div className="text-sm text-blue-600 flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                กำลังประมวลผลรูปภาพ...
+              </div>
+            )}
             <Input
               type="file"
               accept="image/*"
-              onChange={(e) => setSlip(e.target.files?.[0] || null)}
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                if (!file) {
+                  setSlip(null)
+                  return
+                }
+                
+                console.log('📎 File selected:', file.name, `(${(file.size / 1024).toFixed(1)}KB)`)
+                
+                setCompressing(true)
+                setUploadMsg(null)
+                
+                try {
+                  // Compress and convert to WebP (more aggressive settings)
+                  const result = await validateAndCompressImage(file, {
+                    maxWidth: 1280,  // ลดจาก 1920
+                    maxHeight: 1280,  // ลดจาก 1920
+                    quality: 0.75,    // ลดจาก 0.85 เพื่อลดขนาดมากขึ้น
+                    convertToWebP: true,
+                    maxSizeMB: 3,     // ลดจาก 5MB
+                  })
+                  
+                  if (result.success && result.file) {
+                    console.log('✅ Using compressed file:', result.file.name, `(${(result.file.size / 1024).toFixed(1)}KB)`)
+                    setSlip(result.file)
+                  } else {
+                    console.error('❌ Compression failed:', result.error)
+                    setUploadMsg(result.error || 'เกิดข้อผิดพลาด')
+                    setSlip(null)
+                  }
+                } catch (error) {
+                  console.error('❌ Compression error:', error)
+                  setUploadMsg('เกิดข้อผิดพลาดในการประมวลผลรูปภาพ')
+                  setSlip(null)
+                } finally {
+                  setCompressing(false)
+                }
+              }}
               className="h-10"
+              disabled={compressing}
             />
             {slipPreview && (
               <div className="mt-2">
-                <div className="text-xs text-gray-600 mb-1">ตัวอย่างรูปที่เลือก</div>
+                <div className="text-xs text-gray-600 mb-1 flex items-center justify-between">
+                  <span>ตัวอย่างรูปที่เลือก</span>
+                  {slip && (
+                    <span className="text-green-600 font-medium">
+                      📦 {(slip.size / 1024).toFixed(1)}KB {slip.name.endsWith('.webp') && '(WebP)'}
+                    </span>
+                  )}
+                </div>
                 <div className="relative border rounded-md overflow-hidden bg-gray-50">
                   <img src={slipPreview} alt="ตัวอย่างสลิป" className="max-h-72 w-full object-contain" />
                 </div>
@@ -1363,11 +1416,11 @@ export default function CourseDetailPage() {
                 ปิด
               </Button>
               <Button
-                disabled={!slip || uploading}
+                disabled={!slip || uploading || compressing}
                 onClick={uploadSlip}
                 className="bg-yellow-400 hover:bg-yellow-500 text-white"
               >
-                {uploading ? "กำลังอัพโหลด..." : "อัพโหลดสลิป"}
+                {uploading ? "กำลังอัพโหลด..." : compressing ? "กำลังประมวลผล..." : "อัพโหลดสลิป"}
               </Button>
             </div>
           </div>
