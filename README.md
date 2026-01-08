@@ -5,7 +5,7 @@
 
 ---
 
-## 🚀 Tech Stack
+## 🚀 Tech Stack ##
 
 - [Next.js 15](https://nextjs.org/)
 - [React 19](https://react.dev/)
