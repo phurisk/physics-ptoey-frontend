@@ -20,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import LoginModal from '@/components/login-modal'
 import { useAuth } from '@/components/auth-provider'
 import Player from '@vimeo/player'
+import http from '@/lib/http'
 
 // ===== Types =====
 
@@ -98,7 +99,7 @@ function getYouTubeEmbedUrl(url: string) {
 
 function getVimeoEmbedUrl(url: string) {
   const idMatch = url.match(/(?:vimeo\.com|player\.vimeo\.com)\/(?:video\/)?(\d+)/)?.[1]
-  return idMatch ? `https://player.vimeo.com/video/${idMatch}?dnt=1&title=0&byline=0&portrait=0` : null
+  return idMatch ? `https://player.vimeo.com/video/${idMatch}?dnt=1&title=0&byline=0&portrait=0&autopause=0&controls=1&fun=0` : null
 }
 
 function getEmbedSrc(url: string) {
@@ -349,14 +350,14 @@ export default function CourseDetailPage() {
 
     setProgressLoading(true)
     try {
-      const response = await fetch('/api/update-progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, courseId, contentId: content.id }),
+      const response = await http.post('/api/update-progress', {
+        userId: user.id,
+        courseId,
+        contentId: content.id
       })
-      const result = await response.json()
+      const result = response.data
 
-      if (!response.ok || !result?.success) {
+      if (response.status !== 200 || !result?.success) {
         // rollback
         setHighestCompletedIndex(prevIndex)
         setCourse((prev) => {
@@ -637,11 +638,41 @@ export default function CourseDetailPage() {
                         ref={videoFrameRef}
                         src={selectedEmbedSrc}
                         className={`w-full h-full transition-opacity ${hasOverlay ? 'pointer-events-none opacity-0' : 'opacity-100'}`}
+                        sandbox="allow-scripts allow-same-origin allow-presentation"
                         allowFullScreen
                         referrerPolicy="no-referrer"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         title={selectedContent.title}
                       />
+                      {/* Overlay to block clicks on edges (Vimeo logo area) */}
+                      {!hasOverlay && (
+                        <>
+                          {/* Top edge overlay */}
+                          <div 
+                            className="absolute top-0 left-0 right-0 h-12 z-10 pointer-events-auto"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                          />
+                          {/* Right edge overlay */}
+                          <div 
+                            className="absolute top-0 right-0 bottom-0 w-24 z-10 pointer-events-auto"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                          />
+                          {/* Bottom edge overlay */}
+                          <div 
+                            className="absolute bottom-0 left-0 right-0 h-16 z-10 pointer-events-auto"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                          />
+                          {/* Left edge overlay */}
+                          <div 
+                            className="absolute top-0 left-0 bottom-0 w-24 z-10 pointer-events-auto"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                          />
+                        </>
+                      )}
                       {hasOverlay && (
                         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-black/90 text-white px-6 text-center">
                           <div className="space-y-1">

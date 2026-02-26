@@ -1,16 +1,13 @@
 import { NextResponse, NextRequest } from "next/server"
+import { getAuthHeaders, checkApiConfig } from "@/lib/api-auth-utils"
 
 export async function GET(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const baseUrl = process.env.API_BASE_URL
-  if (!baseUrl) {
-    return NextResponse.json(
-      { success: false, message: "API_BASE_URL is not configured" },
-      { status: 500 }
-    )
-  }
+  const config = checkApiConfig()
+  if (!config.ok) return config.error
+  const baseUrl = process.env.API_BASE_URL!
 
   const { id } = await context.params
   if (!id) {
@@ -21,9 +18,9 @@ export async function GET(
   }
 
   try {
-    const cookie = req.headers.get("cookie") ?? ""
+    const authHeaders = getAuthHeaders(req)
     const res = await fetch(`${baseUrl}/api/orders/${encodeURIComponent(id)}`, {
-      headers: { cookie },
+      headers: authHeaders,
       cache: "no-store",
     })
     const data = await res.json().catch(() => ({}))

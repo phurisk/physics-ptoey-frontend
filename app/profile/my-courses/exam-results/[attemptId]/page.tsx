@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import http from "@/lib/http"
 
 type AttemptResult = {
   id: string
@@ -72,9 +73,9 @@ export default function ExamResultDetailPage() {
       if (!attemptId || !user?.id) { setLoading(false); return }
       try {
         setLoading(true)
-        const res = await fetch(`/api/my-courses/exam-results/${encodeURIComponent(String(attemptId))}?userId=${encodeURIComponent(String(user.id))}`, { cache: "no-store" })
-        const json: ResultResponse = await res.json().catch(() => ({ success: false }))
-        if (!res.ok || json.success === false) throw new Error(json?.error || `HTTP ${res.status}`)
+        const res = await http.get(`/api/my-courses/exam-results/${encodeURIComponent(String(attemptId))}?userId=${encodeURIComponent(String(user.id))}`)
+        const json: ResultResponse = res.data || { success: false }
+        if (res.status !== 200 || json.success === false) throw new Error(json?.error || `HTTP ${res.status}`)
         const data: any = json.result || json.data || null
         if (active && data) {
           const exam = data.exam ?? {}

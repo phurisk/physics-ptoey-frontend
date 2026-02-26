@@ -49,8 +49,8 @@ export default function MyBooksPage() {
 
   const fetchOrderLink = async (orderId: string, ebookId?: string) => {
     try {
-      const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}`, { cache: 'no-store' })
-      const json: any = await res.json().catch(() => ({}))
+      const res = await http.get(`/api/orders/${encodeURIComponent(orderId)}`)
+      const json: any = res.data || {}
       let url = ''
       const fromOrder = json?.data?.ebook
       if (fromOrder && (!ebookId || String(fromOrder?.id) === String(ebookId))) {
@@ -164,8 +164,8 @@ export default function MyBooksPage() {
           try {
             let url = ''
             try {
-              const res = await fetch(`/api/orders/${encodeURIComponent(e.orderId)}`, { cache: 'no-store' })
-              const json: any = await res.json().catch(() => ({}))
+              const res = await http.get(`/api/orders/${encodeURIComponent(e.orderId)}`)
+              const json: any = res.data || {}
               const fromOrder = json?.data?.ebook
               if (fromOrder && String(fromOrder?.id) === String(e.ebookId)) {
                 url = normalizeUrl(fromOrder?.fileUrl || fromOrder?.previewUrl || '')

@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import http from "@/lib/http"
 
 type Attempt = {
   id: string
@@ -47,9 +48,9 @@ export default function ExamResultsPage() {
       if (!user?.id) { setLoading(false); return }
       try {
         setLoading(true)
-        const res = await fetch(`/api/my-courses/exam-results?userId=${encodeURIComponent(String(user.id))}`, { cache: "no-store" })
-        const json: ResultsResponse = await res.json().catch(() => ({ success: false }))
-        if (!res.ok || json.success === false) throw new Error(json?.error || `HTTP ${res.status}`)
+        const res = await http.get(`/api/my-courses/exam-results?userId=${encodeURIComponent(String(user.id))}`)
+        const json: ResultsResponse = res.data || { success: false }
+        if (res.status !== 200 || json.success === false) throw new Error(json?.error || `HTTP ${res.status}`)
         const list = Array.isArray(json.attempts)
           ? json.attempts
           : Array.isArray((json?.data as any)?.attempts)

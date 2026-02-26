@@ -81,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (code) {
           //  LINE callback code -  login
+          console.log('🔵 [AuthProvider] LINE callback detected, exchanging code...');
           try {
             const { data: result } = await http.post(`/api/external/auth/line`, {
               code,
@@ -89,9 +90,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             })
             if (result.success && result.data) {
               const userData = result.data.user
+              console.log('✅ [AuthProvider] LINE login success:', userData.email);
               setUser(userData)
               localStorage.setItem('user', JSON.stringify(userData))
               localStorage.setItem('token', result.data.token)
+              console.log('✅ [AuthProvider] Token stored in localStorage');
 
               // remove code from URL
               window.history.replaceState({}, document.title, window.location.pathname)
@@ -134,13 +137,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return
         }
 
-        // Try to recover session from server cookie (LINE login)
+        // Try to recover session from server cookie (NextAuth session)
         try {
           const res = await http.get("/api/auth/me")
           const data: any = res.data || {}
           if (active && res.status >= 200 && res.status < 300 && data && data.success !== false && data.data) {
-            setUser(data.data)
-            try { localStorage.setItem("user", JSON.stringify(data.data)) } catch {}
+            // Found NextAuth session, but need JWT token for API calls
+            // Exchange the session for a JWT token
+            try {
+              console.log('🔵 [AuthProvider] Exchanging NextAuth session for JWT token...');
+              const tokenRes = await http.post("/api/auth/exchange-token")
+              const tokenData = tokenRes.data || {}
+              if (tokenData.success && tokenData.data?.token) {
+                // Store both user and token
+                setUser(tokenData.data.user)
+                localStorage.setItem("user", JSON.stringify(tokenData.data.user))
+                localStorage.setItem("token", tokenData.data.token)
+                console.log('✅ [AuthProvider] Exchanged NextAuth session for JWT token:', tokenData.data.user.email)
+              } else {
+                // Fallback: set user without token (limited functionality)
+                setUser(data.data)
+                localStorage.setItem("user", JSON.stringify(data.data))
+                console.log('⚠️ NextAuth session found but token exchange failed')
+              }
+            } catch (exchangeError) {
+              // Fallback: set user without token
+              setUser(data.data)
+              localStorage.setItem("user", JSON.stringify(data.data))
+              console.log('⚠️ NextAuth session found but token exchange error:', exchangeError)
+            }
           }
         } catch (error) {
           // Silently handle when backend is unavailable or returns an error
@@ -235,6 +260,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       '&scope=profile%20openid' +
       '&state=' + encodeURIComponent(state)
 
+    console.log('🔵 [AuthProvider] Initiating LINE login...');
+    console.log('🔵 [AuthProvider] Redirect URI:', redirectUri);
     window.location.href = lineURL
   }
 

@@ -21,6 +21,7 @@ import Player from "@vimeo/player"
 import { AspectRatio } from "@/components/ui/aspect-ratio"
 import SimpleYouTubePlayer from "@/components/simple-youtube-player"
 import { validateAndCompressImage } from "@/lib/image-compress"
+import http from "@/lib/http"
 
 const API_BASE = (process.env.NEXT_PUBLIC_ELEARNING_BASE_URL || "").replace(/\/$/, "");
 
@@ -338,9 +339,9 @@ export default function CourseDetailPage() {
     const check = async () => {
       try {
         if (!isAuthenticated || !user?.id || !id) return
-        const res = await fetch(`/api/my-courses?userId=${encodeURIComponent(user.id)}`, { cache: "no-store" })
-        const json = await res.json().catch(() => ({}))
-        if (res.ok && json && Array.isArray(json.courses)) {
+        const res = await http.get(`/api/my-courses?userId=${encodeURIComponent(user.id)}`)
+        const json = res.data || {}
+        if (res.status === 200 && json && Array.isArray(json.courses)) {
           const found = !!json.courses.find((c: any) => c.id === id)
           if (active) setIsEnrolled(found)
         }
@@ -356,8 +357,8 @@ export default function CourseDetailPage() {
     const loadEnrollment = async () => {
       try {
         if (!isAuthenticated || !user?.id || !id) return
-        const res = await fetch(`/api/enrollments?userId=${encodeURIComponent(user.id)}&courseId=${encodeURIComponent(String(id))}`, { cache: "no-store" })
-        const json = await res.json().catch(() => ({}))
+        const res = await http.get(`/api/enrollments?userId=${encodeURIComponent(user.id)}&courseId=${encodeURIComponent(String(id))}`)
+        const json = res.data || {}
         const v = json?.enrollment?.viewedContentIds
         if (active && Array.isArray(v)) setViewedIds(v)
       } catch { }
@@ -448,10 +449,10 @@ export default function CourseDetailPage() {
     setViewedIds(next)
     try {
       setSaving(true)
-      await fetch(`/api/enrollments`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, courseId: id, viewedContentIds: next })
+      await http.patch(`/api/enrollments`, {
+        userId: user.id,
+        courseId: id,
+        viewedContentIds: next
       })
     } catch { }
     finally { setSaving(false) }
@@ -523,9 +524,9 @@ export default function CourseDetailPage() {
       const form = new FormData()
       form.append("orderId", orderInfo.orderId)
       form.append("file", slip)
-      const res = await fetch(`/api/payments/upload-slip`, { method: "POST", body: form })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || json?.success === false) throw new Error(json?.error || "อัพโหลดไม่สำเร็จ")
+      const res = await http.post(`/api/payments/upload-slip`, form)
+      const json = res.data || {}
+      if (res.status !== 200 && res.status !== 201 || json?.success === false) throw new Error(json?.error || "อัพโหลดไม่สำเร็จ")
       setUploadMsg("อัพโหลดสลิปสำเร็จ กำลังรอตรวจสอบ")
     } catch (e: any) {
       setUploadMsg(e?.message ?? "อัพโหลดไม่สำเร็จ")
@@ -593,19 +594,15 @@ export default function CourseDetailPage() {
 
     try {
       setPostingReview(true)
-      const res = await fetch(`/api/reviews`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user.id,
-          courseId: String(id),
-          rating: reviewRating,
-          title: reviewTitle.trim(),
-          comment: reviewComment.trim(),
-        }),
+      const res = await http.post(`/api/reviews`, {
+        userId: user.id,
+        courseId: String(id),
+        rating: reviewRating,
+        title: reviewTitle.trim(),
+        comment: reviewComment.trim(),
       })
-      const json: PostReviewResponse = await res.json().catch(() => ({ success: false }))
-      if (!res.ok || json.success === false) throw new Error(json?.error || "ส่งรีวิวไม่สำเร็จ")
+      const json: PostReviewResponse = res.data || { success: false }
+      if (res.status !== 200 && res.status !== 201 || json.success === false) throw new Error(json?.error || "ส่งรีวิวไม่สำเร็จ")
 
 
       if (json.data) {

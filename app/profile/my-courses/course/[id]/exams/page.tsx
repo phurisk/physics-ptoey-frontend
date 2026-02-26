@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/components/auth-provider"
+import http from "@/lib/http"
 
 type ExamItem = {
   id: string
@@ -50,9 +51,9 @@ export default function CourseExamsPage() {
       if (!id || !user?.id) { setLoading(false); return }
       try {
         setLoading(true)
-        const res = await fetch(`/api/my-courses/course/${encodeURIComponent(String(id))}/exams?userId=${encodeURIComponent(String(user.id))}`, { cache: "no-store" })
-        const json: ExamsResponse = await res.json().catch(() => ({ success: false }))
-        if (!res.ok || json.success === false) throw new Error(json?.error || `HTTP ${res.status}`)
+        const res = await http.get(`/api/my-courses/course/${encodeURIComponent(String(id))}/exams?userId=${encodeURIComponent(String(user.id))}`)
+        const json: ExamsResponse = res.data || { success: false }
+        if (res.status !== 200 || json.success === false) throw new Error(json?.error || `HTTP ${res.status}`)
         const list = Array.isArray(json.exams)
           ? json.exams
           : Array.isArray(json?.data as any)

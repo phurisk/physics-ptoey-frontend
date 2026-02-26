@@ -12,6 +12,7 @@ import { useCart } from "@/components/cart-provider"
 import { useAuth } from "@/components/auth-provider"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/use-toast"
+import http from "@/lib/http"
 
 type ShippingAddress = {
   name: string
@@ -234,24 +235,20 @@ export default function CartPage() {
     }
     try {
       setSubmitting(true)
-      const res = await fetch(`/api/orders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: (user as any)?.id,
-          items: items.map((item) => ({
-            itemType: item.itemType,
-            itemId: item.itemId,
-            title: item.title,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-          })),
-          couponCode: couponCode || undefined,
-          shippingAddress: anyPhysical ? shipping : undefined,
-        }),
+      const res = await http.post(`/api/orders`, {
+        userId: (user as any)?.id,
+        items: items.map((item) => ({
+          itemType: item.itemType,
+          itemId: item.itemId,
+          title: item.title,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+        })),
+        couponCode: couponCode || undefined,
+        shippingAddress: anyPhysical ? shipping : undefined,
       })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || json?.success === false) {
+      const json = res.data || {}
+      if (res.status !== 200 && res.status !== 201 || json?.success === false) {
         throw new Error(json?.error || "ไม่สามารถสร้างคำสั่งซื้อได้")
       }
       toast({ title: "สร้างคำสั่งซื้อสำเร็จ", description: "โปรดอัพโหลดสลิปชำระเงินหากมี" })

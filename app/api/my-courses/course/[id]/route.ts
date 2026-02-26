@@ -1,31 +1,22 @@
 import { NextResponse } from "next/server"
+import { getAuthHeaders, checkApiConfig } from "@/lib/api-auth-utils"
 
 export async function GET(
   req: Request,
   { params }: { params: { id: string } }
 ) {
-  const baseUrl = process.env.API_BASE_URL
-  if (!baseUrl) {
-    return NextResponse.json(
-      { success: false, message: "API_BASE_URL is not configured", course: null },
-      { status: 500 }
-    )
-  }
+  const config = checkApiConfig()
+  if (!config.ok) return config.error
+  const baseUrl = process.env.API_BASE_URL!
 
   try {
     const url = new URL(req.url)
     const search = url.search || ""
     const courseId = params.id
-    const cookie = req.headers.get("cookie") ?? ""
-    const authorization = req.headers.get("authorization") ?? ""
-    
-    const headers: Record<string, string> = { cookie }
-    if (authorization) {
-      headers["authorization"] = authorization
-    }
+    const authHeaders = getAuthHeaders(req)
     
     const res = await fetch(`${baseUrl}/api/my-courses/course/${courseId}${search}`, {
-      headers,
+      headers: authHeaders,
       cache: "no-store",
     })
     

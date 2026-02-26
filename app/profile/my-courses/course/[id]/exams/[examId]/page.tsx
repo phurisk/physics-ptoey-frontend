@@ -12,6 +12,7 @@ import Image from "next/image"
 import { PanelRightClose, PanelRightOpen } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/components/ui/use-toast"
+import http from "@/lib/http"
 
 type ExamDetail = {
   id: string
@@ -71,9 +72,9 @@ export default function ExamAttemptPage() {
       if (!courseId || !examId || !user?.id) { setLoading(false); return }
       try {
         setLoading(true)
-        const res = await fetch(`/api/my-courses/course/${encodeURIComponent(String(courseId))}/exams/${encodeURIComponent(String(examId))}?userId=${encodeURIComponent(String(user.id))}`, { cache: "no-store" })
-        const json: ExamDetailResponse = await res.json().catch(() => ({ success: false }))
-        if (!res.ok || json.success === false) throw new Error(json?.error || `HTTP ${res.status}`)
+        const res = await http.get(`/api/my-courses/course/${encodeURIComponent(String(courseId))}/exams/${encodeURIComponent(String(examId))}?userId=${encodeURIComponent(String(user.id))}`)
+        const json: ExamDetailResponse = res.data || { success: false }
+        if (res.status !== 200 || json.success === false) throw new Error(json?.error || `HTTP ${res.status}`)
         const payload = json.data || (json as any).exam || null
 
         let normalized: ExamDetail | null = null
@@ -315,15 +316,9 @@ const summaryContent = exam ? (
           textAnswer: answers[q.id]?.textAnswer,
         })),
       }
-      const res = await fetch(`/api/my-courses/course/${encodeURIComponent(String(courseId))}/exams/${encodeURIComponent(String(examId))}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-      const text = await res.text().catch(() => "")
-      let json: any = null
-      try { json = text ? JSON.parse(text) : null } catch {}
-      if (!res.ok || json?.success === false) throw new Error(json?.error || (text && text.slice(0, 200)) || `HTTP ${res.status}`)
+      const res = await http.post(`/api/my-courses/course/${encodeURIComponent(String(courseId))}/exams/${encodeURIComponent(String(examId))}`, payload)
+      const json: any = res.data || null
+      if (res.status !== 200 && res.status !== 201 || json?.success === false) throw new Error(json?.error || `HTTP ${res.status}`)
       const result = json?.result || json?.data || json
       const attemptId = result?.attemptId || result?.id
       if (attemptId) {

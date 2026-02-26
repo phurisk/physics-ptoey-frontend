@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Loader2 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import http from "@/lib/http"
 
 type ApiCourse = {
   id: string
@@ -87,10 +88,8 @@ export default function CheckoutCoursePage() {
         setCheckingExisting(true)
         const uid = (user as any)?.id
         if (!uid) { setCheckingExisting(false); return }
-        const res0 = await fetch(`/api/orders?userId=${encodeURIComponent(uid)}`, { cache: "no-store" })
-        const text0 = await res0.text().catch(() => "")
-        let json0: any = null
-        try { json0 = text0 ? JSON.parse(text0) : null } catch {}
+        const res0 = await http.get(`/api/orders?userId=${encodeURIComponent(uid)}`)
+        const json0: any = res0.data || {}
         const list: any[] = Array.isArray(json0?.data) ? json0.data : (Array.isArray(json0) ? json0 : [])
         const exists = list.find((o: any) => {
           const t = String(o?.orderType || o?.type || "").toUpperCase()
@@ -208,10 +207,8 @@ export default function CheckoutCoursePage() {
       const userId = (user as any)?.id
       if (userId) {
         try {
-          const res0 = await fetch(`/api/orders?userId=${encodeURIComponent(userId)}`, { cache: "no-store" })
-          const text0 = await res0.text().catch(() => "")
-          let json0: any = null
-          try { json0 = text0 ? JSON.parse(text0) : null } catch {}
+          const res0 = await http.get(`/api/orders?userId=${encodeURIComponent(userId)}`)
+          const json0: any = res0.data || {}
           const list: any[] = Array.isArray(json0?.data) ? json0.data : (Array.isArray(json0) ? json0 : [])
           const exists = list.find((o: any) => {
             const t = String(o?.orderType || o?.type || "").toUpperCase()
@@ -227,26 +224,22 @@ export default function CheckoutCoursePage() {
         } catch {}
       }
 
-      const res = await fetch(`/api/orders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: (user as any)?.id,
-          items: [
-            {
-              itemType: "COURSE",
-              itemId: course.id,
-              title: course.title,
-              quantity: 1,
-              unitPrice: price,
-            },
-          ],
-          couponCode: couponCode || undefined,
-          shippingAddress: course.isPhysical ? shipping : undefined,
-        }),
+      const res = await http.post(`/api/orders`, {
+        userId: (user as any)?.id,
+        items: [
+          {
+            itemType: "COURSE",
+            itemId: course.id,
+            title: course.title,
+            quantity: 1,
+            unitPrice: price,
+          },
+        ],
+        couponCode: couponCode || undefined,
+        shippingAddress: course.isPhysical ? shipping : undefined,
       })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || json?.success === false) throw new Error(json?.error || "สร้างคำสั่งซื้อไม่สำเร็จ")
+      const json = res.data || {}
+      if (res.status !== 200 && res.status !== 201 || json?.success === false) throw new Error(json?.error || "สร้างคำสั่งซื้อไม่สำเร็จ")
       const oid = String(json?.data?.orderId || json?.data?.id)
       router.push(`/order-success/${encodeURIComponent(oid)}`)
     } catch (e: any) {

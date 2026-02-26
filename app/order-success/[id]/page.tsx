@@ -11,6 +11,7 @@ import Image from "next/image"
 import { CheckCircle2, Clock, AlertCircle, FileText, RefreshCw, MapPin, Download, Upload, Loader2 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { validateAndCompressImage } from "@/lib/image-compress"
+import http from "@/lib/http"
 
 type OrderItem = {
   id?: string
@@ -151,12 +152,10 @@ export default function OrderSuccessPage() {
   // API helpers
   // ────────────────────────────────────────────────────────────────────────────
   async function fetchOrder(orderId: string) {
-    const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}`, { cache: "no-store" })
-    const text = await res.text().catch(() => "")
-    let json: OrderResponse | null = null
-    try { json = text ? JSON.parse(text) : null } catch {}
-    if (!res.ok || !json?.success) {
-      throw new Error(json?.error || (text && text.slice(0, 300)) || `HTTP ${res.status}`)
+    const res = await http.get(`/api/orders/${encodeURIComponent(orderId)}`)
+    const json: OrderResponse | null = res.data || null
+    if (res.status !== 200 || !json?.success) {
+      throw new Error(json?.error || `HTTP ${res.status}`)
     }
     return json.data!
   }
@@ -320,8 +319,8 @@ export default function OrderSuccessPage() {
       for (const it of items) {
         const cid = String(it.itemId)
         try {
-          const res = await fetch(`/api/enrollments?userId=${encodeURIComponent(userId)}&courseId=${encodeURIComponent(cid)}`, { cache: "no-store" })
-          const json: any = await res.json().catch(() => ({}))
+          const res = await http.get(`/api/enrollments?userId=${encodeURIComponent(userId)}&courseId=${encodeURIComponent(cid)}`)
+          const json: any = res.data || {}
           const exists = !!(json?.enrollment || json?.data || json?.id)
           if (!cancelled) setEnrollmentStatus((prev) => ({ ...prev, [cid]: exists ? "exists" : "missing" }))
         } catch {
@@ -344,12 +343,10 @@ export default function OrderSuccessPage() {
       const form = new FormData()
       form.append("orderId", order.id)
       form.append("file", file)
-      const res = await fetch(`/api/payments/upload-slip`, { method: "POST", body: form })
-      const text = await res.text().catch(() => "")
-      let json: any = null
-      try { json = text ? JSON.parse(text) : null } catch {}
-      if (!res.ok || json?.success === false) {
-        const msg = json?.error || (text && text.slice(0, 300)) || `HTTP ${res.status}`
+      const res = await http.post(`/api/payments/upload-slip`, form)
+      const json: any = res.data || null
+      if (res.status !== 200 && res.status !== 201 || json?.success === false) {
+        const msg = json?.error || `HTTP ${res.status}`
         throw new Error(msg)
       }
       

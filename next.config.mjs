@@ -15,8 +15,9 @@ const nextConfig = {
       { protocol: "https", hostname: "*.vercel.app" },
       { protocol: "https", hostname: "res.cloudinary.com" },
       { protocol: "https", hostname: "img.youtube.com" },
+      { protocol: "https", hostname: "vumbnail.com" },
     ],
-    domains: ["img.youtube.com", "i.ytimg.com"],
+    domains: ["img.youtube.com", "i.ytimg.com", "vumbnail.com"],
   },
 
   async headers() {

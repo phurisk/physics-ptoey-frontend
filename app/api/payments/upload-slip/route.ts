@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server"
+import { getAuthHeaders, checkApiConfig } from "@/lib/api-auth-utils"
 
 export async function POST(req: Request) {
-  const baseUrl = process.env.API_BASE_URL
-  if (!baseUrl) {
-    return NextResponse.json(
-      { success: false, message: "API_BASE_URL is not configured" },
-      { status: 500 }
-    )
-  }
+  const config = checkApiConfig()
+  if (!config.ok) return config.error
+  const baseUrl = process.env.API_BASE_URL!
 
   try {
-    const cookie = req.headers.get("cookie") ?? ""
+    const authHeaders = getAuthHeaders(req)
     const incoming = await req.formData()
     const form = new FormData()
     for (const [key, value] of incoming.entries()) {
@@ -24,7 +21,7 @@ export async function POST(req: Request) {
 
     const res = await fetch(`${baseUrl}/api/payments/upload-slip`, {
       method: "POST",
-      headers: { cookie },
+      headers: authHeaders,
       body: form,
       cache: "no-store",
     })

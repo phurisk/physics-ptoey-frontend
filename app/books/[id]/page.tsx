@@ -15,6 +15,7 @@ import { ArrowLeft, Loader2, Star } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useCart } from "@/components/cart-provider"
 import LoginModal from "@/components/login-modal"
+import http from "@/lib/http"
 
 type Ebook = {
   id: string
@@ -168,10 +169,10 @@ export default function BookDetailPage() {
         return
       }
       try {
-        const res = await fetch(`/api/orders?userId=${encodeURIComponent(user.id)}`, { cache: "no-store" })
-        const json = await res.json().catch(() => ({}))
+        const res = await http.get(`/api/orders?userId=${encodeURIComponent(user.id)}`)
+        const json = res.data || {}
         if (!active) return
-        if (res.ok && Array.isArray(json?.data)) {
+        if (res.status === 200 && Array.isArray(json?.data)) {
           const found = json.data.some((order: any) => {
             const type = String(order?.orderType || "").toUpperCase()
             if (type !== "EBOOK") return false
@@ -283,19 +284,15 @@ export default function BookDetailPage() {
     if (!reviewRating || !reviewTitle.trim() || !reviewComment.trim()) return
     try {
       setPostingReview(true)
-      const res = await fetch(`/api/reviews`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user.id,
-          ebookId: String(id),
-          rating: reviewRating,
-          title: reviewTitle.trim(),
-          comment: reviewComment.trim(),
-        }),
+      const res = await http.post(`/api/reviews`, {
+        userId: user.id,
+        ebookId: String(id),
+        rating: reviewRating,
+        title: reviewTitle.trim(),
+        comment: reviewComment.trim(),
       })
-      const json = await res.json().catch(() => ({ success: false }))
-      if (!res.ok || json?.success === false) throw new Error(json?.error || "ส่งรีวิวไม่สำเร็จ")
+      const json = res.data || { success: false }
+      if (res.status !== 200 && res.status !== 201 || json?.success === false) throw new Error(json?.error || "ส่งรีวิวไม่สำเร็จ")
       const newItem: ApiReview = json?.data ?? {
         id: `temp_${Date.now()}`,
         userId: user.id,
