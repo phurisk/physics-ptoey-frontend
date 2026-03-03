@@ -11,7 +11,7 @@ export function validateYouTubeId(id: string): boolean {
   // Additional validation: should not be all the same character or obvious invalid patterns
   if (/^(.)\1{10}$/.test(id)) return false; // All same character
   if (id === '00000000000' || id === '___________' || id === '-----------') return false;
-  
+  //sss
   return true;
 }
 
