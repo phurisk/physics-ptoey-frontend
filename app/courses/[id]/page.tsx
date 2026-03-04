@@ -54,7 +54,9 @@ function getYouTubeEmbedUrl(url: string) {
 }
 function getVimeoEmbedUrl(url: string) {
   const id = url.match(/(?:vimeo\.com|player\.vimeo\.com)\/(?:video\/)?(\d+)/)?.[1]
-  return id ? `https://player.vimeo.com/video/${id}?dnt=1&title=0&byline=0&portrait=0` : null
+  return id
+    ? `https://player.vimeo.com/video/${id}?dnt=1&title=0&byline=0&portrait=0&autopause=0&controls=1&fun=0&speed=1&pip=1`
+    : null
 }
 function getEmbedSrc(url?: string | null) {
   if (!url) return null
@@ -758,11 +760,20 @@ export default function CourseDetailPage() {
                               width="100%"
                               height="100%"
                               style={{ border: 0, display: "block" }}
+                              sandbox="allow-scripts allow-same-origin allow-presentation"
                               allowFullScreen
-                              allow="autoplay; fullscreen"
+                              allow="autoplay; fullscreen; encrypted-media; picture-in-picture; web-share"
                               title={`${course.title} - แนะนำคอร์ส`}
                               loading="lazy"
                             />
+                            {isIntroVimeo && !introReplayVisible && (
+                              <div
+                                className="absolute top-2 right-2 h-8 w-14 z-10"
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                aria-hidden="true"
+                              />
+                            )}
                             {isIntroVimeo && introReplayVisible && (
                               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-black/90 text-white p-4">
                                 <div className="text-center space-y-2">

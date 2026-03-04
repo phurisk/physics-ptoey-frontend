@@ -99,7 +99,9 @@ function getYouTubeEmbedUrl(url: string) {
 
 function getVimeoEmbedUrl(url: string) {
   const idMatch = url.match(/(?:vimeo\.com|player\.vimeo\.com)\/(?:video\/)?(\d+)/)?.[1]
-  return idMatch ? `https://player.vimeo.com/video/${idMatch}?dnt=1&title=0&byline=0&portrait=0&autopause=0&controls=1&fun=0` : null
+  return idMatch
+    ? `https://player.vimeo.com/video/${idMatch}?dnt=1&title=0&byline=0&portrait=0&autopause=0&controls=1&fun=0&speed=1&pip=1`
+    : null
 }
 
 function getEmbedSrc(url: string) {
@@ -641,37 +643,17 @@ export default function CourseDetailPage() {
                         sandbox="allow-scripts allow-same-origin allow-presentation"
                         allowFullScreen
                         referrerPolicy="no-referrer"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allow="autoplay; fullscreen; encrypted-media; picture-in-picture; web-share"
                         title={selectedContent.title}
                       />
-                      {/* Overlay to block clicks on edges (Vimeo logo area) */}
-                      {!hasOverlay && (
-                        <>
-                          {/* Top edge overlay */}
-                          <div 
-                            className="absolute top-0 left-0 right-0 h-12 z-10 pointer-events-auto"
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                          />
-                          {/* Right edge overlay */}
-                          <div 
-                            className="absolute top-0 right-0 bottom-0 w-24 z-10 pointer-events-auto"
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                          />
-                          {/* Bottom edge overlay */}
-                          <div 
-                            className="absolute bottom-0 left-0 right-0 h-16 z-10 pointer-events-auto"
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                          />
-                          {/* Left edge overlay */}
-                          <div 
-                            className="absolute top-0 left-0 bottom-0 w-24 z-10 pointer-events-auto"
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                          />
-                        </>
+                      {/* Overlay to block only Vimeo logo click area */}
+                      {!hasOverlay && isSelectedVimeo && (
+                        <div
+                          className="absolute top-2 right-2 h-8 w-14 z-10"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                          aria-hidden="true"
+                        />
                       )}
                       {hasOverlay && (
                         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-black/90 text-white px-6 text-center">
