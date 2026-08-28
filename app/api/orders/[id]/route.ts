@@ -1,92 +1,28 @@
-import { NextResponse, NextRequest } from "next/server"
-import { getAuthHeaders, checkApiConfig } from "@/lib/api-auth-utils"
+import { NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
+import { requireUser } from "@/lib/requireUser"
 
-export async function GET(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  const config = checkApiConfig()
-  if (!config.ok) return config.error
-  const baseUrl = process.env.API_BASE_URL!
-
-  const { id } = await context.params
-  if (!id) {
-    return NextResponse.json(
-      { success: false, message: "Missing order id" },
-      { status: 400 }
-    )
-  }
+// GET: /api/orders/[id] - single order detail (owner or admin only)
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = requireUser(req)
+  if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
 
   try {
-    const authHeaders = getAuthHeaders(req)
-    const res = await fetch(`${baseUrl}/api/orders/${encodeURIComponent(id)}`, {
-      headers: authHeaders,
-      cache: "no-store",
-    })
-    const data = await res.json().catch(() => ({}))
+    const { id } = await params
 
-    // Frontend normalization: remove shipping fee and adjust totals for display only.
-    const normalize = (o: any) => {
-      if (!o || typeof o !== 'object') return o
-      const subtotal = Number(o.subtotal || 0)
-      const couponDiscount = Number(o.couponDiscount || 0)
-      const tax = Number(o.tax || 0)
-      o.shippingFee = 0
-      o.total = Math.max(0, subtotal + tax - couponDiscount)
-      if (o.shipping && typeof o.shipping === 'object') {
-        o.shipping.shippingFee = 0
-      }
-      return o
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: { user: { select: { id: true, name: true, email: true } }, payment: true, shipping: true, items: true },
+    })
+
+    if (!order) return NextResponse.json({ success: false, error: "ไม่พบคำสั่งซื้อ" }, { status: 404 })
+    if (order.userId !== user.userId && user.role !== "ADMIN") {
+      return NextResponse.json({ success: false, error: "ไม่มีสิทธิ์เข้าถึงคำสั่งซื้อนี้" }, { status: 403 })
     }
 
-    if (data && typeof data === 'object' && data.data) {
-      data.data = normalize(data.data)
-    }
-
-    return NextResponse.json(data, { status: res.status })
-  } catch (err) {
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch order" },
-      { status: 502 }
-    )
-  }
-}
-
-export async function PATCH(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  const baseUrl = process.env.API_BASE_URL
-  if (!baseUrl) {
-    return NextResponse.json(
-      { success: false, message: "API_BASE_URL is not configured" },
-      { status: 500 }
-    )
-  }
-
-  const { id } = await context.params
-  if (!id) {
-    return NextResponse.json(
-      { success: false, message: "Missing order id" },
-      { status: 400 }
-    )
-  }
-
-  try {
-    const body = await req.json().catch(() => ({}))
-    const cookie = req.headers.get("cookie") ?? ""
-    const res = await fetch(`${baseUrl}/api/orders/${encodeURIComponent(id)}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json", cookie },
-      body: JSON.stringify(body),
-      cache: "no-store",
-    })
-    const data = await res.json().catch(() => ({}))
-    return NextResponse.json(data, { status: res.status })
-  } catch (err) {
-    return NextResponse.json(
-      { success: false, message: "Failed to update order" },
-      { status: 502 }
-    )
+    return NextResponse.json({ success: true, data: order })
+  } catch (error) {
+    console.error("Get order error:", error)
+    return NextResponse.json({ success: false, error: "เกิดข้อผิดพลาดในการดึงข้อมูลคำสั่งซื้อ" }, { status: 500 })
   }
 }

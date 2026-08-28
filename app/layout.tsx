@@ -6,6 +6,8 @@ import { Navigation } from "@/components/navigation"
 import { AuthProvider } from "@/components/auth-provider"
 import { CartProvider } from "@/components/cart-provider"
 import { Toaster } from "@/components/ui/toaster"
+import { SiteMain } from "@/components/site-main"
+import { SessionProviderWrapper } from "@/components/session-provider-wrapper"
 
 const sarabun = Sarabun({
   subsets: ["thai", "latin"],
@@ -33,13 +35,15 @@ export default function RootLayout({
   return (
     <html lang="th">
       <body className={`font-sans ${sarabun.variable} antialiased`}>
-        <AuthProvider>
-          <CartProvider>
-            <Navigation />
-            <main className="pt-16 lg:pt-20">{children}</main>
-            <Toaster />
-          </CartProvider>
-        </AuthProvider>
+        <SessionProviderWrapper>
+          <AuthProvider>
+            <CartProvider>
+              <Navigation />
+              <SiteMain>{children}</SiteMain>
+              <Toaster />
+            </CartProvider>
+          </AuthProvider>
+        </SessionProviderWrapper>
       </body>
     </html>
   )

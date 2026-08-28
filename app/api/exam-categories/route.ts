@@ -1,27 +1,30 @@
 import { NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
 
+// GET: /api/exam-categories?includeExams=true - exam-bank categories, public
 export async function GET(req: Request) {
-  const baseUrl = process.env.API_BASE_URL
-  if (!baseUrl) {
-    return NextResponse.json(
-      { success: false, message: "API_BASE_URL is not configured", data: [] },
-      { status: 500 }
-    )
-  }
-
   try {
-    const cookie = req.headers.get("cookie") ?? ""
-    const res = await fetch(`${baseUrl}/api/exam-categories`, {
-      next: { revalidate: 60 },
-      headers: { cookie },
+    const { searchParams } = new URL(req.url)
+    const includeExams = searchParams.get("includeExams") === "true"
+
+    const categories = await prisma.examCategory.findMany({
+      where: { isActive: true },
+      include: {
+        ...(includeExams && {
+          exams: {
+            where: { isActive: true },
+            include: { _count: { select: { files: true } } },
+            orderBy: { createdAt: "desc" },
+          },
+        }),
+        _count: { select: { exams: { where: { isActive: true } } } },
+      },
+      orderBy: { name: "asc" },
     })
-    const data = await res.json().catch(() => ({}))
-    return NextResponse.json(data, { status: res.status })
-  } catch (err) {
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch exam categories", data: [] },
-      { status: 502 }
-    )
+
+    return NextResponse.json({ success: true, data: categories })
+  } catch (error) {
+    console.error("Get exam categories error:", error)
+    return NextResponse.json({ success: false, error: "เกิดข้อผิดพลาดในการดึงข้อมูลหมวดหมู่ข้อสอบ" }, { status: 500 })
   }
 }
-

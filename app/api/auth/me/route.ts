@@ -1,46 +1,24 @@
 import { NextResponse } from "next/server"
+import { verifyExternalToken } from "@/lib/jwt"
 
+// GET: /api/auth/me - reads the httpOnly jwt cookie only (no Bearer support
+// here, unlike requireUser). Sourced straight from the token payload — can
+// be stale relative to the DB if the profile was edited elsewhere.
 export async function GET(req: Request) {
-  const baseUrl = process.env.API_BASE_URL
-  if (!baseUrl) {
-    return NextResponse.json(
-      { success: false, message: "API_BASE_URL is not configured" },
-      { status: 500 }
-    )
-  }
-
   try {
-    const rawCookie = req.headers.get("cookie") ?? ""
-   
-    const backendCookie = (() => {
-      try {
-        const match = rawCookie.split(/;\s*/).find((p) => p.startsWith("backend_cookie="))
-        if (!match) return null
-        const val = decodeURIComponent(match.split("=").slice(1).join("="))
-        return val
-      } catch { return null }
-    })()
-   
-    const toCookieHeader = (setCookie: string) => {
-      try {
-        const items = setCookie.split(/,\s*(?=[^=;,\s]+=)/g)
-        const pairs = items.map((c) => c.split(";")[0].trim()).filter(Boolean)
-        return pairs.join("; ")
-      } catch {
-        return ""
-      }
-    }
-    const cookie = backendCookie ? toCookieHeader(backendCookie) : rawCookie
-    const res = await fetch(`${baseUrl}/api/auth/me`, {
-      headers: { cookie },
-      cache: "no-store",
-    })
-    const data = await res.json().catch(() => ({}))
-    return NextResponse.json(data, { status: res.status })
-  } catch (err) {
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch current user" },
-      { status: 502 }
-    )
+    const cookieHeader = req.headers.get("cookie") || ""
+    const match = cookieHeader.match(/(?:^|;\s*)jwt=([^;]+)/)
+    const token = match ? decodeURIComponent(match[1]) : null
+
+    if (!token) return NextResponse.json({ success: false, message: "Not authenticated" }, { status: 401 })
+
+    const verification = verifyExternalToken(token)
+    if (!verification.valid) return NextResponse.json({ success: false, message: "Invalid session" }, { status: 401 })
+
+    const { userId, email, name, role, lineId } = verification.data
+    return NextResponse.json({ success: true, data: { id: userId, email, name, role, lineId } })
+  } catch (error) {
+    console.error("Get me error:", error)
+    return NextResponse.json({ success: false, message: "Failed to fetch current user" }, { status: 500 })
   }
 }

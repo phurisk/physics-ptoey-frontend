@@ -1,44 +1,35 @@
 import { NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
+import type { Prisma } from "@prisma/client"
 
+// GET: /api/exams - exam-bank (downloadable past-paper files) catalog, public
 export async function GET(req: Request) {
   try {
-    const baseUrl = process.env.API_BASE_URL
-    if (!baseUrl) {
-      return NextResponse.json(
-        { success: false, message: "API_BASE_URL is not configured" },
-        { status: 500 }
-      )
-    }
+    const { searchParams } = new URL(req.url)
+    const page = parseInt(searchParams.get("page") || "1") || 1
+    const limit = parseInt(searchParams.get("limit") || "12") || 12
+    const search = searchParams.get("search")
+    const categoryId = searchParams.get("categoryId")
+    const skip = (page - 1) * limit
 
-    const url = new URL(req.url)
-    const upstream = new URL("/api/exams", baseUrl)
+    const where: Prisma.ExamBankWhereInput = { isActive: true }
+    if (search) where.title = { contains: search, mode: "insensitive" }
+    if (categoryId) where.categoryId = categoryId
 
-    const allowed = new Set([
-      "page",
-      "limit",
-      "q",
-      "type",
-      "examType",
-      "categoryType",
-      "year",
-      "categoryId",
-      "search",
+    const [data, total] = await Promise.all([
+      prisma.examBank.findMany({
+        where,
+        include: { category: { select: { id: true, name: true } }, _count: { select: { files: true } } },
+        orderBy: { title: "asc" },
+        skip,
+        take: limit,
+      }),
+      prisma.examBank.count({ where }),
     ])
-    url.searchParams.forEach((v, k) => {
-      if (allowed.has(k) && v !== "") upstream.searchParams.set(k, v)
-    })
 
-    const cookie = req.headers.get("cookie") || undefined
-    const r = await fetch(upstream.toString(), {
-      cache: "no-store",
-      headers: cookie ? { cookie } : undefined,
-    })
-    const data = await r.json().catch(() => ({}))
-    return NextResponse.json(data, { status: r.status })
-  } catch (e: any) {
-    return NextResponse.json(
-      { success: false, message: e?.message ?? "proxy error" },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: true, data, pagination: { page, limit, total, pages: Math.ceil(total / limit) } })
+  } catch (error) {
+    console.error("Get exam bank error:", error)
+    return NextResponse.json({ success: false, error: "เกิดข้อผิดพลาดในการดึงข้อมูลข้อสอบ" }, { status: 500 })
   }
 }

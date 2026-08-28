@@ -163,6 +163,9 @@ export function Footer() {
               <Link href="/terms" className="hover:text-yellow-400 transition-colors duration-200">
                 ข้อกำหนดการใช้งาน
               </Link>
+              <Link href="/admin/dashboard" className="hover:text-yellow-400 transition-colors duration-200">
+                จัดการหลังบ้าน
+              </Link>
             </div>
           </div>
         </div>

@@ -1,46 +1,24 @@
 import { NextResponse, NextRequest } from "next/server"
+import { prisma } from "@/lib/prisma"
 
-export async function GET(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  const baseUrl = process.env.API_BASE_URL
-  if (!baseUrl) {
-    return NextResponse.json(
-      { success: false, message: "API_BASE_URL is not configured", data: [] },
-      { status: 500 }
-    )
-  }
-
+// GET: /api/courses/[id]/chapters - public chapter+content list for a course
+// (the course detail route already returns chapters inline; this exists as a
+// standalone fallback for consumers that fetch it separately)
+export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params
   if (!id) {
-    return NextResponse.json(
-      { success: false, message: "Missing course id", data: [] },
-      { status: 400 }
-    )
+    return NextResponse.json({ success: false, message: "Missing course id", data: [] }, { status: 400 })
   }
 
   try {
-    const url = new URL(req.url)
-    const search = url.search || ""
-    const cookie = req.headers.get("cookie") ?? ""
-    const authorization = req.headers.get("authorization") ?? ""
-    
-    const headers: Record<string, string> = { cookie }
-    if (authorization) {
-      headers["authorization"] = authorization
-    }
-    
-    const res = await fetch(`${baseUrl}/api/courses/${encodeURIComponent(id)}/chapters${search}`, {
-      headers,
-      cache: "no-store",
+    const chapters = await prisma.chapter.findMany({
+      where: { courseId: id },
+      include: { contents: { orderBy: { order: "asc" } } },
+      orderBy: { order: "asc" },
     })
-    const data = await res.json()
-    return NextResponse.json(data, { status: res.status })
+    return NextResponse.json({ success: true, data: chapters })
   } catch (err) {
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch chapters", data: [] },
-      { status: 502 }
-    )
+    console.error("Get public chapters error:", err)
+    return NextResponse.json({ success: false, message: "Failed to fetch chapters", data: [] }, { status: 500 })
   }
 }

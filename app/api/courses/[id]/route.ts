@@ -1,46 +1,53 @@
-import { NextResponse, NextRequest } from "next/server"
+import { NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
 
-export async function GET(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  const baseUrl = process.env.API_BASE_URL
-  if (!baseUrl) {
-    return NextResponse.json(
-      { success: false, message: "API_BASE_URL is not configured" },
-      { status: 500 }
-    )
-  }
-
-  const { id } = await context.params
-  if (!id) {
-    return NextResponse.json(
-      { success: false, message: "Missing course id" },
-      { status: 400 }
-    )
-  }
-
+// GET: /api/courses/[id] - published course detail, public.
+// Content bodies/URLs are intentionally omitted here (locked-content teaser
+// pattern) — only title/type/order. Full contents are served via
+// /api/my-courses/course/[id] once the caller is enrolled.
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const url = new URL(req.url)
-    const search = url.search || ""
-    const cookie = req.headers.get("cookie") ?? ""
-    const authorization = req.headers.get("authorization") ?? ""
-    
-    const headers: Record<string, string> = { cookie }
-    if (authorization) {
-      headers["authorization"] = authorization
-    }
-    
-    const res = await fetch(`${baseUrl}/api/courses/${encodeURIComponent(id)}${search}`, {
-      headers,
-      cache: "no-store",
+    const { id } = await params
+
+    const course = await prisma.course.findUnique({
+      where: { id, status: "PUBLISHED" },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        price: true,
+        discountPrice: true,
+        sampleVideo: true,
+        duration: true,
+        accessDuration: true,
+        accessHours: true,
+        isFree: true,
+        isRecommended: true,
+        status: true,
+        coverImageUrl: true,
+        coverPublicId: true,
+        isPhysical: true,
+        weight: true,
+        dimensions: true,
+        createdAt: true,
+        updatedAt: true,
+        instructor: { select: { id: true, name: true, email: true } },
+        category: { select: { id: true, name: true, description: true } },
+        chapters: {
+          select: { id: true, title: true, order: true, contents: { select: { id: true, title: true, contentType: true, order: true }, orderBy: { order: "asc" } } },
+          orderBy: { order: "asc" },
+        },
+        _count: { select: { enrollments: true } },
+      },
     })
-    const data = await res.json()
-    return NextResponse.json(data, { status: res.status })
-  } catch (err) {
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch course" },
-      { status: 502 }
-    )
+
+    if (!course) {
+      return NextResponse.json({ success: false, error: "ไม่พบคอร์สที่ระบุ" }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true, data: course })
+  } catch (error) {
+    console.error("Get course error:", error)
+    return NextResponse.json({ success: false, error: "เกิดข้อผิดพลาดในการดึงข้อมูลคอร์ส" }, { status: 500 })
   }
 }

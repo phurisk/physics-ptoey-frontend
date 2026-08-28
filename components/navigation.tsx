@@ -90,6 +90,8 @@ export function Navigation() {
     (user as any)?.displayName ||
     (user as any)?.email ||
     "ผู้ใช้"
+
+  if (pathname?.startsWith("/admin")) return null
   const initial = String(displayName || "").trim().charAt(0).toUpperCase() || "U"
 
   const menuItems = [

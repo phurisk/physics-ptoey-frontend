@@ -1,0 +1,1082 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// =========================================================================
+// Auth / Users
+// =========================================================================
+
+model User {
+  id        String   @id @default(uuid())
+  email     String?  @unique // optional — LINE-only users may not have one
+  name      String?
+  school    String?
+  password  String?
+  image     String? // profile image, e.g. จาก LINE
+  lineId    String?  @unique
+  role      Role     @default(STUDENT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  courses      Course[]        @relation("InstructorCourses")
+  enrollments  Enrollment[]
+  examAttempts ExamAttempt[]
+  orders       Order[]
+  posts        Post[]          @relation("AuthorPosts")
+  postContents PostContent[]   @relation("PostContentAuthor")
+  reviews      Review[]
+  couponUsages CouponUsage[]
+  downloads    EbookDownload[]
+  accounts     Account[]
+  sessions     Session[]
+  carts        Cart[]
+
+  mockExamPurchases  MockExamPurchase[]
+  mockExamAttempts   MockExamAttempt[]
+  mockPracticeUnlocks MockPracticeUnlock[]
+  mockPracticeWallet MockPracticeWallet?
+
+  flashcardReviews    FlashcardReview[]
+  flashcardReviewLogs FlashcardReviewLog[]
+}
+
+// NextAuth.js required models — declared for schema completeness; no
+// PrismaAdapter is used (session strategy is JWT, LINE login is handled by
+// hand in the signIn callback), so these tables stay empty in practice.
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum Role {
+  ADMIN
+  INSTRUCTOR
+  STUDENT
+}
+
+// =========================================================================
+// Courses
+// =========================================================================
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  courses     Course[]
+}
+
+model Course {
+  id             String       @id @default(uuid())
+  title          String
+  description    String?      @db.Text
+  price          Float        @default(0)
+  discountPrice  Float?
+  sampleVideo    String?
+  duration       Int?
+  accessDuration Int?         @default(60) // วัน
+  accessHours    Int?         @default(120)
+  isFree         Boolean      @default(false)
+  isRecommended  Boolean      @default(false)
+  status         CourseStatus @default(DRAFT)
+  instructorId   String
+  categoryId     String?
+  subject        Subjects?
+  gradeLevel     GradeLevel?
+  coverImageUrl  String?
+  coverPublicId  String?
+  isPhysical     Boolean      @default(false)
+  weight         Float?
+  dimensions     String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  chapters    Chapter[]
+  exams       Exam[]
+  category    Category?    @relation(fields: [categoryId], references: [id])
+  instructor  User         @relation("InstructorCourses", fields: [instructorId], references: [id])
+  enrollments Enrollment[]
+  reviews     Review[]
+  mockExams   MockExam[]
+}
+
+model Chapter {
+  id        String    @id @default(uuid())
+  title     String
+  order     Int
+  courseId  String
+  createdAt DateTime  @default(now())
+  course    Course    @relation(fields: [courseId], references: [id])
+  contents  Content[]
+}
+
+model Content {
+  id          String      @id @default(uuid())
+  title       String
+  contentType ContentType
+  contentUrl  String
+  order       Int
+  chapterId   String
+  createdAt   DateTime    @default(now())
+  chapter     Chapter     @relation(fields: [chapterId], references: [id])
+}
+
+model Enrollment {
+  id               String       @id @default(uuid())
+  userId           String
+  courseId         String
+  progress         Float        @default(0)
+  status           EnrollStatus @default(ACTIVE)
+  viewedContentIds Json         @default("[]")
+  enrolledAt       DateTime     @default(now())
+  accessDuration   Int? // override (วัน) รายบุคคล — ถ้าไม่กำหนดใช้ Course.accessDuration
+  accessHours      Int? // override (ชั่วโมง) รายบุคคล — ถ้าไม่กำหนดใช้ Course.accessHours
+  course           Course       @relation(fields: [courseId], references: [id])
+  user             User         @relation(fields: [userId], references: [id])
+
+  @@unique([userId, courseId])
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  DELETED
+}
+
+enum ContentType {
+  VIDEO
+  PDF
+  LINK
+  QUIZ
+  ASSIGNMENT
+}
+
+enum EnrollStatus {
+  ACTIVE
+  COMPLETED
+  CANCELED
+}
+
+// =========================================================================
+// Legacy course-exam system (quiz-taking, tied to a Course) — separate from
+// the ExamBank/ExamFile downloadable-file catalog below.
+// =========================================================================
+
+model Exam {
+  id              String   @id @default(uuid())
+  title           String
+  description     String?
+  courseId        String?
+  examType        ExamType @default(QUIZ)
+  timeLimit       Int? // นาที
+  totalMarks      Int      @default(0)
+  passingMarks    Int      @default(0)
+  attemptsAllowed Int      @default(1)
+  showResults     Boolean  @default(true)
+  showAnswers     Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  course    Course?       @relation(fields: [courseId], references: [id])
+  questions Question[]
+  attempts  ExamAttempt[]
+
+  @@index([courseId])
+}
+
+model Question {
+  id            String       @id @default(uuid())
+  examId        String
+  questionText  String
+  questionImage String?
+  questionType  QuestionType @default(MULTIPLE_CHOICE)
+  marks         Int          @default(1)
+  explanation   String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  exam    Exam             @relation(fields: [examId], references: [id], onDelete: Cascade)
+  options QuestionOption[]
+  answers StudentAnswer[]
+
+  @@index([examId])
+}
+
+model QuestionOption {
+  id         String  @id @default(uuid())
+  questionId String
+  optionText String
+  isCorrect  Boolean @default(false)
+  order      Int     @default(0)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+}
+
+model ExamAttempt {
+  id             String     @id @default(uuid())
+  examId         String
+  userId         String
+  status         ExamStatus @default(IN_PROGRESS)
+  startedAt      DateTime   @default(now())
+  completedAt    DateTime?
+  totalQuestions Int        @default(0)
+  correctAnswers Int        @default(0)
+  totalMarks     Int        @default(0)
+  obtainedMarks  Int        @default(0)
+  percentage     Float      @default(0)
+  passed         Boolean    @default(false)
+
+  exam    Exam            @relation(fields: [examId], references: [id])
+  user    User            @relation(fields: [userId], references: [id])
+  answers StudentAnswer[]
+
+  @@unique([examId, userId]) // ทำได้ครั้งเดียวต่อคน
+  @@index([examId])
+  @@index([userId])
+}
+
+model StudentAnswer {
+  id         String   @id @default(uuid())
+  attemptId  String
+  questionId String
+  optionId   String?
+  textAnswer String?
+  isCorrect  Boolean  @default(false)
+  marks      Int      @default(0)
+  answeredAt DateTime @default(now())
+
+  attempt  ExamAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question Question    @relation(fields: [questionId], references: [id])
+
+  @@unique([attemptId, questionId])
+  @@index([attemptId])
+}
+
+enum ExamType {
+  PRETEST
+  POSTTEST
+  QUIZ
+  MIDTERM
+  FINAL
+  PRACTICE
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  SHORT_ANSWER
+}
+
+enum ExamStatus {
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// =========================================================================
+// Exam bank — downloadable past-paper files, unrelated to the quiz system
+// above. Public catalog, no auth required to browse.
+// =========================================================================
+
+model ExamCategory {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  description String?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  exams       ExamBank[]
+}
+
+model ExamBank {
+  id          String        @id @default(uuid())
+  title       String
+  description String?
+  categoryId  String?
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  category    ExamCategory? @relation(fields: [categoryId], references: [id])
+  files       ExamFile[]
+}
+
+model ExamFile {
+  id         String   @id @default(uuid())
+  examId     String
+  fileName   String
+  filePath   String
+  fileType   String?
+  fileSize   Int?
+  isDownload Boolean  @default(true)
+  uploadedAt DateTime @default(now())
+  exam       ExamBank @relation(fields: [examId], references: [id], onDelete: Cascade)
+}
+
+// =========================================================================
+// Ebooks
+// =========================================================================
+
+model EbookCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  ebooks      Ebook[]
+}
+
+model Ebook {
+  id             String      @id @default(uuid())
+  title          String
+  description    String?
+  author         String
+  isbn           String?     @unique
+  price          Float
+  discountPrice  Float?
+  coverImageUrl  String?
+  previewUrl     String?
+  fileUrl        String?
+  fileSize       Int?
+  pageCount      Int?
+  language       String      @default("th")
+  format         EbookFormat @default(PDF)
+  isPhysical     Boolean     @default(false)
+  weight         Float?
+  dimensions     String?
+  downloadLimit  Int?
+  accessDuration Int? // วัน
+  isActive       Boolean     @default(true)
+  isFeatured     Boolean     @default(false)
+  publishedAt    DateTime?
+  publishedYear  Int?
+  categoryId     String?
+  createdAt      DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  category  EbookCategory?  @relation(fields: [categoryId], references: [id])
+  reviews   Review[]
+  downloads EbookDownload[]
+}
+
+model EbookDownload {
+  id           String    @id @default(uuid())
+  userId       String
+  ebookId      String
+  orderId      String
+  downloadUrl  String
+  expiresAt    DateTime
+  downloadedAt DateTime?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime  @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  ebook Ebook @relation(fields: [ebookId], references: [id])
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+enum EbookFormat {
+  PDF
+  EPUB
+  MOBI
+}
+
+// =========================================================================
+// Orders — item data lives ONLY in OrderItem (no legacy singular
+// Order.courseId/ebookId/orderType — those were dead fields in the
+// reference implementation; fixed here so every consumer reads real data).
+// =========================================================================
+
+model Order {
+  id             String      @id @default(uuid())
+  orderNumber    String      @unique @default(cuid())
+  userId         String
+  status         OrderStatus @default(PENDING)
+  subtotal       Float
+  shippingFee    Float       @default(0)
+  tax            Float       @default(0)
+  discount       Float       @default(0)
+  couponDiscount Float       @default(0)
+  total          Float
+  notes          String?
+  couponId       String?
+  couponCode     String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  user         User            @relation(fields: [userId], references: [id])
+  coupon       Coupon?         @relation(fields: [couponId], references: [id])
+  items        OrderItem[]
+  payment      Payment?
+  shipping     Shipping?
+  couponUsages CouponUsage[]
+  downloads    EbookDownload[]
+}
+
+// itemId is a polymorphic reference (Course.id or Ebook.id depending on
+// itemType) — deliberately NOT a Prisma relation/FK, since it can't point to
+// two different models. Resolve it in application code per itemType.
+model OrderItem {
+  id         String   @id @default(uuid())
+  orderId    String
+  itemType   ItemType
+  itemId     String
+  title      String // เก็บชื่อสินค้าตอนสั่งซื้อ
+  quantity   Int      @default(1)
+  unitPrice  Float
+  totalPrice Float
+  createdAt  DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+}
+
+enum ItemType {
+  COURSE
+  EBOOK
+  MOCK_EXAM
+}
+
+enum OrderStatus {
+  PENDING
+  PENDING_PAYMENT
+  PENDING_VERIFICATION
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+model Payment {
+  id               String        @id @default(uuid())
+  orderId          String        @unique
+  method           PaymentMethod @default(BANK_TRANSFER)
+  status           PaymentStatus @default(PENDING)
+  amount           Float
+  slipUrl          String?
+  ref              String?
+  uploadedAt       DateTime?
+  verifiedAt       DateTime?
+  paidAt           DateTime?
+  slipAnalysisData Json?
+  confidenceScore  Float?
+  validationPassed Boolean?
+  lastAnalyzedAt   DateTime?
+  analysisError    String?
+  detectedAmount   Float?
+  detectedDate     DateTime?
+  detectedSender   String?
+  detectedReceiver String?
+  notes            String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CREDIT_CARD
+  PROMPTPAY
+  TRUE_MONEY
+  FREE
+}
+
+enum PaymentStatus {
+  PENDING
+  PENDING_VERIFICATION
+  COMPLETED
+  REJECTED
+  FAILED
+  REFUNDED
+}
+
+model Shipping {
+  id             String         @id @default(uuid())
+  orderId        String         @unique
+  name           String
+  phone          String
+  address        String
+  district        String
+  province       String
+  postalCode     String
+  shippingMethod ShippingMethod @default(STANDARD)
+  status         ShippingStatus @default(PENDING)
+  trackingNumber String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+enum ShippingMethod {
+  STANDARD
+  EXPRESS
+  KERRY
+  THAILAND_POST
+  JT_EXPRESS
+  FLASH_EXPRESS
+  NINJA_VAN
+  DHL
+  FEDEX
+}
+
+enum ShippingStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+// =========================================================================
+// Coupons
+// =========================================================================
+
+model Coupon {
+  id             String         @id @default(uuid())
+  code           String         @unique
+  name           String
+  description    String?
+  type           CouponType     @default(PERCENTAGE)
+  value          Float
+  minOrderAmount Float?
+  maxDiscount    Float?
+  usageLimit     Int?
+  usageCount     Int            @default(0)
+  userUsageLimit Int?
+  isActive       Boolean        @default(true)
+  validFrom      DateTime
+  validUntil     DateTime
+  applicableType ApplicableType @default(ALL)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  orders     Order[]
+  usages     CouponUsage[]
+  categories CouponCategory[]
+  items      CouponItem[]
+}
+
+model CouponUsage {
+  id       String   @id @default(uuid())
+  couponId String
+  userId   String
+  orderId  String
+  usedAt   DateTime @default(now())
+
+  coupon Coupon @relation(fields: [couponId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+  order  Order  @relation(fields: [orderId], references: [id])
+
+  @@unique([couponId, userId, orderId])
+}
+
+model CouponCategory {
+  id         String   @id @default(uuid())
+  couponId   String
+  categoryId String
+  createdAt  DateTime @default(now())
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@unique([couponId, categoryId])
+}
+
+model CouponItem {
+  id        String   @id @default(uuid())
+  couponId  String
+  itemType  ItemType
+  itemId    String
+  createdAt DateTime @default(now())
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@unique([couponId, itemType, itemId])
+}
+
+enum CouponType {
+  PERCENTAGE
+  FIXED_AMOUNT
+  FREE_SHIPPING
+}
+
+enum ApplicableType {
+  ALL
+  COURSE_ONLY
+  EBOOK_ONLY
+  CATEGORY
+  SPECIFIC_ITEM
+}
+
+// =========================================================================
+// Reviews
+// =========================================================================
+
+model Review {
+  id         String   @id @default(uuid())
+  userId     String
+  courseId   String?
+  ebookId    String?
+  rating     Int      @default(5)
+  title      String?
+  comment    String?
+  isActive   Boolean  @default(true)
+  isVerified Boolean  @default(false) // ตรวจสอบว่าเป็นผู้ซื้อจริง
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course? @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  ebook  Ebook?  @relation(fields: [ebookId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId], name: "unique_user_course_review")
+  @@unique([userId, ebookId], name: "unique_user_ebook_review")
+  @@index([userId])
+  @@index([courseId])
+  @@index([ebookId])
+  @@index([rating])
+  @@index([createdAt])
+}
+
+// =========================================================================
+// Posts / Articles
+// =========================================================================
+
+model PostType {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  posts       Post[]
+}
+
+model Post {
+  id                 String        @id @default(uuid())
+  title              String
+  content            String?
+  excerpt            String?
+  imageUrl           String?
+  imageUrlMobileMode String?
+  slug               String?       @unique
+  isActive           Boolean       @default(true)
+  isFeatured         Boolean       @default(false)
+  publishedAt        DateTime?
+  authorId           String
+  postTypeId         String
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  author             User          @relation("AuthorPosts", fields: [authorId], references: [id])
+  postType           PostType      @relation(fields: [postTypeId], references: [id])
+  postContents       PostContent[]
+}
+
+model PostContent {
+  id          String   @id @default(uuid())
+  urlImg      String?
+  name        String?
+  description String?
+  authorId    String
+  postId      String
+  createdAt   DateTime @default(now())
+
+  author User @relation("PostContentAuthor", fields: [authorId], references: [id])
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([authorId])
+}
+
+// =========================================================================
+// Cart
+// =========================================================================
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  items     CartItem[]
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String
+  itemType  ItemType
+  itemId    String
+  title     String?
+  quantity  Int      @default(1)
+  unitPrice Float?
+  createdAt DateTime @default(now())
+
+  cart Cart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  @@index([cartId])
+}
+
+// =========================================================================
+// Shared subject/level enums
+// =========================================================================
+
+enum Subjects {
+  Thai
+  Mathematics
+  Science
+  Physics
+  Chemistry
+  Biology
+  SocialStudies
+  History
+  Geography
+  HealthAndPE
+  Art
+  Music
+  OccupationsAndTechnology
+  ComputerScience
+  ForeignLanguages
+  English
+  Chinese
+  Japanese
+}
+
+enum GradeLevel {
+  JUNIOR_HIGH
+  SENIOR_HIGH
+}
+
+// =========================================================================
+// Mock Exam System — independent from Exam/Question/ExamAttempt/StudentAnswer
+// above. Only relates to existing models via User and (optionally) Course.
+// =========================================================================
+
+model MockTopic {
+  id        String   @id @default(uuid())
+  subject   Subjects
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  questions      MockQuestion[]
+  flashcardDecks FlashcardDeck[]
+
+  @@unique([subject, name])
+}
+
+model MockExam {
+  id                 String      @id @default(uuid())
+  title              String
+  description        String?
+  courseId           String? // optional tie-in to existing paid-course entitlement
+  subject            Subjects
+  gradeLevel         GradeLevel?
+  timeLimit          Int? // minutes; null = untimed
+  price              Float       @default(0) // 0 = free, no purchase required for REAL mode
+  discountPrice      Float?
+  passingMarks       Int         @default(0)
+  attemptsAllowed    Int         @default(1) // REAL mode only
+  allowPracticeMode  Boolean     @default(true)
+  allowRealMode      Boolean     @default(true)
+  practiceUnlockCost Int         @default(1)
+  isActive           Boolean     @default(true)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  course    Course?            @relation(fields: [courseId], references: [id])
+  questions MockQuestion[]
+  attempts  MockExamAttempt[]
+  purchases MockExamPurchase[]
+
+  @@index([courseId])
+}
+
+model MockExamPurchase {
+  id          String   @id @default(uuid())
+  userId      String
+  mockExamId  String
+  orderId     String?
+  purchasedAt DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  mockExam MockExam @relation(fields: [mockExamId], references: [id])
+
+  @@unique([userId, mockExamId])
+}
+
+model MockQuestion {
+  id                String       @id @default(uuid())
+  mockExamId        String
+  topicId           String?
+  questionText      String
+  questionImage     String?
+  questionType      QuestionType @default(MULTIPLE_CHOICE)
+  marks             Int          @default(1)
+  numericTolerance  Float? // SHORT_ANSWER only; null = exact string match
+  explanation       String?
+  explanationImages String[]     @default([])
+  order             Int          @default(0)
+  isActive          Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  mockExam            MockExam             @relation(fields: [mockExamId], references: [id], onDelete: Cascade)
+  topic               MockTopic?           @relation(fields: [topicId], references: [id])
+  options             MockQuestionOption[]
+  answers             MockStudentAnswer[]
+  mockPracticeUnlocks MockPracticeUnlock[]
+
+  @@index([mockExamId])
+  @@index([topicId])
+}
+
+model MockQuestionOption {
+  id         String  @id @default(uuid())
+  questionId String
+  optionText String
+  isCorrect  Boolean @default(false)
+  order      Int     @default(0)
+
+  question MockQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+}
+
+enum MockAttemptMode {
+  PRACTICE
+  REAL
+}
+
+enum MockAttemptStatus {
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model MockExamAttempt {
+  id            String            @id @default(uuid())
+  mockExamId    String
+  userId        String
+  mode          MockAttemptMode
+  status        MockAttemptStatus @default(IN_PROGRESS)
+  startedAt     DateTime          @default(now())
+  completedAt   DateTime?
+  totalMarks    Int               @default(0)
+  obtainedMarks Int               @default(0)
+  percentage    Float             @default(0)
+  passed        Boolean           @default(false)
+
+  mockExam MockExam            @relation(fields: [mockExamId], references: [id])
+  user     User                @relation(fields: [userId], references: [id])
+  answers  MockStudentAnswer[]
+
+  @@index([mockExamId])
+  @@index([userId])
+}
+
+model MockStudentAnswer {
+  id         String   @id @default(uuid())
+  attemptId  String
+  questionId String
+  optionId   String?
+  textAnswer String?
+  isCorrect  Boolean?
+  marks      Int      @default(0)
+  answeredAt DateTime @default(now())
+
+  attempt  MockExamAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question MockQuestion    @relation(fields: [questionId], references: [id])
+
+  @@unique([attemptId, questionId])
+}
+
+model MockPracticeUnlock {
+  id         String   @id @default(uuid())
+  userId     String
+  questionId String
+  unlockedAt DateTime @default(now())
+
+  user     User         @relation(fields: [userId], references: [id])
+  question MockQuestion @relation(fields: [questionId], references: [id])
+
+  @@unique([userId, questionId])
+}
+
+// One wallet per user, shared across every MockExam — a student's practice
+// tokens are a single pool they can spend on whichever exam they choose, not
+// a separate allotment reset per exam. `tokens` defaults to 10 on first
+// creation (lazily created the first time a user touches practice mode).
+model MockPracticeWallet {
+  userId String @id
+  tokens Int    @default(10)
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// =========================================================================
+// Flashcards — spaced repetition (SM-2). Standalone feature: FlashcardDeck
+// carries its own `subject` so it doesn't depend on mock exams existing, but
+// `topicId` is an optional loose tie-in to MockTopic so a weak-topic result
+// can recommend a matching deck without any FK on the MockQuestion side.
+// =========================================================================
+
+model FlashcardDeck {
+  id            String      @id @default(uuid())
+  title         String
+  description   String?
+  subject       Subjects
+  gradeLevel    GradeLevel?
+  topicId       String?
+  coverImageUrl String?
+  isActive      Boolean     @default(true)
+  order         Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  topic MockTopic?  @relation(fields: [topicId], references: [id])
+  cards Flashcard[]
+
+  @@index([subject])
+  @@index([topicId])
+}
+
+enum FlashcardAnswerMode {
+  SELF_GRADE
+  MULTIPLE_CHOICE
+  TYPED
+}
+
+model Flashcard {
+  id         String   @id @default(uuid())
+  deckId     String
+  front      String   @db.Text
+  frontImage String?
+  back       String   @db.Text
+  backImage  String?
+  hint       String?
+  order      Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  answerMode       FlashcardAnswerMode @default(SELF_GRADE)
+  acceptedAnswers  String[]            @default([]) // TYPED only
+  numericTolerance Float? // TYPED only; null = exact string match
+
+  deck    FlashcardDeck        @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  options FlashcardOption[]
+  reviews FlashcardReview[]
+  logs    FlashcardReviewLog[]
+
+  @@index([deckId])
+}
+
+model FlashcardOption {
+  id         String  @id @default(uuid())
+  cardId     String
+  optionText String
+  isCorrect  Boolean @default(false)
+  order      Int     @default(0)
+
+  card Flashcard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([cardId])
+}
+
+enum FlashcardStatus {
+  NEW
+  LEARNING
+  REVIEW
+  RELEARNING
+}
+
+// Per-user, per-card SM-2 state. `nextReviewAt` is the field the study-queue
+// query filters on — indexed together with userId since every query is
+// "this user's cards due now".
+model FlashcardReview {
+  id             String          @id @default(uuid())
+  userId         String
+  cardId         String
+  repetitions    Int             @default(0)
+  easeFactor     Float           @default(2.5)
+  interval       Int             @default(0)
+  nextReviewAt   DateTime        @default(now())
+  lastReviewedAt DateTime?
+  lapses         Int             @default(0)
+  status         FlashcardStatus @default(NEW)
+
+  user User      @relation(fields: [userId], references: [id])
+  card Flashcard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cardId])
+  @@index([userId, nextReviewAt])
+}
+
+// Append-only history — powers streaks/stats and lets admins see which
+// cards get forgotten most often (via `grade`/`wasCorrect` aggregation).
+model FlashcardReviewLog {
+  id              String   @id @default(uuid())
+  userId          String
+  cardId          String
+  grade           Int
+  intervalBefore  Int
+  intervalAfter   Int
+  easeFactorAfter Float
+  reviewedAt      DateTime @default(now())
+
+  answerMode FlashcardAnswerMode
+  userAnswer String?
+  wasCorrect Boolean?
+
+  user User      @relation(fields: [userId], references: [id])
+  card Flashcard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([userId, reviewedAt])
+  @@index([cardId])
+}

@@ -1,41 +1,26 @@
-import { NextResponse, NextRequest } from "next/server"
+import { NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
 
-export async function GET(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  const baseUrl = process.env.API_BASE_URL
-  if (!baseUrl) {
-    return NextResponse.json(
-      { success: false, message: "API_BASE_URL is not configured", data: null },
-      { status: 500 }
-    )
-  }
-
-  const { id } = await context.params
-  if (!id) {
-    return NextResponse.json(
-      { success: false, message: "Missing exam id", data: null },
-      { status: 400 }
-    )
-  }
-
+// GET: /api/exams/[id] - exam-bank entry detail (+ downloadable files), public
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const cookie = req.headers.get("cookie") ?? ""
-    
-    const url = new URL(req.url)
-    const search = url.search || ""
-    const res = await fetch(`${baseUrl}/api/exams/${encodeURIComponent(id)}${search}`, {
-      next: { revalidate: 60 },
-      headers: { cookie },
+    const { id } = await params
+
+    const exam = await prisma.examBank.findUnique({
+      where: { id, isActive: true },
+      include: {
+        category: { select: { id: true, name: true } },
+        files: { select: { id: true, fileName: true, filePath: true, fileType: true, fileSize: true, uploadedAt: true, isDownload: true }, orderBy: { uploadedAt: "desc" } },
+      },
     })
-    const data = await res.json().catch(() => ({}))
-    return NextResponse.json(data, { status: res.status })
-  } catch (err) {
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch exam", data: null },
-      { status: 502 }
-    )
+
+    if (!exam) {
+      return NextResponse.json({ success: false, error: "ไม่พบข้อสอบ" }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true, data: exam })
+  } catch (error) {
+    console.error("Get exam bank entry error:", error)
+    return NextResponse.json({ success: false, error: "เกิดข้อผิดพลาดในการดึงข้อมูลข้อสอบ" }, { status: 500 })
   }
 }
-

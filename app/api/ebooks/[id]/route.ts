@@ -1,102 +1,29 @@
-import { NextResponse, NextRequest } from "next/server"
+import { NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
 
-export async function GET(
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  const baseUrl = process.env.API_BASE_URL
-  if (!baseUrl) {
-    return NextResponse.json(
-      { success: false, message: "API_BASE_URL is not configured" },
-      { status: 500 }
-    )
-  }
-
-  const { id } = await context.params
-  if (!id) {
-    return NextResponse.json(
-      { success: false, message: "Missing ebook id" },
-      { status: 400 }
-    )
-  }
-
+// GET: /api/ebooks/[id] - active ebook detail, public
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const cookie = req.headers.get("cookie") ?? ""
-    const authorization = req.headers.get("authorization") ?? ""
-    const headers: Record<string, string> = {}
-    if (cookie) headers["cookie"] = cookie
-    if (authorization) headers["authorization"] = authorization
+    const { id } = await params
 
-    const res = await fetch(`${baseUrl.replace(/\/$/, "")}/api/ebooks/${encodeURIComponent(id)}`, {
-      headers,
-      cache: "no-store",
+    const ebook = await prisma.ebook.findUnique({
+      where: { id, isActive: true },
+      include: {
+        category: { select: { id: true, name: true } },
+        reviews: { where: { isActive: true }, include: { user: { select: { name: true } } }, orderBy: { createdAt: "desc" } },
+        _count: { select: { reviews: true } },
+      },
     })
-    const mediaBase = process.env.NEXT_PUBLIC_ELEARNING_BASE_URL?.trim().replace(/\/$/, "") || baseUrl
 
-    const toAbsolute = (input?: string | null) => {
-      if (!input) return null
-      const trimmed = input.trim()
-      if (!trimmed) return null
-      if (/^https?:\/\//i.test(trimmed)) return trimmed
-      if (trimmed.startsWith("/")) return `${mediaBase}${trimmed}`
-      return `${mediaBase}/${trimmed}`
+    if (!ebook) {
+      return NextResponse.json({ success: false, error: "Ebook not found" }, { status: 404 })
     }
 
-    const normalizeEntry = (entry: any) => {
-      if (!entry || typeof entry !== "object") return entry
-      const candidates = [
-        entry.coverImageUrl,
-        entry.cover_image_url,
-        entry.coverImage,
-        entry.cover_image,
-        entry.coverImagePath,
-        entry.cover_image_path,
-      ]
-      let resolved: string | null = null
-      for (const value of candidates) {
-        if (typeof value === "string" && value.trim()) {
-          resolved = toAbsolute(value)
-          if (resolved) break
-        } else if (value && typeof value === "object") {
-          const nested = typeof value.url === "string" ? value.url : typeof value.path === "string" ? value.path : null
-          if (nested) {
-            resolved = toAbsolute(nested)
-            if (resolved) break
-          }
-        }
-      }
-      if (resolved) {
-        entry.coverImageUrl = resolved
-      }
-      return entry
-    }
+    const averageRating = ebook.reviews.length > 0 ? ebook.reviews.reduce((s, r) => s + r.rating, 0) / ebook.reviews.length : 0
 
-    const normalizePayload = (payload: any) => {
-      if (Array.isArray(payload?.data)) {
-        return {
-          ...payload,
-          data: payload.data.map((item: any) => normalizeEntry({ ...item })),
-        }
-      }
-      if (payload && typeof payload === "object" && payload.data && typeof payload.data === "object") {
-        return {
-          ...payload,
-          data: normalizeEntry({ ...payload.data }),
-        }
-      }
-      if (Array.isArray(payload)) {
-        return payload.map((item) => normalizeEntry({ ...item }))
-      }
-      return normalizeEntry(payload)
-    }
-
-    const data = await res.json().catch(() => ({}))
-    const normalized = normalizePayload(data)
-    return NextResponse.json(normalized ?? {}, { status: res.status })
-  } catch (err) {
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch ebook" },
-      { status: 502 }
-    )
+    return NextResponse.json({ success: true, data: { ...ebook, fileUrl: undefined, averageRating } })
+  } catch (error) {
+    console.error("Get ebook error:", error)
+    return NextResponse.json({ success: false, error: "เกิดข้อผิดพลาดในการดึงข้อมูลอีบุ๊ก" }, { status: 500 })
   }
 }

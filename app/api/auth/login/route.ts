@@ -1,59 +1,37 @@
 import { NextResponse } from "next/server"
+import bcrypt from "bcryptjs"
+import { prisma } from "@/lib/prisma"
+import { createExternalToken } from "@/lib/jwt"
 
+// POST: /api/auth/login - email/password login, issues the external JWT
 export async function POST(req: Request) {
-  const baseUrl = process.env.API_BASE_URL
-  if (!baseUrl) {
-    return NextResponse.json(
-      { success: false, message: "API_BASE_URL is not configured" },
-      { status: 500 }
-    )
-  }
-
   try {
     const body = await req.json()
-    const cookie = req.headers.get("cookie") ?? ""
-    const res = await fetch(`${baseUrl}/api/auth/login`, {
-      method: "POST",
-      headers: { "content-type": "application/json", cookie },
-      body: JSON.stringify(body),
-     
-      cache: "no-store",
-    })
-
-    const data = await res.json().catch(() => ({}))
-    const response = NextResponse.json(data, { status: res.status })
-    const setCookie = res.headers.get("set-cookie")
-    if (setCookie) {
-
-      try {
-        const encoded = encodeURIComponent(setCookie)
-        const maxAge = 60 * 60 * 24 * 7
-        response.cookies.set("backend_cookie", encoded, {
-          httpOnly: true,
-          sameSite: "lax",
-          path: "/",
-          maxAge,
-        })
-      } catch {}
+    const { email, password } = body
+    if (!email || !password) {
+      return NextResponse.json({ success: false, message: "กรุณากรอกอีเมลและรหัสผ่าน" }, { status: 400 })
     }
-   
-    try {
-      const token = (data?.data && (data?.data.token || data?.token)) || data?.token
-      if (typeof token === "string" && token.length > 0) {
-        response.cookies.set("jwt", token, {
-          httpOnly: true,
-          sameSite: "lax",
-          path: "/",
-         
-          maxAge: 60 * 60 * 24 * 7,
-        })
-      }
-    } catch {}
+
+    const user = await prisma.user.findUnique({ where: { email: String(email).toLowerCase() } })
+    if (!user) return NextResponse.json({ success: false, message: "ไม่พบผู้ใช้นี้" }, { status: 404 })
+
+    if (!user.password) {
+      // First password set for an account created via LINE — auto-migrate instead of rejecting.
+      const hashed = await bcrypt.hash(password, 12)
+      await prisma.user.update({ where: { id: user.id }, data: { password: hashed } })
+    } else {
+      const isValid = await bcrypt.compare(password, user.password)
+      if (!isValid) return NextResponse.json({ success: false, message: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" }, { status: 401 })
+    }
+
+    const token = createExternalToken(user)
+    const { password: _unused, ...userWithoutPassword } = user
+
+    const response = NextResponse.json({ success: true, message: "เข้าสู่ระบบสำเร็จ", data: { ...userWithoutPassword, token }, token })
+    response.cookies.set("jwt", token, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 7 })
     return response
-  } catch (err) {
-    return NextResponse.json(
-      { success: false, message: "Failed to login" },
-      { status: 502 }
-    )
+  } catch (error) {
+    console.error("Login error:", error)
+    return NextResponse.json({ success: false, message: "เกิดข้อผิดพลาดในการเข้าสู่ระบบ" }, { status: 500 })
   }
 }

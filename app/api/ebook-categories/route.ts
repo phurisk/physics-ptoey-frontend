@@ -1,27 +1,18 @@
 import { NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
 
-export async function GET(req: Request) {
-  const baseUrl = process.env.API_BASE_URL
-  if (!baseUrl) {
-    return NextResponse.json(
-      { success: false, message: "API_BASE_URL is not configured", data: [] },
-      { status: 500 }
-    )
-  }
-
+// GET: /api/ebook-categories - active ebook categories, public, no pagination
+export async function GET() {
   try {
-    const cookie = req.headers.get("cookie") ?? ""
-    const res = await fetch(`${baseUrl}/api/ebook-categories`, {
-      next: { revalidate: 60 },
-      headers: { cookie },
+    const categories = await prisma.ebookCategory.findMany({
+      where: { isActive: true },
+      include: { _count: { select: { ebooks: { where: { isActive: true } } } } },
+      orderBy: { name: "asc" },
     })
-    const data = await res.json().catch(() => ({}))
-    return NextResponse.json(data, { status: res.status })
-  } catch (err) {
-    return NextResponse.json(
-      { success: false, message: "Failed to fetch ebook categories", data: [] },
-      { status: 502 }
-    )
+
+    return NextResponse.json({ success: true, data: categories })
+  } catch (error) {
+    console.error("Get ebook categories error:", error)
+    return NextResponse.json({ success: false, error: "เกิดข้อผิดพลาดในการดึงข้อมูลหมวดหมู่" }, { status: 500 })
   }
 }
-

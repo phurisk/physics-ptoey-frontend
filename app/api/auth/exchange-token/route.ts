@@ -1,36 +1,30 @@
 import { NextResponse } from "next/server"
-import { getAuthHeaders, checkApiConfig, proxyErrorResponse } from "@/lib/api-auth-utils"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+import { createExternalToken } from "@/lib/jwt"
 
-/**
- * Exchange NextAuth session for JWT token
- * Allows users logged in via backend admin (NextAuth) to get JWT tokens for frontend use
- */
-export async function POST(req: Request) {
-  const config = checkApiConfig()
-  if (!config.ok) return config.error
-  const baseUrl = process.env.API_BASE_URL!
-
+// POST: /api/auth/exchange-token - exchange a NextAuth session (admin login)
+// for an external JWT, so the same account can also call the customer-facing
+// JWT-guarded API routes.
+export async function POST() {
   try {
-    const authHeaders = getAuthHeaders(req)
-    console.log('🔵 [Frontend] Token exchange - Auth headers:', Object.keys(authHeaders))
-    
-    const res = await fetch(`${baseUrl}/api/auth/exchange-token`, {
-      method: "POST",
-      headers: {
-        ...authHeaders,
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-    })
-    
-    const data = await res.json().catch(() => ({}))
-    if (data.success) {
-      console.log('✅ [Frontend] Token exchange success for user:', data.data?.user?.email)
-    } else {
-      console.error('❌ [Frontend] Token exchange failed:', data.error)
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 })
     }
-    return NextResponse.json(data, { status: res.status })
-  } catch (err) {
-    return proxyErrorResponse("Failed to exchange token")
+
+    const user = await prisma.user.findUnique({ where: { id: session.user.id } })
+    if (!user) return NextResponse.json({ success: false, error: "User not found" }, { status: 404 })
+
+    const token = createExternalToken(user)
+    const { password: _unused, ...userWithoutPassword } = user
+
+    const response = NextResponse.json({ success: true, data: { token, user: userWithoutPassword } })
+    response.cookies.set("jwt", token, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 7 })
+    return response
+  } catch (error) {
+    console.error("Exchange token error:", error)
+    return NextResponse.json({ success: false, error: "Failed to exchange token" }, { status: 500 })
   }
 }

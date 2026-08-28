@@ -1,111 +1,57 @@
 import { NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
+import type { Prisma } from "@prisma/client"
 
+// Public, non-personalized listing — same response for every visitor.
+export const revalidate = 86400 // 1 day
+
+// GET: /api/ebooks - active ebooks, public
 export async function GET(req: Request) {
-  const baseUrl = process.env.API_BASE_URL?.trim()
-  if (!baseUrl) {
-    return NextResponse.json(
-      { success: false, message: "API_BASE_URL is not configured", data: [] },
-      { status: 500 }
-    )
-  }
-
   try {
-    const cookie = req.headers.get("cookie") ?? ""
-    const url = new URL(req.url)
-    const query = url.searchParams.toString()
-    const upstreamUrl = `${baseUrl}/api/ebooks${query ? `?${query}` : ""}`
+    const { searchParams } = new URL(req.url)
+    const categorySlug = searchParams.get("category")
+    const featured = searchParams.get("featured")
+    const search = searchParams.get("search")
+    const format = searchParams.get("format")
+    const page = parseInt(searchParams.get("page") || "1") || 1
+    const limit = parseInt(searchParams.get("limit") || "12") || 12
+    const skip = (page - 1) * limit
 
-    const res = await fetch(upstreamUrl, {
-      cache: "no-store",
-      headers: { cookie },
-    })
-    const text = await res.text()
-    let parsed: any = null
-    try {
-      parsed = text ? JSON.parse(text) : null
-    } catch (err) {
-      console.error("Failed to parse upstream ebooks response", err)
-    }
-
-    const mediaBase = process.env.NEXT_PUBLIC_ELEARNING_BASE_URL?.trim().replace(/\/$/, "") || baseUrl
-
-    const toAbsolute = (input?: string | null) => {
-      if (!input) return null
-      const trimmed = input.trim()
-      if (!trimmed) return null
-      if (/^https?:\/\//i.test(trimmed)) return trimmed
-      if (trimmed.startsWith("/")) return `${mediaBase}${trimmed}`
-      return `${mediaBase}/${trimmed}`
-    }
-
-    const normalizeCover = (entry: any) => {
-      if (!entry || typeof entry !== "object") return entry
-      const candidates = [
-        entry.coverImageUrl,
-        entry.cover_image_url,
-        entry.coverImage,
-        entry.cover_image,
-        entry.coverImagePath,
-        entry.cover_image_path,
+    const where: Prisma.EbookWhereInput = { isActive: true }
+    if (categorySlug) where.category = { slug: categorySlug }
+    if (featured === "true") where.isFeatured = true
+    if (format) where.format = format as Prisma.EbookWhereInput["format"]
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { author: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
       ]
-      let resolved: string | null = null
-      for (const value of candidates) {
-        if (typeof value === "string" && value.trim()) {
-          resolved = toAbsolute(value)
-          if (resolved) break
-        } else if (value && typeof value === "object") {
-          const nested = typeof value.url === "string" ? value.url : typeof value.path === "string" ? value.path : null
-          if (nested) {
-            resolved = toAbsolute(nested)
-            if (resolved) break
-          }
-        }
-      }
-      if (resolved) {
-        entry.coverImageUrl = resolved
-      }
-      return entry
     }
 
-    const normalized = (() => {
-      if (Array.isArray(parsed?.data)) {
-        parsed.data = parsed.data.map((item: any) => normalizeCover({ ...item }))
-        return parsed
-      }
-      if (parsed && typeof parsed === "object" && parsed.data && typeof parsed.data === "object") {
-        parsed.data = normalizeCover({ ...parsed.data })
-        return parsed
-      }
-      if (Array.isArray(parsed)) {
-        return parsed.map((item: any) => normalizeCover({ ...item }))
-      }
-      return normalizeCover(parsed)
-    })()
+    const [ebooks, total] = await Promise.all([
+      prisma.ebook.findMany({
+        where,
+        include: { category: true, reviews: { select: { rating: true } } },
+        orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+        skip,
+        take: limit,
+      }),
+      prisma.ebook.count({ where }),
+    ])
 
-    if (!res.ok) {
-      console.error("Upstream /api/ebooks error", {
-        url: upstreamUrl,
-        status: res.status,
-        body: text,
-      })
-      if (normalized) {
-        return NextResponse.json(normalized, { status: res.status })
-      }
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Failed to fetch ebooks from upstream",
-          status: res.status,
-        },
-        { status: res.status }
-      )
-    }
+    const data = ebooks.map((ebook) => {
+      const averageRating = ebook.reviews.length > 0 ? ebook.reviews.reduce((s, r) => s + r.rating, 0) / ebook.reviews.length : 0
+      const { reviews, ...rest } = ebook
+      return { ...rest, fileUrl: undefined, averageRating, _count: { reviews: reviews.length } }
+    })
 
-    return NextResponse.json(normalized ?? {}, { status: res.status })
-  } catch (err) {
     return NextResponse.json(
-      { success: false, message: "Failed to fetch ebooks", data: [] },
-      { status: 502 }
+      { success: true, data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } },
+      { headers: { "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600" } }
     )
+  } catch (error) {
+    console.error("Get ebooks error:", error)
+    return NextResponse.json({ success: false, error: "เกิดข้อผิดพลาดในการดึงข้อมูลอีบุ๊ก", details: error instanceof Error ? error.message : undefined }, { status: 500 })
   }
 }

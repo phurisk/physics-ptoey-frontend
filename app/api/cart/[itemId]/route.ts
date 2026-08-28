@@ -1,73 +1,34 @@
 import { NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
+import { requireUser } from "@/lib/requireUser"
 
-function ensureBaseUrl() {
-  const baseUrl = process.env.API_BASE_URL
-  if (!baseUrl) {
-    throw new Error("API_BASE_URL is not configured")
-  }
-  return baseUrl.replace(/\/$/, "")
+// PATCH: /api/cart/[itemId] - no-op by design; cart items are always
+// quantity 1, so there's nothing to adjust. Just returns the current cart.
+export async function PATCH(req: Request) {
+  const user = requireUser(req)
+  if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+
+  const cart = await prisma.cart.findFirst({ where: { userId: user.userId }, include: { items: true } })
+  return NextResponse.json({ success: true, data: cart })
 }
 
-async function proxyCartRequest(req: Request, params: { itemId: string }, method: "PATCH" | "DELETE") {
-  const baseUrl = ensureBaseUrl()
-  const cookie = req.headers.get("cookie") ?? ""
-  let body: any = undefined
-  if (method === "PATCH" || method === "DELETE") {
-    try {
-      const json = await req.json()
-      if (json && Object.keys(json).length > 0) body = json
-    } catch {}
-  }
+// DELETE: /api/cart/[itemId] - remove by cart-item id directly
+export async function DELETE(req: Request, { params }: { params: Promise<{ itemId: string }> }) {
+  const user = requireUser(req)
+  if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
 
-  const headers: Record<string, string> = { cookie }
-  if (body !== undefined) headers["content-type"] = "application/json"
-
-  const attempt = async (url: string, payload: any) => {
-    const res = await fetch(url, {
-      method,
-      headers,
-      body: payload !== undefined ? JSON.stringify(payload) : undefined,
-      cache: "no-store",
-    })
-    return res
-  }
-
-  const primary = await attempt(`${baseUrl}/api/cart/${encodeURIComponent(params.itemId)}`, body)
-  if (primary.status !== 404 && primary.status !== 405) {
-    const data = await primary.json().catch(() => ({}))
-    return NextResponse.json(data, { status: primary.status })
-  }
-
-  const fallbackPayload = {
-    ...(body && typeof body === "object" ? body : {}),
-    cartItemId: params.itemId,
-    itemId: params.itemId,
-  }
-
-  const fallbackUrl = body && typeof body === "object" && "cartId" in body
-    ? `${baseUrl}/api/cart?cartId=${encodeURIComponent(String(body.cartId))}`
-    : `${baseUrl}/api/cart`
-
-  const fallback = await attempt(fallbackUrl, fallbackPayload)
-  const data = await fallback.json().catch(() => ({}))
-  return NextResponse.json(data, { status: fallback.status })
-}
-
-export async function PATCH(req: Request, ctx: { params: { itemId: string } }) {
   try {
-    return await proxyCartRequest(req, ctx.params, "PATCH")
-  } catch (error: any) {
-    const message = error?.message || "Failed to adjust cart item"
-    return NextResponse.json({ success: false, error: message }, { status: 500 })
+    const { itemId } = await params
+    const cart = await prisma.cart.findFirst({ where: { userId: user.userId } })
+    if (!cart) return NextResponse.json({ success: false, error: "ไม่พบตะกร้า" }, { status: 404 })
+
+    const { count } = await prisma.cartItem.deleteMany({ where: { id: itemId, cartId: cart.id } })
+    if (count === 0) return NextResponse.json({ success: false, error: "ไม่พบสินค้าในตะกร้า" }, { status: 404 })
+
+    const updatedCart = await prisma.cart.findUnique({ where: { id: cart.id }, include: { items: true } })
+    return NextResponse.json({ success: true, data: updatedCart })
+  } catch (error) {
+    console.error("Remove cart item error:", error)
+    return NextResponse.json({ success: false, error: "เกิดข้อผิดพลาดในการลบสินค้า" }, { status: 500 })
   }
 }
-
-export async function DELETE(req: Request, ctx: { params: { itemId: string } }) {
-  try {
-    return await proxyCartRequest(req, ctx.params, "DELETE")
-  } catch (error: any) {
-    const message = error?.message || "Failed to remove cart item"
-    return NextResponse.json({ success: false, error: message }, { status: 500 })
-  }
-}
-
