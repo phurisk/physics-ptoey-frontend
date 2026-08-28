@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/requireAdmin"
-import type { Prisma } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 
 // GET: /api/admin/enrollments - list enrollments with server-side filtering and pagination
 export async function GET(req: Request) {
@@ -61,5 +61,56 @@ export async function GET(req: Request) {
   } catch (error) {
     console.error("Get enrollments error:", error)
     return NextResponse.json({ success: false, error: "เกิดข้อผิดพลาดในการดึงข้อมูลการลงทะเบียน" }, { status: 500 })
+  }
+}
+
+// POST: /api/admin/enrollments - manually grant one or more courses to a user
+// (bypassing checkout), e.g. from the "grant course" action on the users page.
+export async function POST(req: Request) {
+  const session = await requireAdmin()
+  if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
+
+  try {
+    const { userId, courseIds, accessDuration, accessHours } = await req.json()
+    if (!userId || !Array.isArray(courseIds) || courseIds.length === 0) {
+      return NextResponse.json({ success: false, error: "ต้องระบุ userId และ courseIds" }, { status: 400 })
+    }
+
+    const courses = await prisma.course.findMany({ where: { id: { in: courseIds } }, select: { id: true, title: true } })
+    const foundIds = new Set(courses.map((c) => c.id))
+    const missingIds = courseIds.filter((id: string) => !foundIds.has(id))
+    if (missingIds.length > 0) {
+      return NextResponse.json({ success: false, error: `ไม่พบคอร์สบางรายการ: ${missingIds.join(", ")}` }, { status: 404 })
+    }
+
+    const granted: string[] = []
+    const alreadyEnrolled: string[] = []
+
+    for (const course of courses) {
+      try {
+        await prisma.enrollment.create({
+          data: {
+            userId,
+            courseId: course.id,
+            progress: 0,
+            status: "ACTIVE",
+            accessDuration: accessDuration ?? null,
+            accessHours: accessHours ?? null,
+          },
+        })
+        granted.push(course.title)
+      } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+          alreadyEnrolled.push(course.title)
+        } else {
+          throw error
+        }
+      }
+    }
+
+    return NextResponse.json({ success: true, granted, alreadyEnrolled })
+  } catch (error) {
+    console.error("Grant course access error:", error)
+    return NextResponse.json({ success: false, error: "เกิดข้อผิดพลาดในการเพิ่มคอร์ส" }, { status: 500 })
   }
 }

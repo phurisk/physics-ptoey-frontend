@@ -14,6 +14,7 @@ export async function GET(req: Request) {
     const pageSize = parseInt(searchParams.get("pageSize") || "", 10) || 10
     const search = searchParams.get("search") || ""
     const status = searchParams.get("status") || ""
+    const shippingMethod = searchParams.get("shippingMethod") || ""
     const sortBy = searchParams.get("sortBy") || "createdAt"
     const sortOrder = searchParams.get("sortOrder") === "asc" ? "asc" : "desc"
 
@@ -27,6 +28,7 @@ export async function GET(req: Request) {
       ]
     }
     if (status && status !== "ALL") where.status = status as Prisma.ShippingWhereInput["status"]
+    if (shippingMethod && shippingMethod !== "ALL") where.shippingMethod = shippingMethod as Prisma.ShippingWhereInput["shippingMethod"]
 
     const [totalCount, shipments] = await Promise.all([
       prisma.shipping.count({ where }),

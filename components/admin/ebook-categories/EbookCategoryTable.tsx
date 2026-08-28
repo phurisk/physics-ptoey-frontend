@@ -1,26 +1,37 @@
 "use client"
 
-import { Edit, Trash2, BookText } from "lucide-react"
+import { Edit, Trash2, BookText, Calendar } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import AdminPagination from "@/components/admin/shared/AdminPagination"
 import type { AdminEbookCategory } from "@/hooks/admin/useEbookCategories"
+
+const formatDate = (dateString?: string) => (dateString ? new Date(dateString).toLocaleString("th-TH") : "-")
 
 export default function EbookCategoryTable({
   categories,
   loading,
   totalCount,
+  page,
+  pageSize,
+  onPageChange,
   onEdit,
   onDelete,
 }: {
   categories: AdminEbookCategory[]
   loading: boolean
   totalCount: number
+  page: number
+  pageSize: number
+  onPageChange: (page: number) => void
   onEdit: (category: AdminEbookCategory) => void
   onDelete: (category: AdminEbookCategory) => void
 }) {
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+
   return (
     <TooltipProvider delayDuration={200}>
       <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
@@ -37,6 +48,7 @@ export default function EbookCategoryTable({
                 <TableHead>รายละเอียด</TableHead>
                 <TableHead>สถานะ</TableHead>
                 <TableHead>จำนวนอีบุ๊ก</TableHead>
+                <TableHead>วันที่สร้าง</TableHead>
                 <TableHead className="text-right">จัดการ</TableHead>
               </TableRow>
             </TableHeader>
@@ -44,14 +56,14 @@ export default function EbookCategoryTable({
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={5}>
+                    <TableCell colSpan={6}>
                       <Skeleton className="h-10 w-full" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : categories.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-gray-400">
+                  <TableCell colSpan={6} className="text-center text-gray-400">
                     ไม่พบหมวดหมู่
                   </TableCell>
                 </TableRow>
@@ -74,6 +86,12 @@ export default function EbookCategoryTable({
                       <div className="flex items-center gap-1.5 text-sm text-gray-600">
                         <BookText className="h-3.5 w-3.5 text-gray-400" />
                         {record._count?.ebooks ?? 0}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5 text-sm text-gray-500">
+                        <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                        {formatDate(record.createdAt)}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
@@ -102,6 +120,8 @@ export default function EbookCategoryTable({
             </TableBody>
           </Table>
         </div>
+
+        <AdminPagination current={page} total={totalPages} onPageChange={onPageChange} className="mt-4" />
       </div>
     </TooltipProvider>
   )

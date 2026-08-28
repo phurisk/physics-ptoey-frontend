@@ -84,6 +84,7 @@ export function useOrders() {
         search: (params.search as string) || "",
         status: (params.status as string) || "ALL",
         paymentStatus: (params.paymentStatus as string) || "ALL",
+        orderType: (params.orderType as string) || "ALL",
         sortBy: (params.sortBy as string) || "createdAt",
         sortOrder: (params.sortOrder as string) || "desc",
       })
@@ -101,7 +102,7 @@ export function useOrders() {
 
   const list = useAdminListState<AdminOrder>({
     fetcher,
-    initialFilters: { status: "ALL", paymentStatus: "ALL", dateFrom: "", dateTo: "" },
+    initialFilters: { status: "ALL", paymentStatus: "ALL", orderType: "ALL", dateFrom: "", dateTo: "" },
   })
 
   return {

@@ -16,6 +16,7 @@ type Stats = {
   totalOrders: number
   pendingOrders: number
   totalRevenue: number
+  revenueByType: { itemType: string; revenue: number; count: number }[]
   recentOrders: {
     id: string
     orderNumber: string
@@ -37,6 +38,8 @@ const ORDER_STATUS_LABEL: Record<string, string> = {
   CANCELLED: "ยกเลิก",
   REFUNDED: "คืนเงิน",
 }
+
+const ITEM_TYPE_LABEL: Record<string, string> = { COURSE: "คอร์สเรียน", EBOOK: "อีบุ๊ก", MOCK_EXAM: "ข้อสอบจำลอง" }
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(amount)
 
@@ -120,6 +123,17 @@ export default function DashboardClient() {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
+              {stats.revenueByType.length > 0 && (
+                <div className="mt-4 grid grid-cols-1 gap-3 border-t border-gray-100 pt-4 sm:grid-cols-3">
+                  {stats.revenueByType.map((r) => (
+                    <div key={r.itemType} className="rounded-lg bg-gray-50 p-3">
+                      <div className="text-xs text-gray-500">รายได้ {ITEM_TYPE_LABEL[r.itemType] || r.itemType}</div>
+                      <div className="text-lg font-semibold text-gray-900">{formatCurrency(r.revenue)}</div>
+                      <div className="text-xs text-gray-400">{r.count} รายการ</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">

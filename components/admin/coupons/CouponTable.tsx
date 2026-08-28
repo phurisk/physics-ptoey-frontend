@@ -1,6 +1,6 @@
 "use client"
 
-import { Edit, Trash2 } from "lucide-react"
+import { Edit, Trash2, Power } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -38,6 +38,7 @@ export default function CouponTable({
   pagination,
   onEdit,
   onDelete,
+  onToggleStatus,
   onPageChange,
   onSortChange,
 }: {
@@ -47,6 +48,7 @@ export default function CouponTable({
   pagination: { current: number; total: number; pageSize: number }
   onEdit: (coupon: AdminCoupon) => void
   onDelete: (coupon: AdminCoupon) => void
+  onToggleStatus: (coupon: AdminCoupon) => void
   onPageChange: (page: number) => void
   onSortChange: (field: string) => void
 }) {
@@ -139,6 +141,20 @@ export default function CouponTable({
                       </TableCell>
                       <TableCell className="sticky right-0 z-10 border-l border-gray-100 bg-white group-hover:bg-muted/50">
                         <div className="flex items-center justify-end gap-1">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={record.isActive ? "text-green-600" : "text-gray-400"}
+                                onClick={() => onToggleStatus(record)}
+                                disabled={record.isExpired}
+                              >
+                                <Power className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{record.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}</TooltipContent>
+                          </Tooltip>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button variant="ghost" size="icon" className="text-blue-600" onClick={() => onEdit(record)}>

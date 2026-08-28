@@ -6,6 +6,7 @@ export type AdminCategory = {
   id: string
   name: string
   description?: string | null
+  createdAt?: string
   _count?: { courses: number }
 }
 
@@ -14,11 +15,19 @@ export type AdminCategory = {
  * endpoint returns the full list, so filtering happens client-side here
  * instead of pulling in useAdminListState's server-pagination machinery.
  */
+const PAGE_SIZE = 10
+
 export function useCategories() {
   const { toast } = useToast()
   const [categories, setCategories] = useState<AdminCategory[]>([])
   const [loading, setLoading] = useState(false)
-  const [searchInput, setSearchInput] = useState("")
+  const [searchInput, setSearchInputState] = useState("")
+  const [page, setPage] = useState(1)
+
+  const setSearchInput = useCallback((value: string) => {
+    setSearchInputState(value)
+    setPage(1)
+  }, [])
 
   const fetchCategories = useCallback(async () => {
     setLoading(true)
@@ -46,12 +55,27 @@ export function useCategories() {
     )
   }, [categories, searchInput])
 
+  const pagedCategories = useMemo(
+    () => filteredCategories.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filteredCategories, page]
+  )
+
+  const resetFilters = useCallback(() => {
+    setSearchInputState("")
+    setPage(1)
+  }, [])
+
   return {
-    categories: filteredCategories,
-    totalCount: categories.length,
+    categories: pagedCategories,
+    totalCount: filteredCategories.length,
+    allCount: categories.length,
     loading,
     searchInput,
     setSearchInput,
+    page,
+    pageSize: PAGE_SIZE,
+    setPage,
+    resetFilters,
     fetchCategories,
   }
 }

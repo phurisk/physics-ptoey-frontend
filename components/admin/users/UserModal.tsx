@@ -96,6 +96,11 @@ export default function UserModal({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            {editing?.lineId && (
+              <p className="rounded-md bg-gray-50 px-3 py-2 text-xs text-gray-500">
+                LINE ID: <span className="font-mono text-gray-700">{editing.lineId}</span> (เชื่อมต่อจากการล็อกอินด้วย LINE)
+              </p>
+            )}
             <FormField
               control={form.control}
               name="name"

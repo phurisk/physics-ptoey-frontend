@@ -8,8 +8,11 @@ export type AdminEbookCategory = {
   slug: string
   description?: string | null
   isActive: boolean
+  createdAt?: string
   _count?: { ebooks: number }
 }
+
+const PAGE_SIZE = 10
 
 /**
  * Like useCategories — GET /api/admin/ebook-categories returns the full,
@@ -19,7 +22,13 @@ export function useEbookCategories() {
   const { toast } = useToast()
   const [categories, setCategories] = useState<AdminEbookCategory[]>([])
   const [loading, setLoading] = useState(false)
-  const [searchInput, setSearchInput] = useState("")
+  const [searchInput, setSearchInputState] = useState("")
+  const [page, setPage] = useState(1)
+
+  const setSearchInput = useCallback((value: string) => {
+    setSearchInputState(value)
+    setPage(1)
+  }, [])
 
   const fetchCategories = useCallback(async () => {
     setLoading(true)
@@ -47,12 +56,27 @@ export function useEbookCategories() {
     )
   }, [categories, searchInput])
 
+  const pagedCategories = useMemo(
+    () => filteredCategories.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filteredCategories, page]
+  )
+
+  const resetFilters = useCallback(() => {
+    setSearchInputState("")
+    setPage(1)
+  }, [])
+
   return {
-    categories: filteredCategories,
-    totalCount: categories.length,
+    categories: pagedCategories,
+    totalCount: filteredCategories.length,
+    allCount: categories.length,
     loading,
     searchInput,
     setSearchInput,
+    page,
+    pageSize: PAGE_SIZE,
+    setPage,
+    resetFilters,
     fetchCategories,
   }
 }

@@ -19,6 +19,8 @@ export async function GET(req: Request) {
     const postTypeId = searchParams.get("postTypeId") || ""
     const isActive = searchParams.get("isActive") || ""
     const isFeatured = searchParams.get("isFeatured") || ""
+    const dateFrom = searchParams.get("dateFrom")
+    const dateTo = searchParams.get("dateTo")
     const sortBy = searchParams.get("sortBy") || "createdAt"
     const sortOrder = searchParams.get("sortOrder") === "asc" ? "asc" : "desc"
 
@@ -34,6 +36,15 @@ export async function GET(req: Request) {
     if (isActive === "true") where.isActive = true
     else if (isActive === "false") where.isActive = false
     if (isFeatured === "true") where.isFeatured = true
+    if (dateFrom || dateTo) {
+      where.createdAt = {}
+      if (dateFrom) where.createdAt.gte = new Date(dateFrom)
+      if (dateTo) {
+        const end = new Date(dateTo)
+        end.setHours(23, 59, 59, 999)
+        where.createdAt.lte = end
+      }
+    }
 
     let orderBy: Prisma.PostOrderByWithRelationInput = {}
     if (sortBy === "author") orderBy = { author: { name: sortOrder } }

@@ -18,6 +18,9 @@ export function usePostTypes() {
       page: String(params.page),
       pageSize: String(params.limit),
       search: (params.search as string) || "",
+      status: (params.status as string) || "ALL",
+      sortBy: (params.sortBy as string) || "name",
+      sortOrder: (params.sortOrder as string) || "asc",
     })
 
     const res = await fetch(`/api/admin/post-types?${search}`)
@@ -27,15 +30,19 @@ export function usePostTypes() {
     return { items: data.data as AdminPostType[], total: data.pagination.totalCount, page: data.pagination.page }
   }, [])
 
-  const list = useAdminListState<AdminPostType>({ fetcher })
+  const list = useAdminListState<AdminPostType>({ fetcher, initialFilters: { status: "ALL" } })
 
   return {
     postTypes: list.items,
     loading: list.loading,
+    filters: list.filters,
     searchInput: list.searchInput,
     setSearchInput: list.setSearchInput,
     pagination: list.pagination,
     fetchPostTypes: list.fetchData,
+    handleFilterChange: list.handleFilterChange,
     handlePageChange: list.handlePageChange,
+    handleSortChange: list.handleSortChange,
+    resetFilters: list.resetFilters,
   }
 }

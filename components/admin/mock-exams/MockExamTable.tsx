@@ -1,6 +1,6 @@
 "use client"
 
-import { Pencil, Trash2, ListChecks, Clock, DollarSign } from "lucide-react"
+import { Pencil, Trash2, ListChecks, BarChart3, Clock, DollarSign, HelpCircle, BookOpen, Zap, CheckCircle2, XCircle, FileText } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,6 +21,7 @@ export default function MockExamTable({
   pagination,
   onEdit,
   onManageQuestions,
+  onViewAnalytics,
   onDelete,
   onPageChange,
   onSortChange,
@@ -31,6 +32,7 @@ export default function MockExamTable({
   pagination: { current: number; total: number; pageSize: number }
   onEdit: (exam: AdminMockExam) => void
   onManageQuestions: (exam: AdminMockExam) => void
+  onViewAnalytics: (exam: AdminMockExam) => void
   onDelete: (exam: AdminMockExam) => void
   onPageChange: (page: number) => void
   onSortChange: (field: string) => void
@@ -78,13 +80,19 @@ export default function MockExamTable({
                 exams.map((exam) => (
                   <TableRow key={exam.id} className="group">
                     <TableCell className="max-w-[220px]">
-                      <div className="truncate font-semibold text-gray-900" title={exam.title}>
+                      <div className="flex items-center gap-1.5 truncate font-semibold text-gray-900" title={exam.title}>
+                        <FileText className="h-3.5 w-3.5 shrink-0 text-gray-400" />
                         {exam.title}
                       </div>
                       {exam.course && <div className="truncate text-xs text-gray-400">คอร์ส: {exam.course.title}</div>}
                     </TableCell>
                     <TableCell>{getSubjectLabel(exam.subject)}</TableCell>
-                    <TableCell>{exam._count?.questions ?? 0} ข้อ</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-sm text-gray-600">
+                        <HelpCircle className="h-3.5 w-3.5 text-gray-400" />
+                        {exam._count?.questions ?? 0} ข้อ
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 text-sm text-gray-600">
                         <Clock className="h-3.5 w-3.5 text-gray-400" />
@@ -93,9 +101,14 @@ export default function MockExamTable({
                     </TableCell>
                     <TableCell>
                       {exam.price ? (
-                        <div className="flex items-center gap-1 font-semibold text-green-600">
-                          <DollarSign className="h-3.5 w-3.5" />
-                          {formatCurrency(exam.discountPrice || exam.price)}
+                        <div>
+                          <div className="flex items-center gap-1 font-semibold text-green-600">
+                            <DollarSign className="h-3.5 w-3.5" />
+                            {formatCurrency(exam.discountPrice ?? exam.price)}
+                          </div>
+                          {exam.discountPrice != null && exam.discountPrice < exam.price && (
+                            <div className="text-xs text-gray-400 line-through">{formatCurrency(exam.price)}</div>
+                          )}
                         </div>
                       ) : (
                         <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700">
@@ -105,12 +118,26 @@ export default function MockExamTable({
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {exam.allowPracticeMode && <Badge variant="outline">ฝึกซ้อม</Badge>}
-                        {exam.allowRealMode && <Badge variant="outline">สอบจริง</Badge>}
+                        {exam.allowPracticeMode && (
+                          <Badge variant="outline" className="flex items-center gap-1 border-blue-200 bg-blue-50 text-blue-700">
+                            <BookOpen className="h-3 w-3" />
+                            ฝึกฝน ({exam.practiceUnlockCost} token/ข้อ)
+                          </Badge>
+                        )}
+                        {exam.allowRealMode && (
+                          <Badge variant="outline" className="flex items-center gap-1 border-amber-200 bg-amber-50 text-amber-700">
+                            <Zap className="h-3 w-3" />
+                            สอบจริง ({exam.attemptsAllowed} ครั้ง)
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={exam.isActive ? "border-green-200 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-500"}>
+                      <Badge
+                        variant="outline"
+                        className={`flex w-fit items-center gap-1 ${exam.isActive ? "border-green-200 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-500"}`}
+                      >
+                        {exam.isActive ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
                         {exam.isActive ? "เปิดใช้งาน" : "ปิดใช้งาน"}
                       </Badge>
                     </TableCell>
@@ -123,6 +150,14 @@ export default function MockExamTable({
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>จัดการคำถาม</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-blue-600" onClick={() => onViewAnalytics(exam)}>
+                              <BarChart3 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>สถิติข้อสอบ</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>

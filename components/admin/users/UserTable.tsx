@@ -1,6 +1,6 @@
 "use client"
 
-import { Edit, Trash2, School, Mail } from "lucide-react"
+import { Edit, Trash2, School, Mail, Repeat, BookPlus, Coins, MessageCircle } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -31,6 +31,9 @@ export default function UserTable({
   pagination,
   onEdit,
   onDelete,
+  onToggleRole,
+  onGrantCourse,
+  onManageTokens,
   onPageChange,
   onSortChange,
 }: {
@@ -40,6 +43,9 @@ export default function UserTable({
   pagination: { current: number; total: number; pageSize: number }
   onEdit: (user: AdminUser) => void
   onDelete: (user: AdminUser) => void
+  onToggleRole: (user: AdminUser) => void
+  onGrantCourse: (user: AdminUser) => void
+  onManageTokens: (user: AdminUser) => void
   onPageChange: (page: number) => void
   onSortChange: (field: string) => void
 }) {
@@ -60,6 +66,7 @@ export default function UserTable({
                 <SortableTableHead field="name" label="ชื่อ" sortBy={filters.sortBy} sortOrder={filters.sortOrder} onSort={onSortChange} />
                 <SortableTableHead field="email" label="อีเมล" sortBy={filters.sortBy} sortOrder={filters.sortOrder} onSort={onSortChange} />
                 <TableHead>โรงเรียน</TableHead>
+                <TableHead>LINE ID</TableHead>
                 <SortableTableHead field="role" label="บทบาท" sortBy={filters.sortBy} sortOrder={filters.sortOrder} onSort={onSortChange} />
                 <TableHead>คำสั่งซื้อ</TableHead>
                 <SortableTableHead field="createdAt" label="สมัครเมื่อ" sortBy={filters.sortBy} sortOrder={filters.sortOrder} onSort={onSortChange} />
@@ -70,14 +77,14 @@ export default function UserTable({
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={7}>
+                    <TableCell colSpan={8}>
                       <Skeleton className="h-10 w-full" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-gray-400">
+                  <TableCell colSpan={8} className="text-center text-gray-400">
                     ไม่พบผู้ใช้งาน
                   </TableCell>
                 </TableRow>
@@ -106,6 +113,18 @@ export default function UserTable({
                       </div>
                     </TableCell>
                     <TableCell>
+                      {record.lineId ? (
+                        <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                          <MessageCircle className="h-3.5 w-3.5 text-green-500" />
+                          <span className="max-w-[100px] truncate" title={record.lineId}>
+                            {record.lineId}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-400">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <Badge variant="outline" className={ROLE_STYLES[record.role]}>
                         {ROLE_LABELS[record.role] || record.role}
                       </Badge>
@@ -124,7 +143,55 @@ export default function UserTable({
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-red-600" onClick={() => onDelete(record)}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-purple-600"
+                              onClick={() => onToggleRole(record)}
+                              disabled={record.role === "ADMIN"}
+                            >
+                              <Repeat className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>สลับบทบาท (นักเรียน/ผู้สอน)</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-green-600"
+                              onClick={() => onGrantCourse(record)}
+                              disabled={record.role === "ADMIN"}
+                            >
+                              <BookPlus className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>มอบคอร์สให้ผู้ใช้</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-amber-600"
+                              onClick={() => onManageTokens(record)}
+                              disabled={record.role === "ADMIN"}
+                            >
+                              <Coins className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>จัดการโทเคนฝึกฝน</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-red-600"
+                              onClick={() => onDelete(record)}
+                              disabled={record.role === "ADMIN"}
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>

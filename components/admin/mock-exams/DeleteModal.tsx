@@ -1,5 +1,6 @@
 "use client"
 import { AlertTriangle, Loader2 } from "lucide-react"
+import { getSubjectLabel } from "@/lib/constants"
 import {
   AlertDialog,
   AlertDialogContent,
@@ -35,9 +36,27 @@ export default function DeleteModal({
             ยืนยันการลบข้อสอบจำลอง
           </AlertDialogTitle>
         </AlertDialogHeader>
-        <p className="text-sm text-gray-700">
-          คุณแน่ใจหรือไม่ที่จะลบ &quot;{exam.title}&quot;? คำถามทั้งหมด ({exam._count?.questions ?? 0} ข้อ) จะถูกลบไปด้วย
-        </p>
+        <div className="py-2">
+          <p className="text-sm text-gray-700">คุณแน่ใจหรือไม่ที่จะลบข้อสอบจำลองนี้?</p>
+          <div className="mt-3 rounded-md bg-gray-50 p-3 text-sm">
+            <div>
+              <span className="font-semibold">ชื่อข้อสอบ: </span>
+              {exam.title}
+            </div>
+            <div>
+              <span className="font-semibold">วิชา: </span>
+              {getSubjectLabel(exam.subject)}
+            </div>
+            <div>
+              <span className="font-semibold">จำนวนคำถาม: </span>
+              {exam._count?.questions ?? 0} ข้อ
+            </div>
+          </div>
+          <p className="mt-3 flex items-center gap-1.5 text-sm text-red-600">
+            <AlertTriangle className="h-3.5 w-3.5" />
+            ข้อสอบและคำถามทั้งหมดจะถูกลบอย่างถาวร
+          </p>
+        </div>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={loading}>ยกเลิก</AlertDialogCancel>
           <Button variant="destructive" onClick={onConfirm} disabled={loading}>

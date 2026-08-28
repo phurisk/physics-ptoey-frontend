@@ -10,6 +10,8 @@ import UserFilters from "./UserFilters"
 import UserTable from "./UserTable"
 import UserModal from "./UserModal"
 import DeleteModal from "./DeleteModal"
+import QuickGrantCourseModal from "./QuickGrantCourseModal"
+import TokenModal from "./TokenModal"
 
 import { useUsers, type AdminUser } from "@/hooks/admin/useUsers"
 
@@ -36,6 +38,10 @@ export default function UsersManagement() {
   const [userToDelete, setUserToDelete] = useState<AdminUser | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [grantModalOpen, setGrantModalOpen] = useState(false)
+  const [grantUser, setGrantUser] = useState<AdminUser | null>(null)
+  const [tokenModalOpen, setTokenModalOpen] = useState(false)
+  const [tokenUser, setTokenUser] = useState<AdminUser | null>(null)
 
   const {
     users,
@@ -124,6 +130,83 @@ export default function UsersManagement() {
     setEditing(null)
   }
 
+  const handleToggleRole = async (user: AdminUser) => {
+    const nextRole = user.role === "STUDENT" ? "INSTRUCTOR" : "STUDENT"
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: user.name, email: user.email, role: nextRole, school: user.school }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({ title: `เปลี่ยนบทบาทเป็น${nextRole === "INSTRUCTOR" ? "ผู้สอน" : "นักเรียน"}สำเร็จ` })
+        fetchUsers()
+      } else {
+        toast({ variant: "destructive", title: data.error || "เกิดข้อผิดพลาดในการเปลี่ยนบทบาท" })
+      }
+    } catch {
+      toast({ variant: "destructive", title: "เกิดข้อผิดพลาดในการเปลี่ยนบทบาท" })
+    }
+  }
+
+  const openGrantModal = (user: AdminUser) => {
+    setGrantUser(user)
+    setGrantModalOpen(true)
+  }
+  const closeGrantModal = () => {
+    setGrantModalOpen(false)
+    setGrantUser(null)
+  }
+  const handleQuickGrant = async (courseId: string, accessDuration: number | null) => {
+    if (!grantUser?.id) return
+    try {
+      const res = await fetch("/api/admin/enrollments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: grantUser.id, courseIds: [courseId], accessDuration }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        toast({ variant: "destructive", title: data.error || "เกิดข้อผิดพลาดในการเพิ่มคอร์ส" })
+        return
+      }
+      if (data.granted?.length) toast({ title: `เพิ่มคอร์สสำเร็จ: ${data.granted.join(", ")}` })
+      if (data.alreadyEnrolled?.length) toast({ title: `ผู้ใช้มีคอร์สนี้อยู่แล้ว: ${data.alreadyEnrolled.join(", ")}` })
+      closeGrantModal()
+    } catch {
+      toast({ variant: "destructive", title: "เกิดข้อผิดพลาดในการเพิ่มคอร์ส" })
+    }
+  }
+
+  const openTokenModal = (user: AdminUser) => {
+    setTokenUser(user)
+    setTokenModalOpen(true)
+  }
+  const closeTokenModal = () => {
+    setTokenModalOpen(false)
+    setTokenUser(null)
+  }
+  const handleSubmitTokens = async (tokens: number) => {
+    if (!tokenUser?.id) return
+    try {
+      const res = await fetch(`/api/admin/users/${tokenUser.id}/practice-tokens`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tokens }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({ title: "แก้ไขยอด token สำเร็จ" })
+        closeTokenModal()
+      } else {
+        toast({ variant: "destructive", title: data.error || "เกิดข้อผิดพลาดในการแก้ไข token" })
+      }
+    } catch {
+      toast({ variant: "destructive", title: "เกิดข้อผิดพลาดในการแก้ไข token" })
+    }
+  }
+
   return (
     <AdminPageHeader
       icon={<Users className="h-6 w-6" />}
@@ -161,6 +244,9 @@ export default function UsersManagement() {
         pagination={pagination}
         onEdit={openModal}
         onDelete={handleDelete}
+        onToggleRole={handleToggleRole}
+        onGrantCourse={openGrantModal}
+        onManageTokens={openTokenModal}
         onPageChange={handlePageChange}
         onSortChange={handleSortChange}
       />
@@ -168,6 +254,10 @@ export default function UsersManagement() {
       <UserModal open={modalOpen} editing={editing} onCancel={closeModal} onSubmit={handleSubmitUser} submitting={submitting} />
 
       <DeleteModal open={deleteModalOpen} user={userToDelete} loading={deleting} onConfirm={confirmDelete} onCancel={cancelDelete} />
+
+      <QuickGrantCourseModal open={grantModalOpen} user={grantUser} onCancel={closeGrantModal} onSubmit={handleQuickGrant} />
+
+      <TokenModal open={tokenModalOpen} user={tokenUser} onCancel={closeTokenModal} onSubmit={handleSubmitTokens} />
     </AdminPageHeader>
   )
 }

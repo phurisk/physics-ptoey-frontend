@@ -16,6 +16,7 @@ export async function GET() {
       totalOrders,
       pendingOrders,
       revenueAgg,
+      revenueByTypeAgg,
       recentOrders,
     ] = await Promise.all([
       prisma.user.count(),
@@ -25,6 +26,12 @@ export async function GET() {
       prisma.order.count(),
       prisma.order.count({ where: { status: { in: ["PENDING", "PENDING_PAYMENT", "PENDING_VERIFICATION"] } } }),
       prisma.order.aggregate({ where: { status: "COMPLETED" }, _sum: { total: true } }),
+      prisma.orderItem.groupBy({
+        by: ["itemType"],
+        where: { order: { status: "COMPLETED" } },
+        _sum: { totalPrice: true },
+        _count: { _all: true },
+      }),
       prisma.order.findMany({
         take: 5,
         orderBy: { createdAt: "desc" },
@@ -42,6 +49,11 @@ export async function GET() {
         totalOrders,
         pendingOrders,
         totalRevenue: revenueAgg._sum.total ?? 0,
+        revenueByType: revenueByTypeAgg.map((r) => ({
+          itemType: r.itemType,
+          revenue: r._sum.totalPrice ?? 0,
+          count: r._count._all,
+        })),
         recentOrders: recentOrders.map((o) => ({
           id: o.id,
           orderNumber: o.orderNumber,

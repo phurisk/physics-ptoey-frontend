@@ -1,0 +1,7 @@
+<svg width="200" height="120" viewBox="0 0 200 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="200" height="120" fill="#F0F0F0"/>
+<path d="M85 40H95V50H85V40Z" fill="#D9D9D9"/>
+<path d="M75 50H105V60H75V50Z" fill="#D9D9D9"/>
+<path d="M80 60H100V70H80V60Z" fill="#D9D9D9"/>
+<text x="100" y="85" font-family="Arial, sans-serif" font-size="12" fill="#999999" text-anchor="middle">Course Cover</text>
+</svg>

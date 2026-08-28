@@ -18,6 +18,7 @@ export async function GET(req: Request) {
     const search = searchParams.get("search") || ""
     const status = searchParams.get("status") || ""
     const paymentStatus = searchParams.get("paymentStatus") || ""
+    const orderType = searchParams.get("orderType") || ""
     const dateFrom = searchParams.get("dateFrom")
     const dateTo = searchParams.get("dateTo")
     const sortBy = searchParams.get("sortBy") || "createdAt"
@@ -37,6 +38,9 @@ export async function GET(req: Request) {
     }
     if (paymentStatus && paymentStatus !== "ALL") {
       where.payment = { status: paymentStatus as Prisma.EnumPaymentStatusFilter["equals"] }
+    }
+    if (orderType && orderType !== "ALL") {
+      where.items = { some: { itemType: orderType as Prisma.EnumItemTypeFilter["equals"] } }
     }
     if (dateFrom || dateTo) {
       where.createdAt = {}

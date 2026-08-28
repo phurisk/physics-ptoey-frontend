@@ -76,7 +76,14 @@ export default function PostTable({
                       <div className="flex h-10 w-16 items-center justify-center overflow-hidden rounded-md bg-gray-100">
                         {record.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={record.imageUrl} alt={record.title} className="h-full w-full object-cover" />
+                          <img
+                            src={record.imageUrl}
+                            alt={record.title}
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none"
+                            }}
+                          />
                         ) : (
                           <ImageOff className="h-4 w-4 text-gray-300" />
                         )}
@@ -87,6 +94,12 @@ export default function PostTable({
                         {record.isFeatured && <Star className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-400" />}
                         <span className="truncate">{record.title}</span>
                       </div>
+                      {record.slug && <div className="truncate text-xs text-gray-400">/{record.slug}</div>}
+                      {record.excerpt && (
+                        <div className="truncate text-xs text-gray-500" title={record.excerpt}>
+                          {record.excerpt}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5 text-sm text-gray-600">

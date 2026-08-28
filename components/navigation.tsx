@@ -97,6 +97,8 @@ export function Navigation() {
   const menuItems = [
     { href: "/", label: "หน้าแรก" },
     { href: "/courses", label: "คอร์สเรียน" },
+    { href: "/mock-exams", label: "ระบบจำลองสอบ" },
+    { href: "/flashcards", label: "แฟลชการ์ด" },
     { href: "/student-works", label: "ผลงานนักเรียน" },
     { href: "/study-plans", label: "แผนการเรียน" },
     { href: "/about", label: "เกี่ยวกับเรา" },

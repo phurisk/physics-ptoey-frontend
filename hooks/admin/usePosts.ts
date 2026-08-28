@@ -40,6 +40,8 @@ export function usePosts() {
         sortBy: (params.sortBy as string) || "createdAt",
         sortOrder: (params.sortOrder as string) || "desc",
       })
+      if (params.dateFrom) search.set("dateFrom", String(params.dateFrom))
+      if (params.dateTo) search.set("dateTo", String(params.dateTo))
 
       const res = await fetch(`/api/admin/posts?${search}`)
       const data = await res.json()
@@ -52,7 +54,7 @@ export function usePosts() {
 
   const list = useAdminListState<AdminPost>({
     fetcher,
-    initialFilters: { postTypeId: "all", isActive: "all", isFeatured: "" },
+    initialFilters: { postTypeId: "all", isActive: "all", isFeatured: "", dateFrom: "", dateTo: "" },
   })
 
   const fetchPostTypes = useCallback(async () => {

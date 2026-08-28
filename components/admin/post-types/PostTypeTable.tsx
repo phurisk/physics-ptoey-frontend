@@ -1,28 +1,35 @@
 "use client"
 
-import { Edit, Trash2 } from "lucide-react"
+import { Edit, Trash2, Calendar } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import SortableTableHead from "@/components/admin/shared/SortableTableHead"
 import AdminPagination from "@/components/admin/shared/AdminPagination"
 import type { AdminPostType } from "@/hooks/admin/usePostTypes"
+
+const formatDate = (dateString?: string) => (dateString ? new Date(dateString).toLocaleString("th-TH") : "-")
 
 export default function PostTypeTable({
   postTypes,
   loading,
+  filters,
   pagination,
   onEdit,
   onDelete,
   onPageChange,
+  onSortChange,
 }: {
   postTypes: AdminPostType[]
   loading: boolean
+  filters: { sortBy: string; sortOrder: string }
   pagination: { current: number; total: number; pageSize: number }
   onEdit: (postType: AdminPostType) => void
   onDelete: (postType: AdminPostType) => void
   onPageChange: (page: number) => void
+  onSortChange: (field: string) => void
 }) {
   const totalPages = Math.max(1, Math.ceil((pagination.total || 0) / pagination.pageSize))
 
@@ -38,10 +45,11 @@ export default function PostTypeTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ชื่อประเภท</TableHead>
+                <SortableTableHead field="name" label="ชื่อประเภท" sortBy={filters.sortBy} sortOrder={filters.sortOrder} onSort={onSortChange} />
                 <TableHead>รายละเอียด</TableHead>
                 <TableHead>จำนวนบทความ</TableHead>
-                <TableHead>สถานะ</TableHead>
+                <SortableTableHead field="isActive" label="สถานะ" sortBy={filters.sortBy} sortOrder={filters.sortOrder} onSort={onSortChange} />
+                <SortableTableHead field="createdAt" label="วันที่สร้าง" sortBy={filters.sortBy} sortOrder={filters.sortOrder} onSort={onSortChange} />
                 <TableHead className="text-right">จัดการ</TableHead>
               </TableRow>
             </TableHeader>
@@ -49,14 +57,14 @@ export default function PostTypeTable({
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={5}>
+                    <TableCell colSpan={6}>
                       <Skeleton className="h-10 w-full" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : postTypes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-gray-400">
+                  <TableCell colSpan={6} className="text-center text-gray-400">
                     ไม่พบประเภทบทความ
                   </TableCell>
                 </TableRow>
@@ -72,6 +80,12 @@ export default function PostTypeTable({
                       <Badge variant="outline" className={record.isActive ? "border-green-200 bg-green-50 text-green-700" : "border-gray-200 bg-gray-50 text-gray-600"}>
                         {record.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5 text-sm text-gray-500">
+                        <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                        {formatDate(record.createdAt)}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">

@@ -118,6 +118,7 @@ export default function MockExamsManagement() {
         pagination={pagination}
         onEdit={openModal}
         onManageQuestions={(exam) => router.push(`/admin/mock-exams/questions/${exam.id}`)}
+        onViewAnalytics={(exam) => router.push(`/admin/mock-exams/analytics/${exam.id}`)}
         onDelete={(exam) => {
           setDeleting(exam)
           setDeleteOpen(true)

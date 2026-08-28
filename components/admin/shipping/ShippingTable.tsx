@@ -1,6 +1,6 @@
 "use client"
 
-import { Pencil, User as UserIcon, MapPin, Truck } from "lucide-react"
+import { Pencil, User as UserIcon, MapPin, Truck, Calendar } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,20 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import SortableTableHead from "@/components/admin/shared/SortableTableHead"
 import AdminPagination from "@/components/admin/shared/AdminPagination"
 import type { AdminShipping } from "@/hooks/admin/useShipping"
+
+const formatDate = (dateString?: string) => (dateString ? new Date(dateString).toLocaleString("th-TH") : "-")
+
+const METHOD_META: Record<string, { label: string; className: string }> = {
+  STANDARD: { label: "จัดส่งธรรมดา", className: "text-gray-600" },
+  EXPRESS: { label: "จัดส่งด่วน", className: "text-orange-600" },
+  KERRY: { label: "Kerry Express", className: "text-orange-600" },
+  THAILAND_POST: { label: "ไปรษณีย์ไทย", className: "text-red-600" },
+  JT_EXPRESS: { label: "J&T Express", className: "text-red-600" },
+  FLASH_EXPRESS: { label: "Flash Express", className: "text-yellow-600" },
+  NINJA_VAN: { label: "Ninja Van", className: "text-red-600" },
+  DHL: { label: "DHL", className: "text-yellow-600" },
+  FEDEX: { label: "FedEx", className: "text-purple-600" },
+}
 
 const STATUS_META: Record<string, { label: string; className: string }> = {
   PENDING: { label: "รอดำเนินการ", className: "border-amber-200 bg-amber-50 text-amber-700" },
@@ -58,6 +72,7 @@ export default function ShippingTable({
                 <TableHead>ขนส่ง</TableHead>
                 <TableHead>เลขพัสดุ</TableHead>
                 <SortableTableHead field="status" label="สถานะ" sortBy={filters.sortBy} sortOrder={filters.sortOrder} onSort={onSortChange} />
+                <SortableTableHead field="createdAt" label="วันที่สร้าง" sortBy={filters.sortBy} sortOrder={filters.sortOrder} onSort={onSortChange} />
                 <TableHead className="sticky right-0 z-10 border-l border-gray-100 bg-white text-right">จัดการ</TableHead>
               </TableRow>
             </TableHeader>
@@ -65,20 +80,21 @@ export default function ShippingTable({
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={7}>
+                    <TableCell colSpan={8}>
                       <Skeleton className="h-10 w-full" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : shipments.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-gray-400">
+                  <TableCell colSpan={8} className="text-center text-gray-400">
                     ไม่พบข้อมูลการจัดส่ง
                   </TableCell>
                 </TableRow>
               ) : (
                 shipments.map((s) => {
                   const meta = STATUS_META[s.status] || { label: s.status, className: "" }
+                  const methodMeta = METHOD_META[s.shippingMethod] || { label: s.shippingMethod, className: "text-gray-600" }
                   return (
                     <TableRow key={s.id} className="group">
                       <TableCell className="font-mono text-sm">#{s.order.orderNumber}</TableCell>
@@ -100,9 +116,9 @@ export default function ShippingTable({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1 text-sm text-gray-600">
-                          <Truck className="h-3.5 w-3.5 text-gray-400" />
-                          {s.shippingMethod}
+                        <div className={`flex items-center gap-1 text-sm font-medium ${methodMeta.className}`}>
+                          <Truck className="h-3.5 w-3.5" />
+                          {methodMeta.label}
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-gray-600">{s.trackingNumber || "-"}</TableCell>
@@ -110,6 +126,12 @@ export default function ShippingTable({
                         <Badge variant="outline" className={meta.className}>
                           {meta.label}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5 text-sm text-gray-500">
+                          <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                          {formatDate(s.createdAt)}
+                        </div>
                       </TableCell>
                       <TableCell className="sticky right-0 z-10 border-l border-gray-100 bg-white group-hover:bg-muted/50">
                         <div className="flex items-center justify-end gap-1">

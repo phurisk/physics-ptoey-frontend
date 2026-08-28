@@ -1,17 +1,22 @@
 "use client"
 import { useState } from "react"
-import { FolderOpen, Plus, Search, RotateCcw } from "lucide-react"
+import { FolderOpen, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import AdminPageHeader from "@/components/admin/shared/AdminPageHeader"
-import ResultsCount from "@/components/admin/shared/ResultsCount"
+import AdminFilterBar from "@/components/admin/shared/AdminFilterBar"
 
 import PostTypeTable from "./PostTypeTable"
 import PostTypeModal from "./PostTypeModal"
 import DeleteModal from "./DeleteModal"
 
 import { usePostTypes, type AdminPostType } from "@/hooks/admin/usePostTypes"
+
+const STATUS_OPTIONS = [
+  { value: "ALL", label: "ทั้งหมด" },
+  { value: "ACTIVE", label: "ใช้งาน" },
+  { value: "INACTIVE", label: "ปิดใช้งาน" },
+]
 
 export default function PostTypesManagement() {
   const { toast } = useToast()
@@ -23,7 +28,8 @@ export default function PostTypesManagement() {
   const [deleting, setDeleting] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  const { postTypes, loading, searchInput, setSearchInput, pagination, fetchPostTypes, handlePageChange } = usePostTypes()
+  const { postTypes, loading, filters, searchInput, setSearchInput, pagination, fetchPostTypes, handleFilterChange, handlePageChange, handleSortChange, resetFilters } =
+    usePostTypes()
 
   const handleSubmitPostType = async (data: Record<string, unknown>) => {
     setSubmitting(true)
@@ -109,32 +115,30 @@ export default function PostTypesManagement() {
         </Button>
       }
     >
-      <div className="mb-6 rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-        <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <Input
-            placeholder="ค้นหาชื่อประเภทหรือรายละเอียด..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
-          <ResultsCount current={postTypes.length} total={pagination.total} />
-          <Button variant="outline" size="sm" onClick={() => setSearchInput("")} disabled={loading}>
-            <RotateCcw className="mr-2 h-4 w-4" />
-            ล้างการค้นหา
-          </Button>
-        </div>
-      </div>
+      <AdminFilterBar
+        searchValue={searchInput}
+        onSearchChange={setSearchInput}
+        searchPlaceholder="ค้นหาชื่อประเภทหรือรายละเอียด..."
+        selects={[{ key: "status", value: filters.status as string, onChange: (v) => handleFilterChange("status", v), placeholder: "สถานะ", options: STATUS_OPTIONS }]}
+        onReset={resetFilters}
+        totalCount={pagination.total}
+        currentCount={postTypes.length}
+        loading={loading}
+        activeSummary={[
+          filters.search && `ค้นหา: "${filters.search}"`,
+          filters.status !== "ALL" && `สถานะ: ${STATUS_OPTIONS.find((o) => o.value === filters.status)?.label || filters.status}`,
+        ]}
+      />
 
       <PostTypeTable
         postTypes={postTypes}
         loading={loading}
+        filters={filters as { sortBy: string; sortOrder: string }}
         pagination={pagination}
         onEdit={openModal}
         onDelete={handleDelete}
         onPageChange={handlePageChange}
+        onSortChange={handleSortChange}
       />
 
       <PostTypeModal open={modalOpen} editing={editing} onCancel={closeModal} onSubmit={handleSubmitPostType} submitting={submitting} />

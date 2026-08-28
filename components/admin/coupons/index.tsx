@@ -101,6 +101,25 @@ export default function CouponsManagement() {
     setCouponToDelete(null)
   }
 
+  const handleToggleStatus = async (coupon: AdminCoupon) => {
+    try {
+      const res = await fetch(`/api/admin/coupons/${coupon.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !coupon.isActive }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({ title: coupon.isActive ? "ปิดใช้งานคูปองสำเร็จ" : "เปิดใช้งานคูปองสำเร็จ" })
+        fetchCoupons()
+      } else {
+        toast({ variant: "destructive", title: data.error || "เกิดข้อผิดพลาดในการเปลี่ยนสถานะคูปอง" })
+      }
+    } catch {
+      toast({ variant: "destructive", title: "เกิดข้อผิดพลาดในการเปลี่ยนสถานะคูปอง" })
+    }
+  }
+
   const openModal = (record: AdminCoupon | null) => {
     setEditing(record || null)
     setModalOpen(true)
@@ -141,6 +160,7 @@ export default function CouponsManagement() {
         pagination={pagination}
         onEdit={openModal}
         onDelete={handleDelete}
+        onToggleStatus={handleToggleStatus}
         onPageChange={handlePageChange}
         onSortChange={handleSortChange}
       />

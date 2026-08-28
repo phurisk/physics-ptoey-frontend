@@ -34,3 +34,6 @@ next-env.d.ts
 *.sql
 toey-tutor_*/
 
+# one-off scripts with hardcoded production secrets — never commit
+scripts/push-vercel-env.sh
+

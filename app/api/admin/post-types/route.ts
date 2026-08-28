@@ -14,6 +14,9 @@ export async function GET(req: Request) {
     const page = parseInt(searchParams.get("page") || "", 10) || 1
     const pageSize = parseInt(searchParams.get("pageSize") || "", 10) || 10
     const skip = (page - 1) * pageSize
+    const status = searchParams.get("status") || "ALL"
+    const sortBy = searchParams.get("sortBy") || "name"
+    const sortOrder = searchParams.get("sortOrder") === "desc" ? "desc" : "asc"
 
     const where: Prisma.PostTypeWhereInput = {}
     if (search) {
@@ -22,13 +25,15 @@ export async function GET(req: Request) {
         { description: { contains: search, mode: "insensitive" } },
       ]
     }
+    if (status === "ACTIVE") where.isActive = true
+    else if (status === "INACTIVE") where.isActive = false
 
     const [totalCount, postTypes] = await Promise.all([
       prisma.postType.count({ where }),
       prisma.postType.findMany({
         where,
         include: { _count: { select: { posts: true } } },
-        orderBy: { name: "asc" },
+        orderBy: { [sortBy]: sortOrder },
         skip,
         take: pageSize,
       }),

@@ -21,6 +21,13 @@ const PAYMENT_STATUS_OPTIONS = [
   { value: "REFUNDED", label: "คืนเงิน" },
 ]
 
+const ORDER_TYPE_OPTIONS = [
+  { value: "ALL", label: "ทั้งหมด" },
+  { value: "COURSE", label: "คอร์สเรียน" },
+  { value: "EBOOK", label: "อีบุ๊ก" },
+  { value: "MOCK_EXAM", label: "ข้อสอบจำลอง" },
+]
+
 export default function OrderFilters({
   filters,
   searchInput,
@@ -48,6 +55,7 @@ export default function OrderFilters({
       selects={[
         { key: "status", value: filters.status, onChange: (v) => onFilterChange("status", v), placeholder: "สถานะคำสั่งซื้อ", options: STATUS_OPTIONS },
         { key: "paymentStatus", value: filters.paymentStatus, onChange: (v) => onFilterChange("paymentStatus", v), placeholder: "สถานะการชำระเงิน", options: PAYMENT_STATUS_OPTIONS },
+        { key: "orderType", value: filters.orderType, onChange: (v) => onFilterChange("orderType", v), placeholder: "ประเภทสินค้า", options: ORDER_TYPE_OPTIONS },
       ]}
       extraFields={[
         {
@@ -82,6 +90,7 @@ export default function OrderFilters({
         filters.status !== "ALL" && `สถานะ: ${STATUS_OPTIONS.find((o) => o.value === filters.status)?.label || filters.status}`,
         filters.paymentStatus !== "ALL" &&
           `การชำระเงิน: ${PAYMENT_STATUS_OPTIONS.find((o) => o.value === filters.paymentStatus)?.label || filters.paymentStatus}`,
+        filters.orderType && filters.orderType !== "ALL" && `ประเภท: ${ORDER_TYPE_OPTIONS.find((o) => o.value === filters.orderType)?.label || filters.orderType}`,
         (filters.dateFrom || filters.dateTo) && `วันที่: ${filters.dateFrom || "..."} - ${filters.dateTo || "..."}`,
       ]}
     />

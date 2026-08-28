@@ -12,6 +12,19 @@ const STATUS_OPTIONS = [
   { value: "RETURNED", label: "ตีกลับ" },
 ]
 
+const METHOD_OPTIONS = [
+  { value: "ALL", label: "ทั้งหมด" },
+  { value: "STANDARD", label: "จัดส่งธรรมดา" },
+  { value: "EXPRESS", label: "จัดส่งด่วน" },
+  { value: "KERRY", label: "Kerry Express" },
+  { value: "THAILAND_POST", label: "ไปรษณีย์ไทย" },
+  { value: "JT_EXPRESS", label: "J&T Express" },
+  { value: "FLASH_EXPRESS", label: "Flash Express" },
+  { value: "NINJA_VAN", label: "Ninja Van" },
+  { value: "DHL", label: "DHL" },
+  { value: "FEDEX", label: "FedEx" },
+]
+
 export default function ShippingFilters({
   filters,
   searchInput,
@@ -36,7 +49,10 @@ export default function ShippingFilters({
       searchValue={searchInput}
       onSearchChange={setSearchInput}
       searchPlaceholder="ค้นหาชื่อผู้รับ, เบอร์โทร, เลขพัสดุ หรือเลขคำสั่งซื้อ..."
-      selects={[{ key: "status", value: filters.status, onChange: (v) => onFilterChange("status", v), placeholder: "สถานะการจัดส่ง", options: STATUS_OPTIONS }]}
+      selects={[
+        { key: "status", value: filters.status, onChange: (v) => onFilterChange("status", v), placeholder: "สถานะการจัดส่ง", options: STATUS_OPTIONS },
+        { key: "shippingMethod", value: filters.shippingMethod, onChange: (v) => onFilterChange("shippingMethod", v), placeholder: "ขนส่ง", options: METHOD_OPTIONS },
+      ]}
       onReset={onReset}
       totalCount={totalCount}
       currentCount={currentCount}
@@ -44,6 +60,7 @@ export default function ShippingFilters({
       activeSummary={[
         filters.search && `ค้นหา: "${filters.search}"`,
         filters.status !== "ALL" && `สถานะ: ${STATUS_OPTIONS.find((o) => o.value === filters.status)?.label || filters.status}`,
+        filters.shippingMethod && filters.shippingMethod !== "ALL" && `ขนส่ง: ${METHOD_OPTIONS.find((o) => o.value === filters.shippingMethod)?.label || filters.shippingMethod}`,
       ]}
     />
   )

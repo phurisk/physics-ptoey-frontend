@@ -24,6 +24,7 @@ export function useShipping() {
       pageSize: String(params.limit),
       search: (params.search as string) || "",
       status: (params.status as string) || "ALL",
+      shippingMethod: (params.shippingMethod as string) || "ALL",
       sortBy: (params.sortBy as string) || "createdAt",
       sortOrder: (params.sortOrder as string) || "desc",
     })
@@ -33,7 +34,7 @@ export function useShipping() {
     return { items: data.data as AdminShipping[], total: data.pagination.totalCount, page: data.pagination.page }
   }, [])
 
-  const list = useAdminListState<AdminShipping>({ fetcher, initialFilters: { status: "ALL" } })
+  const list = useAdminListState<AdminShipping>({ fetcher, initialFilters: { status: "ALL", shippingMethod: "ALL" } })
 
   return {
     shipments: list.items,

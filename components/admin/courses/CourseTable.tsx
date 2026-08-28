@@ -61,6 +61,8 @@ export default function CourseTable({
                 <TableHead>รูปแบบ</TableHead>
                 <SortableTableHead field="price" label="ราคา" sortBy={filters.sortBy} sortOrder={filters.sortOrder} onSort={onSortChange} />
                 <SortableTableHead field="status" label="สถานะ" sortBy={filters.sortBy} sortOrder={filters.sortOrder} onSort={onSortChange} />
+                <TableHead className="text-center">จำนวนวัน</TableHead>
+                <TableHead className="text-center">จำนวนชั่วโมง</TableHead>
                 <SortableTableHead field="instructor" label="ผู้สอน" sortBy={filters.sortBy} sortOrder={filters.sortOrder} onSort={onSortChange} />
                 <SortableTableHead field="category" label="หมวดหมู่" sortBy={filters.sortBy} sortOrder={filters.sortOrder} onSort={onSortChange} />
                 <SortableTableHead field="subject" label="วิชา" sortBy={filters.sortBy} sortOrder={filters.sortOrder} onSort={onSortChange} />
@@ -72,14 +74,14 @@ export default function CourseTable({
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={9}>
+                    <TableCell colSpan={11}>
                       <Skeleton className="h-10 w-full" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : courses.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-gray-400">
+                  <TableCell colSpan={11} className="text-center text-gray-400">
                     ไม่พบคอร์สเรียน
                   </TableCell>
                 </TableRow>
@@ -90,7 +92,14 @@ export default function CourseTable({
                       <div className="flex h-10 w-16 items-center justify-center overflow-hidden rounded-md bg-gray-100">
                         {record.coverImageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={record.coverImageUrl} alt={record.title} className="h-full w-full object-cover" />
+                          <img
+                            src={record.coverImageUrl}
+                            alt={record.title}
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = "/placeholder-course.svg"
+                            }}
+                          />
                         ) : (
                           <ImageOff className="h-4 w-4 text-gray-300" />
                         )}
@@ -125,6 +134,12 @@ export default function CourseTable({
                       <Badge variant="outline" className={STATUS_STYLES[record.status]}>
                         {STATUS_LABELS[record.status] || record.status}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-center text-sm text-gray-600">
+                      {record.accessDuration ? `${record.accessDuration} วัน` : "-"}
+                    </TableCell>
+                    <TableCell className="text-center text-sm text-gray-600">
+                      {record.accessHours ? `${record.accessHours} ชม.` : "-"}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5 text-sm text-gray-600">

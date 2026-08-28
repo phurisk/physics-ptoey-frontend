@@ -1,11 +1,10 @@
 "use client"
 import { useState } from "react"
-import { BookText, Plus, Search } from "lucide-react"
+import { BookText, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import AdminPageHeader from "@/components/admin/shared/AdminPageHeader"
-import ResultsCount from "@/components/admin/shared/ResultsCount"
+import AdminFilterBar from "@/components/admin/shared/AdminFilterBar"
 
 import EbookCategoryTable from "./EbookCategoryTable"
 import EbookCategoryModal from "./EbookCategoryModal"
@@ -23,7 +22,8 @@ export default function EbookCategoriesManagement() {
   const [deleting, setDeleting] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  const { categories, totalCount, loading, searchInput, setSearchInput, fetchCategories } = useEbookCategories()
+  const { categories, totalCount, allCount, loading, searchInput, setSearchInput, page, pageSize, setPage, resetFilters, fetchCategories } =
+    useEbookCategories()
 
   const handleSubmitCategory = async (categoryData: Record<string, unknown>) => {
     setSubmitting(true)
@@ -109,22 +109,27 @@ export default function EbookCategoriesManagement() {
         </Button>
       }
     >
-      <div className="mb-6 rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <Input
-            placeholder="ค้นหาชื่อหมวดหมู่หรือรายละเอียด..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <div className="mt-3">
-          <ResultsCount current={categories.length} total={totalCount} />
-        </div>
-      </div>
+      <AdminFilterBar
+        searchValue={searchInput}
+        onSearchChange={setSearchInput}
+        searchPlaceholder="ค้นหาชื่อหรือรายละเอียดหมวดหมู่..."
+        onReset={resetFilters}
+        totalCount={allCount}
+        currentCount={totalCount}
+        loading={loading}
+        activeSummary={[searchInput && `ค้นหา: "${searchInput}"`]}
+      />
 
-      <EbookCategoryTable categories={categories} loading={loading} totalCount={categories.length} onEdit={openModal} onDelete={handleDelete} />
+      <EbookCategoryTable
+        categories={categories}
+        loading={loading}
+        totalCount={totalCount}
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onEdit={openModal}
+        onDelete={handleDelete}
+      />
 
       <EbookCategoryModal open={modalOpen} editing={editing} onCancel={closeModal} onSubmit={handleSubmitCategory} submitting={submitting} />
 
