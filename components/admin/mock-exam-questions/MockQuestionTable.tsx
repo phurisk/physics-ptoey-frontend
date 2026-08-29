@@ -1,6 +1,6 @@
 "use client"
 
-import { Pencil, Trash2 } from "lucide-react"
+import { Pencil, Trash2, Image as ImageIcon, CheckCircle2, XCircle } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -44,6 +44,7 @@ export default function MockQuestionTable({
                 <TableHead>ประเภท</TableHead>
                 <TableHead>หัวข้อ</TableHead>
                 <TableHead>คะแนน</TableHead>
+                <TableHead>เฉลย</TableHead>
                 <TableHead>ตอบแล้ว</TableHead>
                 <TableHead className="sticky right-0 z-10 border-l border-gray-100 bg-white text-right">จัดการ</TableHead>
               </TableRow>
@@ -52,14 +53,14 @@ export default function MockQuestionTable({
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={7}>
+                    <TableCell colSpan={8}>
                       <Skeleton className="h-10 w-full" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : questions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-gray-400">
+                  <TableCell colSpan={8} className="text-center text-gray-400">
                     ยังไม่มีคำถามในข้อสอบนี้
                   </TableCell>
                 </TableRow>
@@ -68,7 +69,8 @@ export default function MockQuestionTable({
                   <TableRow key={q.id} className="group">
                     <TableCell>{q.order}</TableCell>
                     <TableCell className="max-w-[320px]">
-                      <div className="truncate text-sm text-gray-900" title={q.questionText}>
+                      <div className="flex items-center gap-1.5 truncate text-sm text-gray-900" title={q.questionText}>
+                        {q.questionImage && <ImageIcon className="h-3.5 w-3.5 shrink-0 text-green-500" />}
                         {q.questionText}
                       </div>
                     </TableCell>
@@ -77,6 +79,27 @@ export default function MockQuestionTable({
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">{q.topic?.name || "-"}</TableCell>
                     <TableCell>{q.marks}</TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        {q.explanation ? (
+                          <Badge variant="outline" className="w-fit border-green-200 bg-green-50 text-green-700">
+                            <CheckCircle2 className="mr-1 h-3 w-3" />
+                            มีเฉลย
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="w-fit border-gray-200 bg-gray-50 text-gray-500">
+                            <XCircle className="mr-1 h-3 w-3" />
+                            ไม่มีเฉลย
+                          </Badge>
+                        )}
+                        {q.explanationImages?.length > 0 && (
+                          <Badge variant="outline" className="w-fit border-cyan-200 bg-cyan-50 text-cyan-700">
+                            <ImageIcon className="mr-1 h-3 w-3" />
+                            {q.explanationImages.length} รูป
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{q._count?.answers ?? 0}</TableCell>
                     <TableCell className="sticky right-0 z-10 border-l border-gray-100 bg-white group-hover:bg-muted/50">
                       <div className="flex items-center justify-end gap-1">

@@ -2,17 +2,21 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { Lock, Coins, Clock, Loader2, CheckCircle2, XCircle } from "lucide-react"
+import { Lock, Coins, Clock, Loader2, CheckCircle2, XCircle, ZoomIn, PenLine } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import PdfAnswerSheet from "@/components/mock-exam/PdfAnswerSheet"
+import AnswerPad from "@/components/mock-exam/AnswerPad"
+import ExamProgressBar from "@/components/mock-exam/ExamProgressBar"
 import http from "@/lib/http"
 
-type Option = { id: string; optionText: string; isCorrect?: boolean }
-type Question = {
+export type Option = { id: string; optionText: string; optionImage?: string | null; isCorrect?: boolean }
+export type Question = {
   id: string
   order: number
   marks: number
@@ -28,7 +32,7 @@ type Question = {
 type AttemptData = {
   attemptId: string
   mode: "PRACTICE" | "REAL"
-  exam: { id: string; title: string; timeLimit: number | null }
+  exam: { id: string; title: string; timeLimit: number | null; examPdfUrl?: string | null }
   questions: Question[]
   remainingSeconds: number | null
   practiceTokens: number | null
@@ -52,6 +56,8 @@ export default function MockExamAttemptPage() {
   const [unlocking, setUnlocking] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [remaining, setRemaining] = useState<number | null>(null)
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [padOpen, setPadOpen] = useState(true)
   const submittedRef = useRef(false)
 
   const load = useCallback(async () => {
@@ -140,9 +146,11 @@ export default function MockExamAttemptPage() {
   if (error || !data) return <div className="mx-auto max-w-3xl px-4 py-16 text-center text-red-600">{error || "ไม่พบข้อมูล"}</div>
 
   const isPractice = data.mode === "PRACTICE"
+  const isPdfMode = !!data.exam.examPdfUrl
+  const answeredCount = data.questions.filter((q) => answers[q.id]?.optionId || answers[q.id]?.textAnswer).length
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
+    <div className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-foreground">{data.exam.title}</h1>
@@ -157,81 +165,129 @@ export default function MockExamAttemptPage() {
               {data.practiceTokens} โทเคน
             </div>
           )}
-          {remaining != null && (
-            <div className="flex items-center gap-1 rounded-full bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700">
-              <Clock className="h-4 w-4" />
-              {formatSeconds(remaining)}
-            </div>
-          )}
+          <Button type="button" size="sm" variant={padOpen ? "default" : "outline"} onClick={() => setPadOpen((v) => !v)}>
+            <PenLine className="mr-1.5 h-4 w-4" />
+            กระดาษร่าง
+          </Button>
         </div>
       </div>
 
-      <div className="space-y-4">
-        {data.questions.map((q, idx) => (
-          <Card key={q.id}>
-            <CardContent className="p-5">
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-sm font-semibold text-muted-foreground">ข้อที่ {idx + 1}</span>
-                <Badge variant="outline">{q.marks} คะแนน</Badge>
-              </div>
+      {remaining != null && (
+        <div className="fixed right-4 top-4 z-50 flex items-center gap-1 rounded-full bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700 shadow-md">
+          <Clock className="h-4 w-4" />
+          {formatSeconds(remaining)}
+        </div>
+      )}
 
-              {q.locked ? (
-                <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-8 text-center">
-                  <Lock className="h-6 w-6 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">ใช้ {data.practiceUnlockCost} โทเคนเพื่อปลดล็อกคำถามนี้</p>
-                  <Button size="sm" disabled={unlocking === q.id} onClick={() => unlockQuestion(q.id)}>
-                    {unlocking === q.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Coins className="mr-2 h-4 w-4" />}
-                    ปลดล็อก
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <p className="mb-4 text-foreground">{q.questionText}</p>
+      <div className={padOpen ? "grid grid-cols-1 gap-4 lg:grid-cols-[340px_1fr]" : ""}>
+        {padOpen && (
+          <div className="h-[75vh] lg:sticky lg:top-4">
+            <AnswerPad />
+          </div>
+        )}
 
-                  {q.questionType === "SHORT_ANSWER" ? (
-                    <Input
-                      value={answers[q.id]?.textAnswer ?? ""}
-                      onChange={(e) => setAnswers((prev) => ({ ...prev, [q.id]: { ...prev[q.id], textAnswer: e.target.value } }))}
-                      onBlur={(e) => saveAnswer(q.id, { textAnswer: e.target.value })}
-                      placeholder="พิมพ์คำตอบ..."
-                    />
-                  ) : (
-                    <RadioGroup
-                      value={answers[q.id]?.optionId ?? ""}
-                      onValueChange={(v) => saveAnswer(q.id, { optionId: v })}
-                      className="space-y-2"
-                    >
-                      {q.options?.map((opt) => {
-                        const isSelected = answers[q.id]?.optionId === opt.id
-                        const revealCorrectness = isPractice && answers[q.id]?.isCorrect != null && isSelected
-                        return (
-                          <div key={opt.id} className="flex items-center gap-2 rounded-md border p-2.5">
-                            <RadioGroupItem value={opt.id} id={opt.id} />
-                            <Label htmlFor={opt.id} className="flex-1 cursor-pointer font-normal">
-                              {opt.optionText}
-                            </Label>
-                            {revealCorrectness &&
-                              (answers[q.id]?.isCorrect ? (
-                                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                              ) : (
-                                <XCircle className="h-4 w-4 text-red-500" />
-                              ))}
-                          </div>
-                        )
-                      })}
-                    </RadioGroup>
-                  )}
-
-                  {isPractice && q.explanation && answers[q.id]?.isCorrect != null && (
-                    <div className="mt-3 rounded-md bg-muted p-3 text-sm text-muted-foreground">
-                      <strong>คำอธิบาย:</strong> {q.explanation}
+        <div>
+          {isPdfMode ? (
+            <PdfAnswerSheet
+              examPdfUrl={data.exam.examPdfUrl!}
+              questions={data.questions}
+              answers={answers}
+              practiceUnlockCost={data.practiceUnlockCost}
+              unlocking={unlocking}
+              onTextChange={(questionId, value) => setAnswers((prev) => ({ ...prev, [questionId]: { ...prev[questionId], textAnswer: value } }))}
+              onSaveAnswer={saveAnswer}
+              onUnlock={unlockQuestion}
+            />
+          ) : (
+            <div className="space-y-4">
+              {data.questions.map((q, idx) => (
+                <Card key={q.id}>
+                  <CardContent className="p-5">
+                    <div className="mb-3 flex items-center justify-between">
+                      <span className="text-sm font-semibold text-muted-foreground">ข้อที่ {idx + 1}</span>
+                      <Badge variant="outline">{q.marks} คะแนน</Badge>
                     </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+
+                    {q.locked ? (
+                      <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-8 text-center">
+                        <Lock className="h-6 w-6 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">ใช้ {data.practiceUnlockCost} โทเคนเพื่อปลดล็อกคำถามนี้</p>
+                        <Button size="sm" disabled={unlocking === q.id} onClick={() => unlockQuestion(q.id)}>
+                          {unlocking === q.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Coins className="mr-2 h-4 w-4" />}
+                          ปลดล็อก
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        {q.questionImage && (
+                          <button type="button" onClick={() => setPreviewImage(q.questionImage!)} className="group relative mb-3 block">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={q.questionImage} alt="" className="max-w-full rounded-md border" />
+                            <span className="absolute inset-0 flex items-center justify-center rounded-md bg-black/0 opacity-0 transition group-hover:bg-black/30 group-hover:opacity-100">
+                              <ZoomIn className="h-6 w-6 text-white" />
+                            </span>
+                          </button>
+                        )}
+                        <p className="mb-4 text-foreground">{q.questionText}</p>
+
+                        {q.questionType === "SHORT_ANSWER" ? (
+                          <Input
+                            value={answers[q.id]?.textAnswer ?? ""}
+                            onChange={(e) => setAnswers((prev) => ({ ...prev, [q.id]: { ...prev[q.id], textAnswer: e.target.value } }))}
+                            onBlur={(e) => saveAnswer(q.id, { textAnswer: e.target.value })}
+                            placeholder="พิมพ์คำตอบ..."
+                          />
+                        ) : (
+                          <RadioGroup value={answers[q.id]?.optionId ?? ""} onValueChange={(v) => saveAnswer(q.id, { optionId: v })} className="space-y-2">
+                            {q.options?.map((opt) => {
+                              const isSelected = answers[q.id]?.optionId === opt.id
+                              const revealCorrectness = isPractice && answers[q.id]?.isCorrect != null && isSelected
+                              return (
+                                <div key={opt.id} className="flex items-center gap-2 rounded-md border p-2.5">
+                                  <RadioGroupItem value={opt.id} id={opt.id} />
+                                  <Label htmlFor={opt.id} className="flex flex-1 cursor-pointer items-center gap-2 font-normal">
+                                    {opt.optionImage && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.preventDefault()
+                                          setPreviewImage(opt.optionImage!)
+                                        }}
+                                        className="shrink-0"
+                                      >
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={opt.optionImage} alt="" className="h-14 w-20 rounded-md border object-cover" />
+                                      </button>
+                                    )}
+                                    {opt.optionText}
+                                  </Label>
+                                  {revealCorrectness &&
+                                    (answers[q.id]?.isCorrect ? (
+                                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                    ) : (
+                                      <XCircle className="h-4 w-4 text-red-500" />
+                                    ))}
+                                </div>
+                              )
+                            })}
+                          </RadioGroup>
+                        )}
+
+                        {isPractice && q.explanation && answers[q.id]?.isCorrect != null && (
+                          <div className="mt-3 rounded-md bg-muted p-3 text-sm text-muted-foreground">
+                            <strong>คำอธิบาย:</strong> {q.explanation}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+
+              <ExamProgressBar answered={answeredCount} total={data.questions.length} />
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="mt-6 flex justify-end">
@@ -240,6 +296,16 @@ export default function MockExamAttemptPage() {
           ส่งข้อสอบ
         </Button>
       </div>
+
+      <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
+        <DialogContent className="max-w-4xl p-2">
+          <DialogTitle className="sr-only">รูปภาพขยาย</DialogTitle>
+          {previewImage && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={previewImage} alt="" className="max-h-[85vh] w-full rounded-md object-contain" />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ListChecks, Plus } from "lucide-react"
+import { ListChecks, Plus, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
@@ -16,7 +16,7 @@ import { useMockExamQuestions, type AdminMockQuestion } from "@/hooks/admin/useM
 import { fetchMockTopicsForSubject, type AdminMockTopic } from "@/hooks/admin/useMockTopics"
 import { getSubjectLabel } from "@/lib/constants"
 
-type ExamInfo = { id: string; title: string; subject: string; _count?: { questions: number } }
+type ExamInfo = { id: string; title: string; subject: string; questions?: { marks: number }[]; _count?: { questions: number } }
 
 export default function MockExamQuestionsManagement() {
   const { toast } = useToast()
@@ -124,21 +124,37 @@ export default function MockExamQuestionsManagement() {
             {exam.title}
             <Badge variant="outline">{getSubjectLabel(exam.subject)}</Badge>
             <Badge variant="secondary">{exam._count?.questions ?? 0} ข้อ</Badge>
+            <Badge variant="secondary">{exam.questions?.reduce((sum, q) => sum + (q.marks || 0), 0) ?? 0} คะแนนรวม</Badge>
           </span>
         ) : (
           "..."
         )
       }
+      breadcrumbItems={[
+        {
+          href: "/admin/mock-exams",
+          label: (
+            <span className="inline-flex items-center gap-1">
+              <FileText className="h-3.5 w-3.5" />
+              ข้อสอบจำลอง
+            </span>
+          ),
+        },
+        {
+          label: (
+            <span className="inline-flex items-center gap-1">
+              <ListChecks className="h-3.5 w-3.5" />
+              จัดการคำถาม
+            </span>
+          ),
+        },
+      ]}
+      onBack={() => router.back()}
       actions={
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => router.push("/admin/mock-exams")}>
-            กลับไปข้อสอบจำลอง
-          </Button>
-          <Button onClick={() => openModal(null)}>
-            <Plus className="mr-2 h-4 w-4" />
-            เพิ่มคำถามใหม่
-          </Button>
-        </div>
+        <Button onClick={() => openModal(null)}>
+          <Plus className="mr-2 h-4 w-4" />
+          เพิ่มคำถามใหม่
+        </Button>
       }
     >
       <MockQuestionFilters

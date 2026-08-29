@@ -37,10 +37,10 @@ model User {
   sessions     Session[]
   carts        Cart[]
 
-  mockExamPurchases  MockExamPurchase[]
-  mockExamAttempts   MockExamAttempt[]
+  mockExamPurchases   MockExamPurchase[]
+  mockExamAttempts    MockExamAttempt[]
   mockPracticeUnlocks MockPracticeUnlock[]
-  mockPracticeWallet MockPracticeWallet?
+  mockPracticeWallet  MockPracticeWallet?
 
   flashcardReviews    FlashcardReview[]
   flashcardReviewLogs FlashcardReviewLog[]
@@ -392,7 +392,7 @@ model Ebook {
   publishedYear  Int?
   categoryId     String?
   createdAt      DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  updatedAt      DateTime    @updatedAt
 
   category  EbookCategory?  @relation(fields: [categoryId], references: [id])
   reviews   Review[]
@@ -538,7 +538,7 @@ model Shipping {
   name           String
   phone          String
   address        String
-  district        String
+  district       String
   province       String
   postalCode     String
   shippingMethod ShippingMethod @default(STANDARD)
@@ -826,6 +826,7 @@ model MockExam {
   allowRealMode      Boolean     @default(true)
   practiceUnlockCost Int         @default(1)
   isActive           Boolean     @default(true)
+  examPdfUrl         String? // when set, students see the PDF answer-sheet mode instead of the typed question list
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
 
@@ -877,11 +878,12 @@ model MockQuestion {
 }
 
 model MockQuestionOption {
-  id         String  @id @default(uuid())
-  questionId String
-  optionText String
-  isCorrect  Boolean @default(false)
-  order      Int     @default(0)
+  id          String  @id @default(uuid())
+  questionId  String
+  optionText  String
+  optionImage String?
+  isCorrect   Boolean @default(false)
+  order       Int     @default(0)
 
   question MockQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 

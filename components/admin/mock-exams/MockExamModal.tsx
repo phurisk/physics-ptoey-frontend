@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Loader2 } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Loader2, Upload, X, FileText } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getSubjectOptions, getGradeLevelOptions } from "@/lib/constants"
+import { useToast } from "@/hooks/use-toast"
 import type { AdminMockExam } from "@/hooks/admin/useMockExams"
 
 type FormState = {
@@ -27,6 +28,7 @@ type FormState = {
   allowRealMode: boolean
   practiceUnlockCost: string
   isActive: boolean
+  examPdfUrl: string
 }
 
 const DEFAULT_VALUES: FormState = {
@@ -44,6 +46,7 @@ const DEFAULT_VALUES: FormState = {
   allowRealMode: true,
   practiceUnlockCost: "1",
   isActive: true,
+  examPdfUrl: "",
 }
 
 export default function MockExamModal({
@@ -61,6 +64,9 @@ export default function MockExamModal({
 }) {
   const [form, setForm] = useState<FormState>(DEFAULT_VALUES)
   const [courses, setCourses] = useState<{ id: string; title: string }[]>([])
+  const [uploadingPdf, setUploadingPdf] = useState(false)
+  const pdfInputRef = useRef<HTMLInputElement>(null)
+  const { toast } = useToast()
   const subjectOptions = getSubjectOptions()
   const gradeLevelOptions = getGradeLevelOptions()
 
@@ -68,7 +74,13 @@ export default function MockExamModal({
     if (!open) return
     fetch("/api/admin/courses?pageSize=100")
       .then((r) => r.json())
-      .then((data) => setCourses(data.success ? data.data.map((c: { id: string; title: string }) => ({ id: c.id, title: c.title })) : []))
+      .then((data) => {
+        const list: { id: string; title: string }[] = data.success ? data.data.map((c: { id: string; title: string }) => ({ id: c.id, title: c.title })) : []
+        if (editing?.course && !list.some((c) => c.id === editing.course!.id)) {
+          list.unshift(editing.course)
+        }
+        setCourses(list)
+      })
       .catch(() => setCourses([]))
 
     if (editing) {
@@ -87,6 +99,7 @@ export default function MockExamModal({
         allowRealMode: editing.allowRealMode,
         practiceUnlockCost: String(editing.practiceUnlockCost ?? 1),
         isActive: editing.isActive,
+        examPdfUrl: editing.examPdfUrl || "",
       })
     } else {
       setForm(DEFAULT_VALUES)
@@ -94,6 +107,27 @@ export default function MockExamModal({
   }, [open, editing])
 
   const isValid = form.title.trim() && form.subject && (form.allowPracticeMode || form.allowRealMode)
+
+  const handlePdfChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ""
+    if (!file) return
+    setUploadingPdf(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("type", "mock-exam-pdf")
+      const res = await fetch("/api/upload-blob", { method: "POST", body: formData })
+      const result = await res.json()
+      if (!result.success) throw new Error(result.error || "Upload failed")
+      setForm((f) => ({ ...f, examPdfUrl: result.data.url }))
+      toast({ title: "อัพโหลดไฟล์ PDF สำเร็จ" })
+    } catch (error) {
+      toast({ variant: "destructive", title: `อัพโหลดไม่สำเร็จ: ${error instanceof Error ? error.message : ""}` })
+    } finally {
+      setUploadingPdf(false)
+    }
+  }
 
   const handleSubmit = () => {
     onSubmit({
@@ -111,6 +145,7 @@ export default function MockExamModal({
       allowRealMode: form.allowRealMode,
       practiceUnlockCost: form.practiceUnlockCost || 1,
       isActive: form.isActive,
+      examPdfUrl: form.examPdfUrl || null,
     })
   }
 
@@ -204,6 +239,33 @@ export default function MockExamModal({
               <Input type="number" min={0} value={form.discountPrice} onChange={(e) => setForm((f) => ({ ...f, discountPrice: e.target.value }))} />
             </div>
           </div>
+          <p className="-mt-2 text-xs text-gray-400">
+            ถ้าราคามากกว่า 0 นักเรียนต้องซื้อก่อนจึงจะเข้าโหมดสอบจริงได้ (โหมดฝึกฝนใช้ token ไม่เกี่ยวกับราคานี้) — ถ้าผูกกับคอร์ส การซื้อคอร์สนั้นจะปลดล็อคให้อัตโนมัติโดยไม่ต้องซื้อซ้ำ
+          </p>
+
+          <div className="space-y-2">
+            <Label>แนบไฟล์โจทย์ PDF (ไม่บังคับ)</Label>
+            <input ref={pdfInputRef} type="file" accept="application/pdf" className="hidden" onChange={handlePdfChange} />
+            {form.examPdfUrl ? (
+              <div className="flex items-center gap-2 rounded-md border border-gray-100 p-2">
+                <FileText className="h-4 w-4 shrink-0 text-red-500" />
+                <a href={form.examPdfUrl} target="_blank" rel="noreferrer" className="flex-1 truncate text-sm text-blue-600 underline">
+                  {form.examPdfUrl}
+                </a>
+                <Button type="button" variant="ghost" size="icon" onClick={() => setForm((f) => ({ ...f, examPdfUrl: "" }))}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <Button type="button" variant="outline" size="sm" disabled={uploadingPdf} onClick={() => pdfInputRef.current?.click()}>
+                {uploadingPdf ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-1.5 h-3.5 w-3.5" />}
+                อัพโหลดไฟล์ PDF
+              </Button>
+            )}
+            <p className="text-xs text-gray-400">
+              ถ้าแนบไฟล์ PDF นักเรียนจะเห็นข้อสอบเป็น PDF พร้อมพื้นที่ร่างคำตอบ แทนรายการคำถามแบบพิมพ์ทีละข้อ — คำถาม/ตัวเลือกที่จัดการด้านล่าง (หลังบันทึก) จะใช้เป็นเฉลย/คะแนนเท่านั้น
+            </p>
+          </div>
 
           <div className="rounded-lg border border-gray-100 p-3">
             <div className="mb-3 flex items-center justify-between">
@@ -214,6 +276,9 @@ export default function MockExamModal({
               <Label>เปิดโหมดสอบจริง (Real)</Label>
               <Switch checked={form.allowRealMode} onCheckedChange={(v) => setForm((f) => ({ ...f, allowRealMode: v }))} />
             </div>
+            {!form.allowPracticeMode && !form.allowRealMode && (
+              <p className="mt-2 text-xs text-red-600">ต้องเปิดใช้งานอย่างน้อยหนึ่งโหมด (ฝึกฝน หรือ สอบจริง)</p>
+            )}
             {form.allowRealMode && (
               <div className="mt-3 space-y-2">
                 <Label>จำนวนครั้งที่สอบจริงได้</Label>

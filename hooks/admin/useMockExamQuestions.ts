@@ -1,7 +1,7 @@
 import { useCallback } from "react"
 import { useAdminListState } from "@/hooks/admin/useAdminListState"
 
-export type AdminMockQuestionOption = { id?: string; optionText: string; isCorrect: boolean; order: number }
+export type AdminMockQuestionOption = { id?: string; optionText: string; optionImage?: string | null; isCorrect: boolean; order: number }
 
 export type AdminMockQuestion = {
   id: string

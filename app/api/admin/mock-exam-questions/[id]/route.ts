@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/requireAdmin"
 
-type OptionInput = { optionText: string; isCorrect?: boolean; order?: number }
+type OptionInput = { optionText: string; optionImage?: string | null; isCorrect?: boolean; order?: number }
 
 function validateOptions(questionType: string, options: OptionInput[]) {
   if (questionType === "MULTIPLE_CHOICE" || questionType === "TRUE_FALSE") {
@@ -75,7 +75,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           explanation: body.explanation || null,
           explanationImages: Array.isArray(body.explanationImages) ? body.explanationImages : [],
           options: {
-            create: options.map((o, idx) => ({ optionText: o.optionText, isCorrect: !!o.isCorrect, order: o.order ?? idx })),
+            create: options.map((o, idx) => ({ optionText: o.optionText, optionImage: o.optionImage || null, isCorrect: !!o.isCorrect, order: o.order ?? idx })),
           },
         },
         include: { options: { orderBy: { order: "asc" } } },

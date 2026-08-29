@@ -40,7 +40,11 @@ export default function MockQuestionFilters({
       totalCount={totalCount}
       currentCount={currentCount}
       loading={loading}
-      activeSummary={[filters.search && `ค้นหา: "${filters.search}"`]}
+      activeSummary={[
+        filters.search && `ค้นหา: "${filters.search}"`,
+        filters.questionType !== "all" && `ประเภท: ${TYPE_OPTIONS.find((o) => o.value === filters.questionType)?.label || filters.questionType}`,
+        filters.topicId !== "all" && `หัวข้อ: ${topicOptions.find((o) => o.value === filters.topicId)?.label || filters.topicId}`,
+      ]}
     />
   )
 }

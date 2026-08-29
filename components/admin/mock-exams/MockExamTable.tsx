@@ -83,6 +83,11 @@ export default function MockExamTable({
                       <div className="flex items-center gap-1.5 truncate font-semibold text-gray-900" title={exam.title}>
                         <FileText className="h-3.5 w-3.5 shrink-0 text-gray-400" />
                         {exam.title}
+                        {exam.examPdfUrl && (
+                          <Badge variant="outline" className="shrink-0 border-red-200 bg-red-50 text-red-700">
+                            PDF
+                          </Badge>
+                        )}
                       </div>
                       {exam.course && <div className="truncate text-xs text-gray-400">คอร์ส: {exam.course.title}</div>}
                     </TableCell>

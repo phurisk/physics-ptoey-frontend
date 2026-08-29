@@ -69,7 +69,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ attemptI
           questionText: q.questionText,
           questionImage: q.questionImage,
           questionType: q.questionType,
-          options: q.options.map((o) => ({ id: o.id, optionText: o.optionText, order: o.order })),
+          options: q.options.map((o) => ({ id: o.id, optionText: o.optionText, optionImage: o.optionImage, order: o.order })),
           answer: priorAnswer ? { optionId: priorAnswer.optionId, textAnswer: priorAnswer.textAnswer } : null,
         }
       })
@@ -88,7 +88,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ attemptI
       data: {
         attemptId: attempt.id,
         mode: attempt.mode,
-        exam: { id: attempt.mockExam.id, title: attempt.mockExam.title, timeLimit: attempt.mockExam.timeLimit },
+        exam: {
+          id: attempt.mockExam.id,
+          title: attempt.mockExam.title,
+          timeLimit: attempt.mockExam.timeLimit,
+          // Proxy path, not the raw Vercel Blob URL — see the pdf route's
+          // comment for why: no downloadable link should ever reach the client.
+          examPdfUrl: attempt.mockExam.examPdfUrl ? `/api/mock-attempts/${attempt.id}/pdf` : null,
+        },
         questions: questionPayloads,
         remainingSeconds,
         practiceTokens,

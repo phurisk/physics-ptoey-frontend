@@ -87,6 +87,7 @@ export async function POST(req: Request) {
         allowRealMode,
         practiceUnlockCost: body.practiceUnlockCost ? parseInt(body.practiceUnlockCost, 10) : 1,
         isActive: body.isActive ?? true,
+        examPdfUrl: body.examPdfUrl || null,
       },
     })
     return NextResponse.json({ success: true, data: exam })

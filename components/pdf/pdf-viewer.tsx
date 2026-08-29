@@ -10,13 +10,14 @@ import "@react-pdf-viewer/default-layout/lib/styles/index.css"
 type PdfViewerProps = {
   fileUrl: string
   className?: string
+  showLayoutSidebar?: boolean
 }
 
 const PDF_WORKER_URL = "https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js"
 
-export function PdfViewer({ fileUrl, className }: PdfViewerProps) {
+export function PdfViewer({ fileUrl, className, showLayoutSidebar = true }: PdfViewerProps) {
   const layoutPlugin = defaultLayoutPlugin({
-    sidebarTabs: (defaultTabs) => [defaultTabs[0]],
+    sidebarTabs: (defaultTabs) => (showLayoutSidebar ? [defaultTabs[0]] : []),
     renderToolbar: () => <div className="hidden" />,
   })
 

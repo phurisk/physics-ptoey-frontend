@@ -17,6 +17,7 @@ export type AdminMockExam = {
   allowRealMode: boolean
   practiceUnlockCost: number
   isActive: boolean
+  examPdfUrl?: string | null
   course?: { id: string; title: string } | null
   _count?: { questions: number; attempts: number }
 }

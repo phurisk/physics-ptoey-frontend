@@ -23,6 +23,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts"
+import PdfViewer from "@/components/pdf/pdf-viewer"
 import { http } from "@/lib/http"
 
 type QuestionReview = {
@@ -35,7 +36,7 @@ type QuestionReview = {
   topic: { id: string; name: string } | null
   explanation: string | null
   explanationImages: string[]
-  options: { id: string; optionText: string; isCorrect: boolean }[]
+  options: { id: string; optionText: string; optionImage?: string | null; isCorrect: boolean }[]
   studentAnswer: { optionId: string | null; textAnswer: string | null; isCorrect: boolean | null; marksAwarded: number } | null
   timing: { mySec: number; avgSec: number } | null
   mistakeSharePercent: number | null
@@ -63,7 +64,7 @@ type RecommendedCourse = {
 }
 type ResultView = {
   attempt: { id: string; mode: "PRACTICE" | "REAL"; totalMarks: number; obtainedMarks: number; percentage: number; passed: boolean }
-  mockExam: { id: string; title: string }
+  mockExam: { id: string; title: string; examPdfUrl?: string | null }
   questions: QuestionReview[]
   topicBreakdown: TopicBreakdown[]
   comparison: Comparison
@@ -318,6 +319,12 @@ function QuestionReviewCard({ question, index, onPreviewImage }: { question: Que
                   ) : (
                     <span className="h-4 w-4 shrink-0" />
                   )}
+                  {opt.optionImage && (
+                    <button type="button" onClick={() => onPreviewImage(opt.optionImage!)} className="shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={opt.optionImage} alt="" className="h-12 w-16 rounded-md border object-cover" />
+                    </button>
+                  )}
                   <span className={picked ? "font-medium" : ""}>{opt.optionText}</span>
                 </div>
               )
@@ -393,6 +400,7 @@ export default function MockExamResultPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -441,6 +449,11 @@ export default function MockExamResultPage() {
           <Card>
             <CardContent className="p-8 text-center">
               <p className="mb-1 text-sm text-muted-foreground">{result.mockExam.title}</p>
+              {result.mockExam.examPdfUrl && (
+                <button type="button" onClick={() => setPdfViewerOpen(true)} className="mb-2 inline-block text-xs text-blue-600 underline">
+                  ดูข้อสอบต้นฉบับ (PDF)
+                </button>
+              )}
               <div className="text-4xl font-bold text-foreground">
                 {result.attempt.obtainedMarks}/{result.attempt.totalMarks}
               </div>
@@ -469,6 +482,17 @@ export default function MockExamResultPage() {
           {previewImage && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={previewImage} alt="" className="max-h-[85vh] w-full rounded-md object-contain" />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={pdfViewerOpen} onOpenChange={setPdfViewerOpen}>
+        <DialogContent className="max-h-[90vh] max-w-4xl p-2" onContextMenu={(e) => e.preventDefault()}>
+          <DialogTitle className="sr-only">ข้อสอบต้นฉบับ</DialogTitle>
+          {result?.mockExam.examPdfUrl && (
+            <div className="h-[80vh]">
+              <PdfViewer fileUrl={result.mockExam.examPdfUrl} showLayoutSidebar={false} />
+            </div>
           )}
         </DialogContent>
       </Dialog>

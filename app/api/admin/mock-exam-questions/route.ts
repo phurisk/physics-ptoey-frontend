@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/requireAdmin"
 import type { Prisma } from "@prisma/client"
 
-type OptionInput = { optionText: string; isCorrect?: boolean; order?: number }
+type OptionInput = { optionText: string; optionImage?: string | null; isCorrect?: boolean; order?: number }
 
 function validateOptions(questionType: string, options: OptionInput[]) {
   if (questionType === "MULTIPLE_CHOICE" || questionType === "TRUE_FALSE") {
@@ -101,7 +101,7 @@ export async function POST(req: Request) {
         explanationImages: Array.isArray(body.explanationImages) ? body.explanationImages : [],
         order: (maxOrder._max.order ?? 0) + 1,
         options: {
-          create: options.map((o, idx) => ({ optionText: o.optionText, isCorrect: !!o.isCorrect, order: o.order ?? idx })),
+          create: options.map((o, idx) => ({ optionText: o.optionText, optionImage: o.optionImage || null, isCorrect: !!o.isCorrect, order: o.order ?? idx })),
         },
       },
       include: { options: { orderBy: { order: "asc" } } },

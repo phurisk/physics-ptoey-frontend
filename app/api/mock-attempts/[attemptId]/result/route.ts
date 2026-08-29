@@ -18,7 +18,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ attemptI
     const { attemptId } = await params
     const attempt = await prisma.mockExamAttempt.findUnique({
       where: { id: attemptId },
-      include: { mockExam: { select: { id: true, title: true, subject: true, gradeLevel: true, passingMarks: true } } },
+      include: { mockExam: { select: { id: true, title: true, subject: true, gradeLevel: true, passingMarks: true, examPdfUrl: true } } },
     })
     if (!attempt || attempt.userId !== user.userId) {
       return NextResponse.json({ success: false, error: "ไม่พบการทำข้อสอบนี้" }, { status: 404 })
@@ -56,7 +56,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ attemptI
         topic: q.topic,
         explanation: q.explanation,
         explanationImages: q.explanationImages,
-        options: q.options.map((o) => ({ id: o.id, optionText: o.optionText, isCorrect: o.isCorrect })),
+        options: q.options.map((o) => ({ id: o.id, optionText: o.optionText, optionImage: o.optionImage, isCorrect: o.isCorrect })),
         studentAnswer: answer
           ? { optionId: answer.optionId, textAnswer: answer.textAnswer, isCorrect: answer.isCorrect, marksAwarded: answer.marks }
           : null,
@@ -131,7 +131,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ attemptI
           percentage: attempt.percentage,
           passed: attempt.passed,
         },
-        mockExam: attempt.mockExam,
+        mockExam: {
+          ...attempt.mockExam,
+          // Proxy path, not the raw Vercel Blob URL — never expose a
+          // directly-downloadable link to the exam PDF.
+          examPdfUrl: attempt.mockExam.examPdfUrl ? `/api/mock-attempts/${attempt.id}/pdf` : null,
+        },
         questions: questionReviews,
         topicBreakdown,
         comparison,
