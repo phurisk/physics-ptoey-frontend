@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { Menu, X, Loader2, ShoppingCart } from "lucide-react"
+import { Menu, X, Loader2, ShoppingCart, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import LoginModal from "@/components/login-modal"
 import { useAuth } from "@/components/auth-provider"
@@ -94,15 +94,25 @@ export function Navigation() {
   if (pathname?.startsWith("/admin")) return null
   const initial = String(displayName || "").trim().charAt(0).toUpperCase() || "U"
 
-  const menuItems = [
+  const menuItems: { href: string; label: string; children?: { href: string; label: string }[] }[] = [
     { href: "/", label: "หน้าแรก" },
     { href: "/courses", label: "คอร์สเรียน" },
-    { href: "/mock-exams", label: "ระบบจำลองสอบ" },
+    {
+      href: "/mock-exams",
+      label: "ระบบจำลองสอบ",
+      children: [
+        { href: "/mock-exams", label: "ข้อสอบจำลอง" },
+        { href: "/flashcards", label: "แฟลชการ์ด" },
+      ],
+    },
     { href: "/student-works", label: "ผลงานนักเรียน" },
     { href: "/study-plans", label: "แผนการเรียน" },
     { href: "/about", label: "เกี่ยวกับเรา" },
     { href: "/exam-bank", label: "คลังข้อสอบ" },
   ]
+
+  const isMenuItemActive = (item: (typeof menuItems)[number]) =>
+    pathname === item.href || !!item.children?.some((child) => pathname === child.href)
 
   return (
     <>
@@ -124,15 +134,41 @@ export function Navigation() {
             </Link>
 
             <div className="hidden lg:flex items-center space-x-1 lg:pr-4 xl:pr-10">
-              {menuItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`px-3 xl:px-4 py-2 text-sm xl:text-lg font-medium whitespace-nowrap transition-colors duration-200 ${pathname === item.href ? "text-[#004B7D] border-b-2 border-[#004B7D]" : "text-gray-700 hover:text-[#004B7D] "}`}
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {menuItems.map((item) => {
+                const activeClass = isMenuItemActive(item)
+                  ? "text-[#004B7D] border-b-2 border-[#004B7D]"
+                  : "text-gray-700 hover:text-[#004B7D] "
+                const baseClass = `px-3 xl:px-4 py-2 text-sm xl:text-lg font-medium whitespace-nowrap transition-colors duration-200 ${activeClass}`
+
+                if (!item.children) {
+                  return (
+                    <Link key={item.href} href={item.href} className={baseClass}>
+                      {item.label}
+                    </Link>
+                  )
+                }
+
+                return (
+                  <div key={item.href} className="relative group">
+                    <Link href={item.href} className={`inline-flex items-center gap-1 ${baseClass}`}>
+                      {item.label}
+                      <ChevronDown className="h-4 w-4 transition-transform duration-200 group-hover:rotate-180" />
+                    </Link>
+                    {/* Opens on hover, and on keyboard focus for accessibility */}
+                    <div className="invisible absolute left-0 top-full z-50 min-w-[200px] translate-y-1 rounded-lg border border-gray-100 bg-white py-2 opacity-0 shadow-lg transition duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                      {item.children.map((child) => (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          className={`block px-4 py-2 text-sm font-medium transition-colors duration-200 ${pathname === child.href ? "bg-[#004B7D1A] text-[#004B7D]" : "text-gray-700 hover:bg-[#004B7D1A] hover:text-[#004B7D]"}`}
+                        >
+                          {child.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
 
               <Link
                 href="/cart"
@@ -231,14 +267,29 @@ export function Navigation() {
               >
                 <div className="px-2 pt-2 pb-3 space-y-3 bg-white border-t border-gray-200 shadow-sm rounded-lg mb-4">
                   {menuItems.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setIsOpen(false)}
-                      className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${pathname === item.href ? "text-[#004B7D] border-l-4 border-[#004B7D] bg-[#004B7D1A]" : "text-gray-700 hover:text-[#004B7D] hover:bg-[#004B7D1A]"}`}
-                    >
-                      {item.label}
-                    </Link>
+                    <div key={item.href}>
+                      <Link
+                        href={item.href}
+                        onClick={() => setIsOpen(false)}
+                        className={`block px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${isMenuItemActive(item) ? "text-[#004B7D] border-l-4 border-[#004B7D] bg-[#004B7D1A]" : "text-gray-700 hover:text-[#004B7D] hover:bg-[#004B7D1A]"}`}
+                      >
+                        {item.label}
+                      </Link>
+                      {item.children && (
+                        <div className="mt-1 ml-4 space-y-1 border-l border-gray-200 pl-3">
+                          {item.children.map((child) => (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              onClick={() => setIsOpen(false)}
+                              className={`block px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${pathname === child.href ? "bg-[#004B7D1A] text-[#004B7D]" : "text-gray-600 hover:bg-[#004B7D1A] hover:text-[#004B7D]"}`}
+                            >
+                              {child.label}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   ))}
                   <Link
                     href="/cart"

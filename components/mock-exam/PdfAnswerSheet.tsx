@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { RenderPageProps, Slot } from "@react-pdf-viewer/core"
-import { Lock, Coins, Loader2, Pencil, Eraser } from "lucide-react"
+import { Lock, Coins, Loader2 } from "lucide-react"
 import PdfViewer from "@/components/pdf/pdf-viewer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import ExamProgressBar from "./ExamProgressBar"
 import DrawableCanvasLayer, { type DrawApi } from "./DrawableCanvasLayer"
+import DrawToolbar, { DEFAULT_DRAW_SETTINGS } from "./DrawToolbar"
+import type { DrawSettings } from "./freehand-engine"
 import type { Question } from "@/app/mock-exams/attempt/[attemptId]/page"
 
 type Answers = Record<string, { optionId?: string; textAnswer?: string; isCorrect?: boolean }>
@@ -42,30 +44,45 @@ export default function PdfAnswerSheet({
 }) {
   const answeredCount = questions.filter((q) => answers[q.id]?.optionId || answers[q.id]?.textAnswer).length
 
-  const [penEnabled, setPenEnabled] = useState(false)
+  const [settings, setSettings] = useState<DrawSettings>({ ...DEFAULT_DRAW_SETTINGS, penColor: "#dc2626" })
   const canvasApisRef = useRef<Map<number, DrawApi>>(new Map())
+  const lastDrawnPageRef = useRef<number | null>(null)
+  // Read by registerCanvas, which must stay identity-stable across changes.
+  const settingsRef = useRef(settings)
+  settingsRef.current = settings
 
   const registerCanvas = useCallback(
     (pageIndex: number, api: DrawApi) => {
       canvasApisRef.current.set(pageIndex, api)
-      api.setPenEnabled(penEnabled)
+      api.setSettings(settingsRef.current)
     },
-    // Intentionally not depending on `penEnabled` — this only fires once per
-    // page when it's first registered; the toggle effect below handles
-    // propagating later changes to every already-registered canvas.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Intentionally dependency-free — this only fires once per page when it is
+    // first registered; the effect below propagates later toolbar changes to
+    // every already-registered canvas.
     []
   )
 
-  // Push the toggle to every registered canvas imperatively, since the PDF
-  // viewer may cache each page's rendered output and never re-invoke
-  // renderPage (and therefore DrawableCanvasLayer) after this state changes.
+  const handleActivity = useCallback((pageIndex: number) => {
+    lastDrawnPageRef.current = pageIndex
+  }, [])
+
+  // Push toolbar changes to every registered canvas imperatively, since the PDF
+  // viewer caches each page rendered output and never re-invokes renderPage
+  // (and therefore DrawableCanvasLayer) after this state changes.
   useEffect(() => {
-    canvasApisRef.current.forEach((api) => api.setPenEnabled(penEnabled))
-  }, [penEnabled])
+    canvasApisRef.current.forEach((api) => api.setSettings(settings))
+  }, [settings])
 
   const clearAll = () => {
     canvasApisRef.current.forEach((api) => api.clear())
+  }
+
+  // Undo/redo act on the page the student last drew on, not on every page.
+  const onLastPage = (fn: (api: DrawApi) => void) => {
+    const page = lastDrawnPageRef.current
+    if (page === null) return
+    const api = canvasApisRef.current.get(page)
+    if (api) fn(api)
   }
 
   const renderPage = (props: RenderPageProps) => (
@@ -77,8 +94,9 @@ export default function PdfAnswerSheet({
         width={props.width}
         height={props.height}
         pageIndex={props.pageIndex}
-        initialPenEnabled={penEnabled}
+        initialSettings={settings}
         onRegister={registerCanvas}
+        onActivity={handleActivity}
       />
     </>
   )
@@ -86,16 +104,17 @@ export default function PdfAnswerSheet({
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]" onContextMenu={(e) => e.preventDefault()}>
       <div className="flex flex-col overflow-hidden rounded-lg border">
-        <div className="flex items-center gap-2 border-b bg-gray-50 p-2">
-          <Button type="button" size="sm" variant={penEnabled ? "default" : "outline"} onClick={() => setPenEnabled((v) => !v)}>
-            <Pencil className="mr-1.5 h-3.5 w-3.5" />
-            เขียนบนข้อสอบ
-          </Button>
-          <Button type="button" size="sm" variant="outline" onClick={clearAll}>
-            <Eraser className="mr-1.5 h-3.5 w-3.5" />
-            ล้าง
-          </Button>
-          <span className="ml-auto text-xs text-gray-400">ไม่ถูกบันทึก ใช้สำหรับร่าง/คิดเลขเท่านั้น</span>
+        <div className="flex flex-wrap items-center gap-2 border-b bg-gray-50 p-2">
+          <DrawToolbar
+            settings={settings}
+            onChange={setSettings}
+            onUndo={() => onLastPage((api) => api.undo())}
+            onRedo={() => onLastPage((api) => api.redo())}
+            onClear={clearAll}
+          />
+          <span className="ml-auto hidden text-xs text-gray-400 xl:inline">
+            เลื่อนด้วยนิ้วได้ตลอด • Apple Pencil เขียนได้เลย • ไม่ถูกบันทึก
+          </span>
         </div>
         <div className="h-[75vh] select-none">
           <PdfViewer fileUrl={examPdfUrl} showLayoutSidebar={false} renderPage={renderPage} />
