@@ -1,13 +1,25 @@
 "use client"
 
-import { Lock, Coins, Loader2 } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import type { RenderPageProps, Slot } from "@react-pdf-viewer/core"
+import { Lock, Coins, Loader2, Pencil, Eraser } from "lucide-react"
 import PdfViewer from "@/components/pdf/pdf-viewer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import ExamProgressBar from "./ExamProgressBar"
+import DrawableCanvasLayer, { type DrawApi } from "./DrawableCanvasLayer"
 import type { Question } from "@/app/mock-exams/attempt/[attemptId]/page"
 
 type Answers = Record<string, { optionId?: string; textAnswer?: string; isCorrect?: boolean }>
+
+function renderSlot(slot: Slot, key?: string) {
+  return (
+    <div key={key} {...slot.attrs}>
+      {slot.children}
+      {slot.subSlot && renderSlot(slot.subSlot)}
+    </div>
+  )
+}
 
 export default function PdfAnswerSheet({
   examPdfUrl,
@@ -30,11 +42,63 @@ export default function PdfAnswerSheet({
 }) {
   const answeredCount = questions.filter((q) => answers[q.id]?.optionId || answers[q.id]?.textAnswer).length
 
+  const [penEnabled, setPenEnabled] = useState(false)
+  const canvasApisRef = useRef<Map<number, DrawApi>>(new Map())
+
+  const registerCanvas = useCallback(
+    (pageIndex: number, api: DrawApi) => {
+      canvasApisRef.current.set(pageIndex, api)
+      api.setPenEnabled(penEnabled)
+    },
+    // Intentionally not depending on `penEnabled` — this only fires once per
+    // page when it's first registered; the toggle effect below handles
+    // propagating later changes to every already-registered canvas.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  )
+
+  // Push the toggle to every registered canvas imperatively, since the PDF
+  // viewer may cache each page's rendered output and never re-invoke
+  // renderPage (and therefore DrawableCanvasLayer) after this state changes.
+  useEffect(() => {
+    canvasApisRef.current.forEach((api) => api.setPenEnabled(penEnabled))
+  }, [penEnabled])
+
+  const clearAll = () => {
+    canvasApisRef.current.forEach((api) => api.clear())
+  }
+
+  const renderPage = (props: RenderPageProps) => (
+    <>
+      {renderSlot(props.canvasLayer, "canvas")}
+      {renderSlot(props.textLayer, "text")}
+      {renderSlot(props.annotationLayer, "annotation")}
+      <DrawableCanvasLayer
+        width={props.width}
+        height={props.height}
+        pageIndex={props.pageIndex}
+        initialPenEnabled={penEnabled}
+        onRegister={registerCanvas}
+      />
+    </>
+  )
+
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]" onContextMenu={(e) => e.preventDefault()}>
-      <div className="overflow-hidden rounded-lg border">
+      <div className="flex flex-col overflow-hidden rounded-lg border">
+        <div className="flex items-center gap-2 border-b bg-gray-50 p-2">
+          <Button type="button" size="sm" variant={penEnabled ? "default" : "outline"} onClick={() => setPenEnabled((v) => !v)}>
+            <Pencil className="mr-1.5 h-3.5 w-3.5" />
+            เขียนบนข้อสอบ
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={clearAll}>
+            <Eraser className="mr-1.5 h-3.5 w-3.5" />
+            ล้าง
+          </Button>
+          <span className="ml-auto text-xs text-gray-400">ไม่ถูกบันทึก ใช้สำหรับร่าง/คิดเลขเท่านั้น</span>
+        </div>
         <div className="h-[75vh]">
-          <PdfViewer fileUrl={examPdfUrl} showLayoutSidebar={false} />
+          <PdfViewer fileUrl={examPdfUrl} showLayoutSidebar={false} renderPage={renderPage} />
         </div>
       </div>
 

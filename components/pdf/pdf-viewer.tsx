@@ -1,5 +1,5 @@
 "use client"
-import { Worker, Viewer } from "@react-pdf-viewer/core"
+import { Worker, Viewer, SpecialZoomLevel, type RenderPage } from "@react-pdf-viewer/core"
 import { defaultLayoutPlugin } from "@react-pdf-viewer/default-layout"
 import { Loader2 } from "lucide-react"
 import clsx from "clsx"
@@ -11,11 +11,12 @@ type PdfViewerProps = {
   fileUrl: string
   className?: string
   showLayoutSidebar?: boolean
+  renderPage?: RenderPage
 }
 
 const PDF_WORKER_URL = "https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js"
 
-export function PdfViewer({ fileUrl, className, showLayoutSidebar = true }: PdfViewerProps) {
+export function PdfViewer({ fileUrl, className, showLayoutSidebar = true, renderPage }: PdfViewerProps) {
   const layoutPlugin = defaultLayoutPlugin({
     sidebarTabs: (defaultTabs) => (showLayoutSidebar ? [defaultTabs[0]] : []),
     renderToolbar: () => <div className="hidden" />,
@@ -28,6 +29,8 @@ export function PdfViewer({ fileUrl, className, showLayoutSidebar = true }: PdfV
           <Viewer
             fileUrl={fileUrl}
             plugins={[layoutPlugin]}
+            renderPage={renderPage}
+            defaultScale={SpecialZoomLevel.PageWidth}
             renderLoader={() => (
               <div className="flex h-full items-center justify-center gap-2 text-gray-600">
                 <Loader2 className="h-5 w-5 animate-spin" />

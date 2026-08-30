@@ -179,9 +179,9 @@ export default function MockExamAttemptPage() {
         </div>
       )}
 
-      <div className={padOpen ? "grid grid-cols-1 gap-4 lg:grid-cols-[340px_1fr]" : ""}>
+      <div className={padOpen ? "grid grid-cols-1 gap-4 md:grid-cols-[340px_1fr] md:items-start" : ""}>
         {padOpen && (
-          <div className="h-[75vh] lg:sticky lg:top-4">
+          <div className="h-[75vh] md:sticky md:top-4">
             <AnswerPad />
           </div>
         )}
