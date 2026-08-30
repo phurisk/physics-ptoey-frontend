@@ -97,7 +97,7 @@ export default function PdfAnswerSheet({
           </Button>
           <span className="ml-auto text-xs text-gray-400">ไม่ถูกบันทึก ใช้สำหรับร่าง/คิดเลขเท่านั้น</span>
         </div>
-        <div className="h-[75vh]">
+        <div className="h-[75vh] select-none">
           <PdfViewer fileUrl={examPdfUrl} showLayoutSidebar={false} renderPage={renderPage} />
         </div>
       </div>
