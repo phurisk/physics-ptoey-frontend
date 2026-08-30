@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/requireAdmin"
 
@@ -65,6 +66,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       },
     })
 
+    revalidatePath("/api/posts")
     return NextResponse.json({ success: true, data: post })
   } catch (error: unknown) {
     console.error("Update post error:", error)
@@ -90,6 +92,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     // is enough — no manual cleanup transaction needed (unlike Course).
     await prisma.post.delete({ where: { id } })
 
+    revalidatePath("/api/posts")
     return NextResponse.json({ success: true, message: "ลบบทความสำเร็จ", data: { id: post.id, title: post.title } })
   } catch (error) {
     console.error("Delete post error:", error)

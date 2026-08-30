@@ -151,12 +151,12 @@ export default function MockExamModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[560px]">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-[640px]">
+        <DialogHeader className="shrink-0 border-b px-6 py-4">
           <DialogTitle>{editing ? "แก้ไขข้อสอบจำลอง" : "สร้างข้อสอบจำลองใหม่"}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
           <div className="space-y-2">
             <Label>ชื่อข้อสอบ</Label>
             <Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
@@ -299,7 +299,7 @@ export default function MockExamModal({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
             ยกเลิก
           </Button>

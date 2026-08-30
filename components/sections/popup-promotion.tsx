@@ -56,19 +56,17 @@ export default function PopupPromotion() {
           const json = res.data || {}
           const list: any[] = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : []
           const promo: PromotionPost | null = list.length ? list[0] : null
-          if (!cancelled) {
+          // Only show the popup when there's actually an active promotion —
+          // an empty result means admin turned it off/unfeatured it.
+          if (!cancelled && promo) {
             setData(promo)
             setOpen(true)
           }
-        } else {
-          if (!cancelled) {
-            setOpen(true)
-          }
         }
+        // On a failed/non-2xx request, fail silently — don't show a stale
+        // generic popup just because the API errored.
       } catch {
-        if (!cancelled) {
-          setOpen(true)
-        }
+        // same as above: silently skip showing the popup on error
       } finally {
         if (!cancelled) setLoading(false)
       }

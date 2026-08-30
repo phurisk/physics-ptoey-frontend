@@ -200,12 +200,12 @@ export default function MockQuestionModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[600px]">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-[720px]">
+        <DialogHeader className="shrink-0 border-b px-6 py-4">
           <DialogTitle>{editing ? "แก้ไขคำถาม" : "เพิ่มคำถามใหม่"}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
           <div className="space-y-2">
             <Label>คำถาม</Label>
             <Textarea value={questionText} onChange={(e) => setQuestionText(e.target.value)} rows={3} />
@@ -388,7 +388,7 @@ export default function MockQuestionModal({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
             ยกเลิก
           </Button>

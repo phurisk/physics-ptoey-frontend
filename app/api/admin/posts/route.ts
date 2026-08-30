@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/requireAdmin"
 import type { Prisma } from "@prisma/client"
@@ -109,6 +110,7 @@ export async function POST(req: Request) {
         postType: { select: { id: true, name: true } },
       },
     })
+    revalidatePath("/api/posts")
     return NextResponse.json({ success: true, data: post })
   } catch (error: unknown) {
     console.error("Create post error:", error)
