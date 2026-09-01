@@ -68,6 +68,10 @@ export default function AnswerPad() {
           onPointerMove={(e) => engineRef.current?.pointerMove(e)}
           onPointerUp={(e) => engineRef.current?.pointerUp(e)}
           onPointerCancel={(e) => engineRef.current?.pointerUp(e)}
+          // The compatibility mouse events are what actually start a text-selection
+          // drag; cancelling pointerdown alone does not stop them in every browser.
+          onMouseDown={(e) => e.preventDefault()}
+          onDragStart={(e) => e.preventDefault()}
           className="absolute inset-0"
         />
         <div className="pointer-events-none absolute bottom-2 left-2 text-xs text-gray-300">

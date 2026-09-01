@@ -37,10 +37,18 @@ type Stroke = {
  */
 const BASE_SIZE = 4
 const STROKE_OPTIONS = {
-  smoothing: 0.6,
-  streamline: 0.5,
+  smoothing: 0.55,
+  // Keep this low: streamline pulls the rendered line towards the average of
+  // recent points, so a high value makes the ink visibly trail behind the
+  // cursor — which reads as laggy rather than smooth.
+  streamline: 0.3,
   easing: (t: number) => Math.sin((t * Math.PI) / 2),
 }
+
+/** Above this many live points, flatten the front of the in-progress stroke
+ *  onto the committed bitmap so re-tessellating it every frame stays cheap. */
+const LIVE_FLUSH_AT = 320
+const LIVE_FLUSH_OVERLAP = 12
 
 /** perfect-freehand returns an outline polygon; round its corners into a
  *  fillable path. Built as a Path2D (not an SVG string) to skip re-parsing. */
@@ -73,6 +81,8 @@ export class FreehandEngine {
   private strokes: Stroke[] = []
   private undone: Stroke[] = []
   private live: Pt[] = []
+  /** Points of the current stroke already baked into the committed bitmap. */
+  private liveFlushed: Pt[] = []
   private liveStyle: Omit<Stroke, "pts"> | null = null
   private drawing = false
   private pointerId: number | null = null
@@ -90,6 +100,23 @@ export class FreehandEngine {
     this.ctx = canvas.getContext("2d")!
     this.committed = document.createElement("canvas")
     this.applyStyle()
+
+    // A stroke must end even if the release never reaches the canvas — a
+    // pointerup over another element, a dropped pointer capture, an alt-tab
+    // mid-stroke. Without these the engine stays "held down": the browser keeps
+    // extending a selection across the page and drawing can't resume.
+    window.addEventListener("pointerup", this.endStroke)
+    window.addEventListener("pointercancel", this.endStroke)
+    window.addEventListener("blur", this.endStroke)
+    document.addEventListener("selectstart", this.blockSelection)
+    document.addEventListener("dragstart", this.blockSelection)
+  }
+
+  /** Suppress the browser's own drag-select while a stroke is in progress.
+   *  preventDefault on pointerdown alone is not enough here: Safari and Chrome
+   *  still start a text selection from the compatibility mouse events. */
+  private blockSelection = (e: Event) => {
+    if (this.drawing) e.preventDefault()
   }
 
   /** Resize the backing store to the CSS box times devicePixelRatio, then
@@ -130,7 +157,6 @@ export class FreehandEngine {
    *  so text underneath stays readable; the eraser punches through instead. */
   private styleFor(tool: Exclude<Tool, "hand">, isStylus: boolean): Omit<Stroke, "pts"> {
     const scale = SIZE_SCALE[this.settings.size]
-    const simulatePressure = !isStylus
     if (tool === "eraser") {
       return {
         color: "#000",
@@ -151,13 +177,17 @@ export class FreehandEngine {
         simulatePressure: false,
       }
     }
+    // Taper only where real pressure exists (a stylus). Inferring pressure from
+    // speed with a mouse or finger makes the width wobble on every small change
+    // of pace, which looks unsteady rather than expressive — so those get an
+    // even, predictable line instead.
     return {
       color: this.settings.penColor,
       size: BASE_SIZE * scale,
-      thinning: 0.62,
+      thinning: isStylus ? 0.62 : 0,
       alpha: 1,
       composite: "source-over",
-      simulatePressure,
+      simulatePressure: false,
     }
   }
 
@@ -248,13 +278,21 @@ export class FreehandEngine {
 
     this.drawing = true
     this.pointerId = e.pointerId
-    this.canvas.setPointerCapture(e.pointerId)
-    // Stop the browser turning the drag into a text selection over whatever is
-    // underneath — this is what used to highlight the whole screen.
+    // Capture can be refused (an already-captured pointer, a detached node);
+    // the window-level listeners above still end the stroke if it is.
+    try {
+      this.canvas.setPointerCapture(e.pointerId)
+    } catch {
+      /* ignore */
+    }
+    // Belt and braces against the drag-select: drop whatever the browser has
+    // already selected, then lock selection off for the duration of the stroke.
+    window.getSelection()?.removeAllRanges()
     document.body.style.userSelect = "none"
 
     this.liveStyle = this.styleFor(tool, isStylus)
     this.live = [this.point(e)]
+    this.liveFlushed = []
     this.schedule()
   }
 
@@ -267,33 +305,61 @@ export class FreehandEngine {
     const coalesced = typeof native.getCoalescedEvents === "function" ? native.getCoalescedEvents() : []
     const events = coalesced.length ? coalesced : [native]
     for (const ev of events) this.live.push(this.point(ev))
+    this.flushLiveIfLong()
     this.schedule()
   }
 
+  /** Long strokes: bake all but the tail into the committed bitmap, so the
+   *  per-frame cost of a stroke stays flat instead of creeping up the longer
+   *  the student writes. Only safe for opaque source-over ink — a translucent
+   *  highlighter would darken where the two halves overlap. */
+  private flushLiveIfLong() {
+    const style = this.liveStyle
+    if (!style || this.live.length < LIVE_FLUSH_AT) return
+    if (style.alpha !== 1 || style.composite !== "source-over") return
+    const ctx = this.committed.getContext("2d")
+    if (!ctx) return
+    const head = this.live.slice(0, this.live.length - LIVE_FLUSH_OVERLAP)
+    this.fill(ctx, style, head, false)
+    this.liveFlushed.push(...head)
+    this.live = this.live.slice(head.length)
+  }
+
   pointerUp(e?: React.PointerEvent<HTMLCanvasElement>) {
+    if (e && this.pointerId !== null && e.pointerId !== this.pointerId) return
+    this.endStroke()
+  }
+
+  private endStroke = () => {
     if (!this.drawing) return
-    if (e && e.pointerId !== this.pointerId) return
     this.drawing = false
     this.pointerId = null
     document.body.style.userSelect = ""
-    if (this.live.length && this.liveStyle) {
+    const points = [...this.liveFlushed, ...this.live]
+    if (points.length && this.liveStyle) {
       const stroke: Stroke = {
         ...this.liveStyle,
-        pts: this.live.map(([x, y, p]) => [x / this.w, y / this.h, p] as Pt),
+        pts: points.map(([x, y, p]) => [x / this.w, y / this.h, p] as Pt),
       }
       this.strokes.push(stroke)
       // A new stroke ends the redo chain, as in any editor.
       this.undone = []
       const ctx = this.committed.getContext("2d")
-      if (ctx) this.fill(ctx, stroke, this.live, true)
-      this.live = []
+      if (ctx) this.fill(ctx, stroke, points, true)
       this.onChange?.()
     }
+    this.live = []
+    this.liveFlushed = []
     this.paint()
   }
 
   destroy() {
     if (this.raf) cancelAnimationFrame(this.raf)
+    window.removeEventListener("pointerup", this.endStroke)
+    window.removeEventListener("pointercancel", this.endStroke)
+    window.removeEventListener("blur", this.endStroke)
+    document.removeEventListener("selectstart", this.blockSelection)
+    document.removeEventListener("dragstart", this.blockSelection)
     document.body.style.userSelect = ""
   }
 }

@@ -76,6 +76,10 @@ export default function DrawableCanvasLayer({
       onPointerMove={(e) => engineRef.current?.pointerMove(e)}
       onPointerUp={(e) => engineRef.current?.pointerUp(e)}
       onPointerCancel={(e) => engineRef.current?.pointerUp(e)}
+      // The compatibility mouse events are what actually start a text-selection
+      // drag; cancelling pointerdown alone does not stop them in every browser.
+      onMouseDown={(e) => e.preventDefault()}
+      onDragStart={(e) => e.preventDefault()}
       style={{
         position: "absolute",
         top: 0,
