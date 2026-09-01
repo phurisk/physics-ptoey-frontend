@@ -11,8 +11,8 @@ import DrawToolbar, { DEFAULT_DRAW_SETTINGS } from "./DrawToolbar"
  * Scribble) already converts handwriting to text in any standard form field at
  * the OS level, so that field doesn't need to live in this pad.
  *
- * The pad starts in "hand" mode so a swipe over it still scrolls the page; an
- * Apple Pencil can write at any time without switching tools.
+ * The pad starts in "hand" mode so a swipe over it still scrolls the page;
+ * picking a tool from the toolbar is what turns drawing on.
  */
 export default function AnswerPad() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -75,7 +75,7 @@ export default function AnswerPad() {
           className="absolute inset-0"
         />
         <div className="pointer-events-none absolute bottom-2 left-2 text-xs text-gray-300">
-          {settings.tool === "hand" ? "เลือกปากกาเพื่อเริ่มเขียน (Apple Pencil เขียนได้เลย)" : "พื้นที่ร่าง/คิดเลข (ไม่ถูกบันทึก)"}
+          {settings.tool === "hand" ? "เลือกปากกาเพื่อเริ่มเขียน" : "พื้นที่ร่าง/คิดเลข (ไม่ถูกบันทึก)"}
         </div>
       </div>
     </div>

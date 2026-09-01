@@ -113,7 +113,7 @@ export default function PdfAnswerSheet({
             onClear={clearAll}
           />
           <span className="ml-auto hidden text-xs text-gray-400 xl:inline">
-            เลื่อนด้วยนิ้วได้ตลอด • Apple Pencil เขียนได้เลย • ไม่ถูกบันทึก
+            โหมดมือ = เลื่อนหน้าอย่างเดียว • สิ่งที่เขียนไม่ถูกบันทึก
           </span>
         </div>
         <div className="h-[75vh] select-none">

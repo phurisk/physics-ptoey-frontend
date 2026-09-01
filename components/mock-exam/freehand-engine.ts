@@ -1,6 +1,6 @@
 import getStroke from "perfect-freehand"
 
-/** "hand" = don't draw, just scroll/pan. A stylus still writes in hand mode. */
+/** "hand" = don't draw, just scroll/pan — for every input, stylus included. */
 export type Tool = "hand" | "pen" | "highlighter" | "eraser"
 export type SizeKey = "s" | "m" | "l"
 
@@ -146,9 +146,8 @@ export class FreehandEngine {
 
   private applyStyle() {
     const drawMode = this.settings.tool !== "hand"
-    // In hand mode touch must still scroll the page/PDF — and an actual stylus
-    // keeps drawing anyway (the iPad behaviour: write with the Pencil, scroll
-    // with a finger, no mode switch needed).
+    // In hand mode every input — touch, mouse, stylus — scrolls the page/PDF
+    // instead of drawing.
     this.canvas.style.touchAction = drawMode ? "none" : "auto"
     this.canvas.style.cursor = drawMode ? "crosshair" : "default"
   }
@@ -270,9 +269,10 @@ export class FreehandEngine {
 
   pointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
     const isStylus = e.pointerType === "pen"
-    // Hand mode: touch/mouse scroll, but a stylus can still write.
-    const tool = this.settings.tool === "hand" ? (isStylus ? "pen" : null) : this.settings.tool
-    if (!tool) return
+    // Hand mode means hand mode for every input, stylus included — letting a
+    // pen still draw here turns an attempt to scroll into an accidental mark.
+    if (this.settings.tool === "hand") return
+    const tool = this.settings.tool
     if (e.pointerType === "mouse" && e.buttons !== 1) return
     e.preventDefault()
 
