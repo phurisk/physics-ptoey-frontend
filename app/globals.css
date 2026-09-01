@@ -124,3 +124,14 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* While a freehand stroke is in progress, nothing on the page may start a text
+   selection. An inline user-select on <body> is not enough: descendants set
+   their own (the PDF viewer's text layer declares user-select: text), so this
+   has to outrank them. Applied and removed by FreehandEngine. */
+body.freehand-drawing,
+body.freehand-drawing * {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+}

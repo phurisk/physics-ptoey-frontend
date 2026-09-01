@@ -50,6 +50,11 @@ const STROKE_OPTIONS = {
 const LIVE_FLUSH_AT = 320
 const LIVE_FLUSH_OVERLAP = 12
 
+/** Matches the rule in app/globals.css that hard-disables selection. */
+const DRAWING_CLASS = "freehand-drawing"
+
+const SELECTION_EVENTS = ["selectstart", "dragstart", "mousedown"] as const
+
 /** perfect-freehand returns an outline polygon; round its corners into a
  *  fillable path. Built as a Path2D (not an SVG string) to skip re-parsing. */
 function outlineToPath(outline: number[][]): Path2D {
@@ -90,6 +95,7 @@ export class FreehandEngine {
   private w = 0
   private h = 0
   private dpr = 1
+  private rect: DOMRect | null = null
 
   private settings: DrawSettings
   onChange?: () => void
@@ -108,8 +114,10 @@ export class FreehandEngine {
     window.addEventListener("pointerup", this.endStroke)
     window.addEventListener("pointercancel", this.endStroke)
     window.addEventListener("blur", this.endStroke)
-    document.addEventListener("selectstart", this.blockSelection)
-    document.addEventListener("dragstart", this.blockSelection)
+    // Capture phase, on the document: a React handler on the canvas alone can
+    // be bypassed by anything that stops propagation on the way up, and these
+    // are the events that actually begin a drag-select.
+    for (const type of SELECTION_EVENTS) document.addEventListener(type, this.blockSelection, true)
   }
 
   /** Suppress the browser's own drag-select while a stroke is in progress.
@@ -262,8 +270,16 @@ export class FreehandEngine {
     if (!this.raf) this.raf = requestAnimationFrame(this.paint)
   }
 
+  /** Canvas box, re-read once per event rather than once per point.
+   *  getBoundingClientRect forces a layout, and a stylus can deliver dozens of
+   *  coalesced points in a single move — reading it per point was stalling the
+   *  frame and making fast strokes stutter. */
+  private syncRect() {
+    this.rect = this.canvas.getBoundingClientRect()
+  }
+
   private point(e: { clientX: number; clientY: number; pressure?: number }): Pt {
-    const rect = this.canvas.getBoundingClientRect()
+    const rect = this.rect ?? this.canvas.getBoundingClientRect()
     return [e.clientX - rect.left, e.clientY - rect.top, e.pressure || 0.5]
   }
 
@@ -288,8 +304,9 @@ export class FreehandEngine {
     // Belt and braces against the drag-select: drop whatever the browser has
     // already selected, then lock selection off for the duration of the stroke.
     window.getSelection()?.removeAllRanges()
-    document.body.style.userSelect = "none"
+    document.body.classList.add(DRAWING_CLASS)
 
+    this.syncRect()
     this.liveStyle = this.styleFor(tool, isStylus)
     this.live = [this.point(e)]
     this.liveFlushed = []
@@ -299,6 +316,7 @@ export class FreehandEngine {
   pointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
     if (!this.drawing || e.pointerId !== this.pointerId) return
     e.preventDefault()
+    this.syncRect()
     const native = e.nativeEvent
     // A stylus reports several positions per frame; replaying all of them is
     // what keeps a fast stroke curved instead of a chain of straight chords.
@@ -334,7 +352,7 @@ export class FreehandEngine {
     if (!this.drawing) return
     this.drawing = false
     this.pointerId = null
-    document.body.style.userSelect = ""
+    document.body.classList.remove(DRAWING_CLASS)
     const points = [...this.liveFlushed, ...this.live]
     if (points.length && this.liveStyle) {
       const stroke: Stroke = {
@@ -358,8 +376,7 @@ export class FreehandEngine {
     window.removeEventListener("pointerup", this.endStroke)
     window.removeEventListener("pointercancel", this.endStroke)
     window.removeEventListener("blur", this.endStroke)
-    document.removeEventListener("selectstart", this.blockSelection)
-    document.removeEventListener("dragstart", this.blockSelection)
-    document.body.style.userSelect = ""
+    for (const type of SELECTION_EVENTS) document.removeEventListener(type, this.blockSelection, true)
+    document.body.classList.remove(DRAWING_CLASS)
   }
 }
