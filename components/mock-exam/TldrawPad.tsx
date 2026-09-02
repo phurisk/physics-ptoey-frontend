@@ -30,8 +30,14 @@ export default function TldrawPad() {
           <p className="text-xs text-gray-500">พื้นที่คิดเลข/ร่างคำตอบ (ไม่ถูกบันทึก)</p>
         </div>
       </div>
-      <div className="relative flex-1">
-        <TldrawCanvas />
+      {/* tldraw's root is `width/height: 100%`, and a percentage height does not
+          resolve against a flex-grown box — it collapses to zero and the canvas
+          renders blank. The absolutely-positioned inner div gives it a real
+          height to fill. */}
+      <div className="relative min-h-0 flex-1">
+        <div className="absolute inset-0">
+          <TldrawCanvas />
+        </div>
       </div>
     </div>
   )
