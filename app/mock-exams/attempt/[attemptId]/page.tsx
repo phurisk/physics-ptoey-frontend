@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import PdfAnswerSheet from "@/components/mock-exam/PdfAnswerSheet"
-import TldrawPad from "@/components/mock-exam/TldrawPad"
+import AnswerPad from "@/components/mock-exam/AnswerPad"
 import ExamProgressBar from "@/components/mock-exam/ExamProgressBar"
 import http from "@/lib/http"
 
@@ -182,7 +182,7 @@ export default function MockExamAttemptPage() {
       <div className={padOpen ? "grid grid-cols-1 gap-4 md:grid-cols-[340px_1fr] md:items-start" : ""}>
         {padOpen && (
           <div className="h-[75vh] md:sticky md:top-4">
-            <TldrawPad />
+            <AnswerPad />
           </div>
         )}
 
