@@ -42,11 +42,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const hasAccess = await hasMockExamAccess(user.userId, exam)
       if (!hasAccess) return NextResponse.json({ success: false, error: "กรุณาซื้อข้อสอบนี้ก่อนทำการสอบจริง" }, { status: 403 })
 
-      const completedRealAttempts = await prisma.mockExamAttempt.count({
-        where: { mockExamId, userId: user.userId, mode: "REAL", status: "COMPLETED" },
-      })
-      if (completedRealAttempts >= exam.attemptsAllowed) {
-        return NextResponse.json({ success: false, error: "คุณใช้สิทธิ์การสอบจริงครบแล้ว" }, { status: 403 })
+      // attemptsAllowed === 0 is the admin's "unlimited attempts" setting.
+      if (exam.attemptsAllowed > 0) {
+        const completedRealAttempts = await prisma.mockExamAttempt.count({
+          where: { mockExamId, userId: user.userId, mode: "REAL", status: "COMPLETED" },
+        })
+        if (completedRealAttempts >= exam.attemptsAllowed) {
+          return NextResponse.json({ success: false, error: "คุณใช้สิทธิ์การสอบจริงครบแล้ว" }, { status: 403 })
+        }
       }
     }
 

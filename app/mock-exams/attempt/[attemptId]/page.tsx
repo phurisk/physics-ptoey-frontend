@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { Lock, Coins, Clock, Loader2, CheckCircle2, XCircle, ZoomIn, PenLine } from "lucide-react"
+import { Lock, Coins, Clock, Loader2, ZoomIn, PenLine } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -110,13 +110,14 @@ export default function MockExamAttemptPage() {
     return () => clearInterval(t)
   }, [remaining, handleSubmit])
 
+  // Correctness is never revealed here, in either mode — only after the exam
+  // is submitted, on the result page. Showing it live in practice mode let a
+  // student swap answers until the checkmark went green, so every attempt
+  // could be walked up to 100% before ever pressing "ส่งข้อสอบ".
   const saveAnswer = async (questionId: string, payload: { optionId?: string; textAnswer?: string }) => {
     setAnswers((prev) => ({ ...prev, [questionId]: { ...prev[questionId], ...payload } }))
     try {
-      const res = await http.post(`/api/mock-attempts/${attemptId}/answers`, { questionId, ...payload })
-      if (res.data?.success && data?.mode === "PRACTICE") {
-        setAnswers((prev) => ({ ...prev, [questionId]: { ...prev[questionId], isCorrect: res.data.data.isCorrect } }))
-      }
+      await http.post(`/api/mock-attempts/${attemptId}/answers`, { questionId, ...payload })
     } catch {
       // best-effort autosave; student can retry by re-selecting
     }
@@ -179,13 +180,7 @@ export default function MockExamAttemptPage() {
         </div>
       )}
 
-      <div className={padOpen ? "grid grid-cols-1 gap-4 md:grid-cols-[340px_1fr] md:items-start" : ""}>
-        {padOpen && (
-          <div className="h-[75vh] md:sticky md:top-4">
-            <AnswerPad />
-          </div>
-        )}
-
+      <div className={padOpen ? "grid grid-cols-1 gap-4 md:grid-cols-[1fr_340px] md:items-start" : ""}>
         <div>
           {isPdfMode ? (
             <PdfAnswerSheet
@@ -239,44 +234,28 @@ export default function MockExamAttemptPage() {
                           />
                         ) : (
                           <RadioGroup value={answers[q.id]?.optionId ?? ""} onValueChange={(v) => saveAnswer(q.id, { optionId: v })} className="space-y-2">
-                            {q.options?.map((opt) => {
-                              const isSelected = answers[q.id]?.optionId === opt.id
-                              const revealCorrectness = isPractice && answers[q.id]?.isCorrect != null && isSelected
-                              return (
-                                <div key={opt.id} className="flex items-center gap-2 rounded-md border p-2.5">
-                                  <RadioGroupItem value={opt.id} id={opt.id} />
-                                  <Label htmlFor={opt.id} className="flex flex-1 cursor-pointer items-center gap-2 font-normal">
-                                    {opt.optionImage && (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.preventDefault()
-                                          setPreviewImage(opt.optionImage!)
-                                        }}
-                                        className="shrink-0"
-                                      >
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img src={opt.optionImage} alt="" className="h-14 w-20 rounded-md border object-cover" />
-                                      </button>
-                                    )}
-                                    {opt.optionText}
-                                  </Label>
-                                  {revealCorrectness &&
-                                    (answers[q.id]?.isCorrect ? (
-                                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                    ) : (
-                                      <XCircle className="h-4 w-4 text-red-500" />
-                                    ))}
-                                </div>
-                              )
-                            })}
+                            {q.options?.map((opt) => (
+                              <div key={opt.id} className="flex items-center gap-2 rounded-md border p-2.5">
+                                <RadioGroupItem value={opt.id} id={opt.id} />
+                                <Label htmlFor={opt.id} className="flex flex-1 cursor-pointer items-center gap-2 font-normal">
+                                  {opt.optionImage && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.preventDefault()
+                                        setPreviewImage(opt.optionImage!)
+                                      }}
+                                      className="shrink-0"
+                                    >
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img src={opt.optionImage} alt="" className="h-14 w-20 rounded-md border object-cover" />
+                                    </button>
+                                  )}
+                                  {opt.optionText}
+                                </Label>
+                              </div>
+                            ))}
                           </RadioGroup>
-                        )}
-
-                        {isPractice && q.explanation && answers[q.id]?.isCorrect != null && (
-                          <div className="mt-3 rounded-md bg-muted p-3 text-sm text-muted-foreground">
-                            <strong>คำอธิบาย:</strong> {q.explanation}
-                          </div>
                         )}
                       </>
                     )}
@@ -288,6 +267,12 @@ export default function MockExamAttemptPage() {
             </div>
           )}
         </div>
+
+        {padOpen && (
+          <div className="h-[75vh] md:sticky md:top-4">
+            <AnswerPad />
+          </div>
+        )}
       </div>
 
       <div className="mt-6 flex justify-end">

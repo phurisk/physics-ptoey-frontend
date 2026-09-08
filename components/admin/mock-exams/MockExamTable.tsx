@@ -132,7 +132,7 @@ export default function MockExamTable({
                         {exam.allowRealMode && (
                           <Badge variant="outline" className="flex items-center gap-1 border-amber-200 bg-amber-50 text-amber-700">
                             <Zap className="h-3 w-3" />
-                            สอบจริง ({exam.attemptsAllowed} ครั้ง)
+                            สอบจริง ({exam.attemptsAllowed > 0 ? `${exam.attemptsAllowed} ครั้ง` : "ไม่จำกัด"})
                           </Badge>
                         )}
                       </div>

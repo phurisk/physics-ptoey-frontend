@@ -107,7 +107,7 @@ export default function MockExamDetailPage() {
           <div className="text-muted-foreground">เวลาสอบจริง</div>
         </div>
         <div className="rounded-lg border p-3 text-center">
-          <div className="font-semibold text-foreground">{exam.attemptsAllowed}</div>
+          <div className="font-semibold text-foreground">{exam.attemptsAllowed > 0 ? exam.attemptsAllowed : "ไม่จำกัด"}</div>
           <div className="text-muted-foreground">ครั้ง (สอบจริง)</div>
         </div>
       </div>

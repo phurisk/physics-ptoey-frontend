@@ -4,8 +4,9 @@ import { requireUser } from "@/lib/requireUser"
 import { isQuestionUnlocked, getOrCreateWallet } from "@/lib/mockExamEngine"
 
 // GET: /api/mock-attempts/[attemptId] - the "taking exam" view.
-// PRACTICE mode hides unlocked-locked question content entirely; REAL mode
-// shows all questions but never leaks isCorrect/explanation mid-attempt.
+// Neither mode leaks isCorrect or the explanation while IN_PROGRESS — that
+// information only appears after submit, on the result page. PRACTICE
+// additionally hides not-yet-unlocked question content entirely.
 export async function GET(req: Request, { params }: { params: Promise<{ attemptId: string }> }) {
   const user = requireUser(req)
   if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
@@ -51,16 +52,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ attemptI
             questionText: q.questionText,
             questionImage: q.questionImage,
             questionType: q.questionType,
-            options: q.options,
-            explanation: q.explanation,
-            explanationImages: q.explanationImages,
-            answer: priorAnswer
-              ? { optionId: priorAnswer.optionId, textAnswer: priorAnswer.textAnswer, isCorrect: priorAnswer.isCorrect }
-              : null,
+            options: q.options.map((o) => ({ id: o.id, optionText: o.optionText, optionImage: o.optionImage, order: o.order })),
+            answer: priorAnswer ? { optionId: priorAnswer.optionId, textAnswer: priorAnswer.textAnswer } : null,
           }
         }
 
-        // REAL mode: full question, options without isCorrect, no explanation/grading leak.
+        // REAL mode: same shape, minus the unlock gate.
         return {
           id: q.id,
           order: q.order,

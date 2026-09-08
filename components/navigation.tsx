@@ -148,25 +148,30 @@ export function Navigation() {
                   )
                 }
 
+                // Click-to-open rather than hover: a hover panel was easy to
+                // trigger by accident while passing over the label, and gave
+                // touch/tablet users no way to open it at all.
                 return (
-                  <div key={item.href} className="relative group">
-                    <Link href={item.href} className={`inline-flex items-center gap-1 ${baseClass}`}>
-                      {item.label}
-                      <ChevronDown className="h-4 w-4 transition-transform duration-200 group-hover:rotate-180" />
-                    </Link>
-                    {/* Opens on hover, and on keyboard focus for accessibility */}
-                    <div className="invisible absolute left-0 top-full z-50 min-w-[200px] translate-y-1 rounded-lg border border-gray-100 bg-white py-2 opacity-0 shadow-lg transition duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                  <DropdownMenu key={item.href}>
+                    <DropdownMenuTrigger asChild>
+                      <button type="button" className={`inline-flex items-center gap-1 ${baseClass}`}>
+                        {item.label}
+                        <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="min-w-[200px]">
                       {item.children.map((child) => (
-                        <Link
-                          key={child.href}
-                          href={child.href}
-                          className={`block px-4 py-2 text-sm font-medium transition-colors duration-200 ${pathname === child.href ? "bg-[#004B7D1A] text-[#004B7D]" : "text-gray-700 hover:bg-[#004B7D1A] hover:text-[#004B7D]"}`}
-                        >
-                          {child.label}
-                        </Link>
+                        <DropdownMenuItem key={child.href} asChild>
+                          <Link
+                            href={child.href}
+                            className={`text-sm font-medium ${pathname === child.href ? "bg-[#004B7D1A] text-[#004B7D]" : "text-gray-700"}`}
+                          >
+                            {child.label}
+                          </Link>
+                        </DropdownMenuItem>
                       ))}
-                    </div>
-                  </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )
               })}
 

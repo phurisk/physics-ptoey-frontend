@@ -821,7 +821,7 @@ model MockExam {
   price              Float       @default(0) // 0 = free, no purchase required for REAL mode
   discountPrice      Float?
   passingMarks       Int         @default(0)
-  attemptsAllowed    Int         @default(1) // REAL mode only
+  attemptsAllowed    Int         @default(1) // REAL mode only; 0 = unlimited
   allowPracticeMode  Boolean     @default(true)
   allowRealMode      Boolean     @default(true)
   practiceUnlockCost Int         @default(1)

@@ -4,8 +4,11 @@ import { requireUser } from "@/lib/requireUser"
 import { gradeAnswer, isQuestionUnlocked } from "@/lib/mockExamEngine"
 
 // POST: /api/mock-attempts/[attemptId]/answers - autosave + grade one answer.
-// PRACTICE requires the question be unlocked first. REAL always grades and
-// stores the result, but never reveals it in the response until submit/result.
+// PRACTICE requires the question be unlocked first. Both modes grade and store
+// the result immediately, but neither reveals it in the response until
+// submit/result — revealing PRACTICE answers live let a student flip through
+// options until the checkmark turned green, so every attempt could be walked
+// up to 100% before submitting.
 export async function POST(req: Request, { params }: { params: Promise<{ attemptId: string }> }) {
   const user = requireUser(req)
   if (!user) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 })
@@ -50,15 +53,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ attempt
       },
     })
 
-    const isPractice = attempt.mode === "PRACTICE"
-    return NextResponse.json({
-      success: true,
-      data: {
-        questionId,
-        isCorrect: isPractice ? answer.isCorrect : undefined,
-        marksAwarded: isPractice ? answer.marks : undefined,
-      },
-    })
+    return NextResponse.json({ success: true, data: { questionId } })
   } catch (error) {
     console.error("Save mock exam answer error:", error)
     return NextResponse.json({ success: false, error: "Failed to save answer" }, { status: 500 })

@@ -281,8 +281,25 @@ export default function MockExamModal({
             )}
             {form.allowRealMode && (
               <div className="mt-3 space-y-2">
-                <Label>จำนวนครั้งที่สอบจริงได้</Label>
-                <Input type="number" min={1} value={form.attemptsAllowed} onChange={(e) => setForm((f) => ({ ...f, attemptsAllowed: e.target.value }))} />
+                <div className="flex items-center justify-between">
+                  <Label>จำนวนครั้งที่สอบจริงได้</Label>
+                  <label className="flex items-center gap-1.5 text-xs text-gray-600">
+                    <input
+                      type="checkbox"
+                      checked={form.attemptsAllowed === "0"}
+                      onChange={(e) => setForm((f) => ({ ...f, attemptsAllowed: e.target.checked ? "0" : "1" }))}
+                    />
+                    ไม่จำกัดจำนวนครั้ง
+                  </label>
+                </div>
+                {form.attemptsAllowed !== "0" && (
+                  <Input
+                    type="number"
+                    min={1}
+                    value={form.attemptsAllowed}
+                    onChange={(e) => setForm((f) => ({ ...f, attemptsAllowed: e.target.value }))}
+                  />
+                )}
               </div>
             )}
             {form.allowPracticeMode && (
