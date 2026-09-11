@@ -69,6 +69,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         practiceUnlockCost: body.practiceUnlockCost ? parseInt(body.practiceUnlockCost, 10) : 1,
         isActive: body.isActive ?? true,
         examPdfUrl: body.examPdfUrl || null,
+        optionLabelStyle: body.optionLabelStyle === "LETTER" ? "LETTER" : "NUMBER",
       },
     })
     return NextResponse.json({ success: true, data: exam })

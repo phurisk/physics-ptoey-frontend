@@ -18,6 +18,7 @@ export type AdminMockExam = {
   practiceUnlockCost: number
   isActive: boolean
   examPdfUrl?: string | null
+  optionLabelStyle?: "NUMBER" | "LETTER"
   course?: { id: string; title: string } | null
   _count?: { questions: number; attempts: number }
 }

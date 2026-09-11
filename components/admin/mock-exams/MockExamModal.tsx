@@ -29,6 +29,7 @@ type FormState = {
   practiceUnlockCost: string
   isActive: boolean
   examPdfUrl: string
+  optionLabelStyle: "NUMBER" | "LETTER"
 }
 
 const DEFAULT_VALUES: FormState = {
@@ -47,6 +48,7 @@ const DEFAULT_VALUES: FormState = {
   practiceUnlockCost: "1",
   isActive: true,
   examPdfUrl: "",
+  optionLabelStyle: "NUMBER",
 }
 
 export default function MockExamModal({
@@ -100,6 +102,7 @@ export default function MockExamModal({
         practiceUnlockCost: String(editing.practiceUnlockCost ?? 1),
         isActive: editing.isActive,
         examPdfUrl: editing.examPdfUrl || "",
+        optionLabelStyle: editing.optionLabelStyle === "LETTER" ? "LETTER" : "NUMBER",
       })
     } else {
       setForm(DEFAULT_VALUES)
@@ -146,6 +149,7 @@ export default function MockExamModal({
       practiceUnlockCost: form.practiceUnlockCost || 1,
       isActive: form.isActive,
       examPdfUrl: form.examPdfUrl || null,
+      optionLabelStyle: form.optionLabelStyle,
     })
   }
 
@@ -308,6 +312,20 @@ export default function MockExamModal({
                 <Input type="number" min={1} value={form.practiceUnlockCost} onChange={(e) => setForm((f) => ({ ...f, practiceUnlockCost: e.target.value }))} />
               </div>
             )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>รูปแบบตัวเลือกตอนทำข้อสอบ</Label>
+            <Select value={form.optionLabelStyle} onValueChange={(v) => setForm((f) => ({ ...f, optionLabelStyle: v as "NUMBER" | "LETTER" }))}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="NUMBER">ตัวเลข (1, 2, 3, 4)</SelectItem>
+                <SelectItem value="LETTER">ตัวอักษร (A, B, C, D)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-400">ป้ายกำกับวงกลมคำตอบที่นักเรียนจะเห็นตอนทำข้อสอบ</p>
           </div>
 
           <div className="flex items-center justify-between">

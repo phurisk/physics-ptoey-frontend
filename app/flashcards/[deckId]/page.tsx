@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast"
 import { http } from "@/lib/http"
 import { checkTypedAnswer } from "@/lib/check-typed-answer"
 import { formatInterval } from "@/lib/format-interval"
+import ExamTimer from "@/components/mock-exam/ExamTimer"
 
 type CardOption = { id: string; optionText: string; isCorrect: boolean }
 type StudyCard = {
@@ -48,6 +49,7 @@ export default function FlashcardStudyPage() {
   const [typedAnswer, setTypedAnswer] = useState("")
   const [typedResult, setTypedResult] = useState<{ grade: number; kind: "ok" | "near" | "no" } | null>(null)
   const [grading, setGrading] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -61,6 +63,19 @@ export default function FlashcardStudyPage() {
       active = false
     }
   }, [deckId])
+
+  // Plain elapsed-time stopwatch for the review session — there's no time
+  // limit to enforce here (spaced repetition isn't graded), this is just so
+  // the student can see how long they've spent reviewing. Stops once the
+  // round is done rather than continuing to run in the background.
+  useEffect(() => {
+    if (!queue || index >= queue.cards.length) return
+    const startedAtMs = Date.now() - elapsed * 1000
+    const tick = () => setElapsed(Math.floor((Date.now() - startedAtMs) / 1000))
+    const t = setInterval(tick, 1000)
+    return () => clearInterval(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queue, index >= (queue?.cards.length ?? 0)])
 
   const resetCardState = () => {
     setFlipped(false)
@@ -116,6 +131,8 @@ export default function FlashcardStudyPage() {
           </>
         )}
       </div>
+
+      <ExamTimer seconds={elapsed} label={isDone ? "เวลาที่ใช้ทบทวนทั้งหมด" : "เวลาที่ใช้ทบทวน"} />
 
       {isDone ? (
         <Card>

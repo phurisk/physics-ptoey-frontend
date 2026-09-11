@@ -2,17 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { Lock, Coins, Clock, Loader2, ZoomIn, PenLine } from "lucide-react"
+import { Lock, Coins, Loader2, ZoomIn, PenLine } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import PdfAnswerSheet from "@/components/mock-exam/PdfAnswerSheet"
 import AnswerPad from "@/components/mock-exam/AnswerPad"
 import ExamProgressBar from "@/components/mock-exam/ExamProgressBar"
+import ExamTimer from "@/components/mock-exam/ExamTimer"
+import { optionLabelFor, type OptionLabelStyle } from "@/lib/mock-exam-option-label"
+import { cn } from "@/lib/utils"
 import http from "@/lib/http"
 
 export type Option = { id: string; optionText: string; optionImage?: string | null; isCorrect?: boolean }
@@ -32,17 +33,12 @@ export type Question = {
 type AttemptData = {
   attemptId: string
   mode: "PRACTICE" | "REAL"
-  exam: { id: string; title: string; timeLimit: number | null; examPdfUrl?: string | null }
+  startedAt: string
+  exam: { id: string; title: string; timeLimit: number | null; examPdfUrl?: string | null; optionLabelStyle?: OptionLabelStyle }
   questions: Question[]
   remainingSeconds: number | null
   practiceTokens: number | null
   practiceUnlockCost: number
-}
-
-function formatSeconds(total: number) {
-  const m = Math.floor(total / 60)
-  const s = total % 60
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
 }
 
 export default function MockExamAttemptPage() {
@@ -58,6 +54,7 @@ export default function MockExamAttemptPage() {
   const [remaining, setRemaining] = useState<number | null>(null)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [padOpen, setPadOpen] = useState(true)
+  const [elapsed, setElapsed] = useState(0)
   const submittedRef = useRef(false)
 
   const load = useCallback(async () => {
@@ -109,6 +106,19 @@ export default function MockExamAttemptPage() {
     const t = setInterval(() => setRemaining((r) => (r != null ? r - 1 : r)), 1000)
     return () => clearInterval(t)
   }, [remaining, handleSubmit])
+
+  // Plain elapsed-time stopwatch shown whenever there's no countdown to show
+  // instead (practice mode, or a REAL exam with no time limit) — computed from
+  // the attempt's actual start time so it's still correct after a refresh,
+  // rather than restarting from zero.
+  useEffect(() => {
+    if (!data?.startedAt || remaining != null) return
+    const startedAtMs = new Date(data.startedAt).getTime()
+    const tick = () => setElapsed(Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000)))
+    tick()
+    const t = setInterval(tick, 1000)
+    return () => clearInterval(t)
+  }, [data?.startedAt, remaining])
 
   // Correctness is never revealed here, in either mode — only after the exam
   // is submitted, on the result page. Showing it live in practice mode let a
@@ -173,11 +183,10 @@ export default function MockExamAttemptPage() {
         </div>
       </div>
 
-      {remaining != null && (
-        <div className="fixed right-4 top-4 z-50 flex items-center gap-1 rounded-full bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700 shadow-md">
-          <Clock className="h-4 w-4" />
-          {formatSeconds(remaining)}
-        </div>
+      {remaining != null ? (
+        <ExamTimer seconds={remaining} label="เวลาที่เหลือ" warning={remaining <= 300} />
+      ) : (
+        <ExamTimer seconds={elapsed} label={isPractice ? "เวลาที่ใช้ไป (ฝึกซ้อม)" : "เวลาที่ใช้ไป"} />
       )}
 
       <div className={padOpen ? "grid grid-cols-1 gap-4 md:grid-cols-[1fr_340px] md:items-start" : ""}>
@@ -188,6 +197,7 @@ export default function MockExamAttemptPage() {
               questions={data.questions}
               answers={answers}
               practiceUnlockCost={data.practiceUnlockCost}
+              optionLabelStyle={data.exam.optionLabelStyle}
               unlocking={unlocking}
               onTextChange={(questionId, value) => setAnswers((prev) => ({ ...prev, [questionId]: { ...prev[questionId], textAnswer: value } }))}
               onSaveAnswer={saveAnswer}
@@ -233,29 +243,50 @@ export default function MockExamAttemptPage() {
                             placeholder="พิมพ์คำตอบ..."
                           />
                         ) : (
-                          <RadioGroup value={answers[q.id]?.optionId ?? ""} onValueChange={(v) => saveAnswer(q.id, { optionId: v })} className="space-y-2">
-                            {q.options?.map((opt) => (
-                              <div key={opt.id} className="flex items-center gap-2 rounded-md border p-2.5">
-                                <RadioGroupItem value={opt.id} id={opt.id} />
-                                <Label htmlFor={opt.id} className="flex flex-1 cursor-pointer items-center gap-2 font-normal">
+                          <div role="radiogroup" className="space-y-2">
+                            {q.options?.map((opt, optIdx) => {
+                              const selected = answers[q.id]?.optionId === opt.id
+                              return (
+                                <button
+                                  key={opt.id}
+                                  type="button"
+                                  role="radio"
+                                  aria-checked={selected}
+                                  onClick={() => saveAnswer(q.id, { optionId: opt.id })}
+                                  className={cn(
+                                    "flex w-full items-center gap-3 rounded-md border p-2.5 text-left transition-colors",
+                                    selected ? "border-[#004B7D] bg-[#004B7D0D]" : "border-gray-200 hover:bg-gray-50"
+                                  )}
+                                >
+                                  {/* A filled numbered/lettered bubble, like a real answer sheet — not a
+                                      plain radio dot — per the exam's optionLabelStyle setting. */}
+                                  <span
+                                    className={cn(
+                                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold",
+                                      selected ? "border-[#004B7D] bg-[#004B7D] text-white" : "border-gray-300 text-gray-600"
+                                    )}
+                                  >
+                                    {optionLabelFor(optIdx, data.exam.optionLabelStyle)}
+                                  </span>
                                   {opt.optionImage && (
-                                    <button
-                                      type="button"
+                                    <span
+                                      role="button"
+                                      tabIndex={0}
                                       onClick={(e) => {
-                                        e.preventDefault()
+                                        e.stopPropagation()
                                         setPreviewImage(opt.optionImage!)
                                       }}
                                       className="shrink-0"
                                     >
                                       {/* eslint-disable-next-line @next/next/no-img-element */}
                                       <img src={opt.optionImage} alt="" className="h-14 w-20 rounded-md border object-cover" />
-                                    </button>
+                                    </span>
                                   )}
-                                  {opt.optionText}
-                                </Label>
-                              </div>
-                            ))}
-                          </RadioGroup>
+                                  <span className="flex-1">{opt.optionText}</span>
+                                </button>
+                              )
+                            })}
+                          </div>
                         )}
                       </>
                     )}

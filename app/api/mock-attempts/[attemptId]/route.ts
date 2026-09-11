@@ -85,10 +85,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ attemptI
       data: {
         attemptId: attempt.id,
         mode: attempt.mode,
+        // Lets the client show an elapsed-time stopwatch even when there's no
+        // countdown (practice mode, or a REAL exam with no time limit) — computed
+        // from this rather than started fresh on every page load/refresh.
+        startedAt: attempt.startedAt,
         exam: {
           id: attempt.mockExam.id,
           title: attempt.mockExam.title,
           timeLimit: attempt.mockExam.timeLimit,
+          optionLabelStyle: attempt.mockExam.optionLabelStyle,
           // Proxy path, not the raw Vercel Blob URL — see the pdf route's
           // comment for why: no downloadable link should ever reach the client.
           examPdfUrl: attempt.mockExam.examPdfUrl ? `/api/mock-attempts/${attempt.id}/pdf` : null,

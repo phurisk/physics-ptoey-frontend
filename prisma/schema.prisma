@@ -811,24 +811,25 @@ model MockTopic {
 }
 
 model MockExam {
-  id                 String      @id @default(uuid())
+  id                 String           @id @default(uuid())
   title              String
   description        String?
   courseId           String? // optional tie-in to existing paid-course entitlement
   subject            Subjects
   gradeLevel         GradeLevel?
   timeLimit          Int? // minutes; null = untimed
-  price              Float       @default(0) // 0 = free, no purchase required for REAL mode
+  price              Float            @default(0) // 0 = free, no purchase required for REAL mode
   discountPrice      Float?
-  passingMarks       Int         @default(0)
-  attemptsAllowed    Int         @default(1) // REAL mode only; 0 = unlimited
-  allowPracticeMode  Boolean     @default(true)
-  allowRealMode      Boolean     @default(true)
-  practiceUnlockCost Int         @default(1)
-  isActive           Boolean     @default(true)
+  passingMarks       Int              @default(0)
+  attemptsAllowed    Int              @default(1) // REAL mode only; 0 = unlimited
+  allowPracticeMode  Boolean          @default(true)
+  allowRealMode      Boolean          @default(true)
+  practiceUnlockCost Int              @default(1)
+  isActive           Boolean          @default(true)
   examPdfUrl         String? // when set, students see the PDF answer-sheet mode instead of the typed question list
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
+  optionLabelStyle   OptionLabelStyle @default(NUMBER)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   course    Course?            @relation(fields: [courseId], references: [id])
   questions MockQuestion[]
@@ -899,6 +900,14 @@ enum MockAttemptStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+}
+
+// How choice bubbles are labelled on the exam-taking screen — a real bubble
+// answer sheet in Thailand almost always numbers them, but some question
+// banks are written assuming lettered choices, so it's per-exam.
+enum OptionLabelStyle {
+  NUMBER
+  LETTER
 }
 
 model MockExamAttempt {

@@ -11,6 +11,8 @@ import DrawableCanvasLayer, { type DrawApi } from "./DrawableCanvasLayer"
 import DrawToolbar, { DEFAULT_DRAW_SETTINGS } from "./DrawToolbar"
 import type { DrawSettings } from "./freehand-engine"
 import type { Question } from "@/app/mock-exams/attempt/[attemptId]/page"
+import { optionLabelFor, type OptionLabelStyle } from "@/lib/mock-exam-option-label"
+import { cn } from "@/lib/utils"
 
 type Answers = Record<string, { optionId?: string; textAnswer?: string; isCorrect?: boolean }>
 
@@ -28,6 +30,7 @@ export default function PdfAnswerSheet({
   questions,
   answers,
   practiceUnlockCost,
+  optionLabelStyle,
   unlocking,
   onTextChange,
   onSaveAnswer,
@@ -37,6 +40,7 @@ export default function PdfAnswerSheet({
   questions: Question[]
   answers: Answers
   practiceUnlockCost: number
+  optionLabelStyle?: OptionLabelStyle
   unlocking: string | null
   onTextChange: (questionId: string, value: string) => void
   onSaveAnswer: (questionId: string, payload: { optionId?: string; textAnswer?: string }) => void
@@ -150,23 +154,28 @@ export default function PdfAnswerSheet({
                   className="h-8 text-sm"
                 />
               ) : (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {q.options?.map((opt, optIdx) => {
                     const selected = answers[q.id]?.optionId === opt.id
-                    const label = String.fromCharCode(65 + optIdx)
+                    const label = optionLabelFor(optIdx, optionLabelStyle)
                     return (
                       <button
                         key={opt.id}
                         type="button"
                         onClick={() => onSaveAnswer(q.id, { optionId: opt.id })}
                         title={opt.optionText}
-                        className={`flex h-8 min-w-8 items-center justify-center rounded-md border px-2 text-xs font-medium transition ${
-                          selected ? "border-blue-600 bg-blue-600 text-white" : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
-                        }`}
+                        className={cn(
+                          // A round bubble like a real answer sheet, not a
+                          // square button — this is what's tapped to "shade
+                          // in" a choice.
+                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold transition",
+                          opt.optionImage && "h-14 w-14",
+                          selected ? "border-[#004B7D] bg-[#004B7D] text-white" : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                        )}
                       >
                         {opt.optionImage ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={opt.optionImage} alt={label} className="h-6 w-8 rounded object-cover" />
+                          <img src={opt.optionImage} alt={label} className="h-full w-full rounded-full object-cover" />
                         ) : (
                           label
                         )}
