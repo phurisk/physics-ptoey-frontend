@@ -53,7 +53,7 @@ export default function MockExamAttemptPage() {
   const [submitting, setSubmitting] = useState(false)
   const [remaining, setRemaining] = useState<number | null>(null)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
-  const [padOpen, setPadOpen] = useState(true)
+  const [padOpen, setPadOpen] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const submittedRef = useRef(false)
 
