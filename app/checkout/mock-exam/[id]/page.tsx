@@ -6,9 +6,9 @@ import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
 import { useAuth } from "@/components/auth-provider"
-import { useSchoolRequirement } from "@/hooks/use-school-requirement"
+import { usePersonalInfoRequirement } from "@/hooks/use-personal-info-requirement"
+import PersonalInfoFields from "@/components/checkout/PersonalInfoFields"
 import http from "@/lib/http"
 
 type MockExam = {
@@ -27,7 +27,7 @@ export default function CheckoutMockExamPage() {
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { school, setSchool, needsSchool } = useSchoolRequirement(isAuthenticated)
+  const personalInfo = usePersonalInfoRequirement(isAuthenticated)
 
   useEffect(() => {
     let active = true
@@ -60,15 +60,18 @@ export default function CheckoutMockExamPage() {
   const confirmOrder = async () => {
     if (!exam) return
     setError(null)
-    if (needsSchool && !school.trim()) {
-      setError("กรุณากรอกชื่อโรงเรียน")
+    const personalInfoValidationError = personalInfo.validate()
+    if (personalInfoValidationError) {
+      setError(personalInfoValidationError)
       return
     }
     setCreating(true)
     try {
       const res = await http.post("/api/orders", {
         items: [{ itemType: "MOCK_EXAM", itemId: exam.id, title: exam.title, quantity: 1 }],
-        school: needsSchool ? school.trim() : undefined,
+        school: personalInfo.missing.school ? personalInfo.values.school.trim() : undefined,
+        phone: personalInfo.missing.phone ? personalInfo.values.phone.trim() : undefined,
+        address: personalInfo.missing.address ? personalInfo.values.address.trim() : undefined,
       })
       const json = res.data || {}
       if (json?.success === false) throw new Error(json?.error || "สร้างคำสั่งซื้อไม่สำเร็จ")
@@ -98,12 +101,7 @@ export default function CheckoutMockExamPage() {
             <span className="text-sm text-muted-foreground">ยอดชำระ</span>
             <span className="text-lg font-semibold text-foreground">฿{price.toLocaleString()}</span>
           </div>
-          {needsSchool && (
-            <div className="space-y-2">
-              <div className="text-sm font-medium">โรงเรียน</div>
-              <Input placeholder="ชื่อโรงเรียน" value={school} onChange={(e) => setSchool(e.target.value)} />
-            </div>
-          )}
+          <PersonalInfoFields values={personalInfo.values} missing={personalInfo.missing} onChange={personalInfo.setValue} />
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => router.back()}>

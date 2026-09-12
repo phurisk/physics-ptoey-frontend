@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Loader2 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
-import { useSchoolRequirement } from "@/hooks/use-school-requirement"
+import { usePersonalInfoRequirement } from "@/hooks/use-personal-info-requirement"
+import PersonalInfoFields from "@/components/checkout/PersonalInfoFields"
 import http from "@/lib/http"
 
 type ApiCourse = {
@@ -46,8 +47,8 @@ export default function CheckoutCoursePage() {
   type ShippingAddress = { name: string; phone: string; address: string; district: string; province: string; postalCode: string }
   const [shipping, setShipping] = useState<ShippingAddress>({ name: "", phone: "", address: "", district: "", province: "", postalCode: "" })
   const [shippingError, setShippingError] = useState<string | null>(null)
-  const [schoolError, setSchoolError] = useState<string | null>(null)
-  const { school, setSchool, needsSchool } = useSchoolRequirement(isAuthenticated)
+  const [personalInfoError, setPersonalInfoError] = useState<string | null>(null)
+  const personalInfo = usePersonalInfoRequirement(isAuthenticated)
 
   useEffect(() => {
     if (!couponFromQuery) {
@@ -178,9 +179,10 @@ export default function CheckoutCoursePage() {
     if (!course) return
     if (!isAuthenticated) { router.push(`/courses/${encodeURIComponent(String(id))}`); return }
     setShippingError(null)
-    setSchoolError(null)
-    if (needsSchool && !school.trim()) {
-      setSchoolError("กรุณากรอกชื่อโรงเรียน")
+    setPersonalInfoError(null)
+    const personalInfoValidationError = personalInfo.validate()
+    if (personalInfoValidationError) {
+      setPersonalInfoError(personalInfoValidationError)
       return
     }
     try {
@@ -245,7 +247,9 @@ export default function CheckoutCoursePage() {
         ],
         couponCode: couponCode || undefined,
         shippingAddress: course.isPhysical ? shipping : undefined,
-        school: needsSchool ? school.trim() : undefined,
+        school: personalInfo.missing.school ? personalInfo.values.school.trim() : undefined,
+        phone: personalInfo.missing.phone ? personalInfo.values.phone.trim() : undefined,
+        address: personalInfo.missing.address ? personalInfo.values.address.trim() : undefined,
       })
       const json = res.data || {}
       if (res.status !== 200 && res.status !== 201 || json?.success === false) throw new Error(json?.error || "สร้างคำสั่งซื้อไม่สำเร็จ")
@@ -291,13 +295,12 @@ export default function CheckoutCoursePage() {
                 </div>
               </div>
             )}
-            {needsSchool && (
-              <div className="space-y-2">
-                <div className="text-sm font-medium">โรงเรียน</div>
-                <Input placeholder="ชื่อโรงเรียน" value={school} onChange={(e) => setSchool(e.target.value)} />
-                {schoolError && <div className="text-xs text-red-600">{schoolError}</div>}
-              </div>
-            )}
+            <PersonalInfoFields
+              values={personalInfo.values}
+              missing={personalInfo.missing}
+              onChange={personalInfo.setValue}
+              error={personalInfoError}
+            />
             {course?.isPhysical && (
               <div className="space-y-2">
                 <div className="text-sm font-medium">ที่อยู่จัดส่ง</div>

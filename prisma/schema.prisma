@@ -17,6 +17,8 @@ model User {
   email     String?  @unique // optional — LINE-only users may not have one
   name      String?
   school    String?
+  phone     String?
+  address   String?
   password  String?
   image     String? // profile image, e.g. จาก LINE
   lineId    String?  @unique

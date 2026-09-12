@@ -17,11 +17,13 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json()
-    const { items, couponCode, shippingAddress, school } = body as {
+    const { items, couponCode, shippingAddress, school, phone, address } = body as {
       items: CheckoutItem[]
       couponCode?: string
       shippingAddress?: { name?: string; phone?: string; address?: string; district?: string; province?: string; postalCode?: string }
       school?: string
+      phone?: string
+      address?: string
     }
 
     if (!Array.isArray(items) || items.length === 0) {
@@ -31,14 +33,28 @@ export async function POST(req: Request) {
     const dbUser = await prisma.user.findUnique({ where: { id: user.userId } })
     if (!dbUser) return NextResponse.json({ success: false, error: "ไม่พบผู้ใช้" }, { status: 404 })
 
-    // One-time school capture — required before the first order if not already on file.
-    let schoolToPersist: string | undefined
+    // One-time capture — school/phone/address are required before a user's
+    // first order if not already on file, and persisted onto the profile so
+    // every order after the first skips them.
+    const profileUpdates: { school?: string; phone?: string; address?: string } = {}
+    const missingFields: string[] = []
     if (!dbUser.school) {
-      const trimmedSchool = school?.trim()
-      if (!trimmedSchool) {
-        return NextResponse.json({ success: false, error: "กรุณากรอกชื่อโรงเรียน" }, { status: 400 })
-      }
-      schoolToPersist = trimmedSchool
+      const v = school?.trim()
+      if (!v) missingFields.push("ชื่อโรงเรียน")
+      else profileUpdates.school = v
+    }
+    if (!dbUser.phone) {
+      const v = phone?.trim()
+      if (!v) missingFields.push("เบอร์โทรศัพท์")
+      else profileUpdates.phone = v
+    }
+    if (!dbUser.address) {
+      const v = address?.trim()
+      if (!v) missingFields.push("ที่อยู่")
+      else profileUpdates.address = v
+    }
+    if (missingFields.length > 0) {
+      return NextResponse.json({ success: false, error: `กรุณากรอก: ${missingFields.join(", ")}` }, { status: 400 })
     }
 
     let subtotal = 0
@@ -137,8 +153,8 @@ export async function POST(req: Request) {
       },
     })
 
-    if (schoolToPersist) {
-      await prisma.user.update({ where: { id: user.userId }, data: { school: schoolToPersist } })
+    if (Object.keys(profileUpdates).length > 0) {
+      await prisma.user.update({ where: { id: user.userId }, data: profileUpdates })
     }
 
     try {

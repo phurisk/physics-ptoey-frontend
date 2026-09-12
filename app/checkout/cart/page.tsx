@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input"
 import { useCart } from "@/components/cart-provider"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/components/ui/use-toast"
-import { useSchoolRequirement } from "@/hooks/use-school-requirement"
+import { usePersonalInfoRequirement } from "@/hooks/use-personal-info-requirement"
+import PersonalInfoFields from "@/components/checkout/PersonalInfoFields"
 import http from "@/lib/http"
 
 type ShippingAddress = {
@@ -41,8 +42,8 @@ export default function CartCheckoutPage() {
     postalCode: "",
   })
   const [shippingError, setShippingError] = useState<string | null>(null)
-  const [schoolError, setSchoolError] = useState<string | null>(null)
-  const { school, setSchool, needsSchool } = useSchoolRequirement(isAuthenticated)
+  const [personalInfoError, setPersonalInfoError] = useState<string | null>(null)
+  const personalInfo = usePersonalInfoRequirement(isAuthenticated)
 
   const couponFromQuery = (searchParams?.get("coupon") || "").trim()
   const [couponCode, setCouponCode] = useState<string>(couponFromQuery)
@@ -237,9 +238,10 @@ export default function CartCheckoutPage() {
       return
     }
 
-    setSchoolError(null)
-    if (needsSchool && !school.trim()) {
-      setSchoolError("กรุณากรอกชื่อโรงเรียน")
+    setPersonalInfoError(null)
+    const personalInfoValidationError = personalInfo.validate()
+    if (personalInfoValidationError) {
+      setPersonalInfoError(personalInfoValidationError)
       return
     }
 
@@ -276,7 +278,9 @@ export default function CartCheckoutPage() {
         })),
         couponCode: couponCode ? couponCode.trim() : undefined,
         shippingAddress: anyPhysical ? shipping : undefined,
-        school: needsSchool ? school.trim() : undefined,
+        school: personalInfo.missing.school ? personalInfo.values.school.trim() : undefined,
+        phone: personalInfo.missing.phone ? personalInfo.values.phone.trim() : undefined,
+        address: personalInfo.missing.address ? personalInfo.values.address.trim() : undefined,
       })
       const json = res.data || {}
       if (res.status !== 200 && res.status !== 201 || json?.success === false) {
@@ -412,13 +416,17 @@ export default function CartCheckoutPage() {
                 <span>฿{totalAfterDiscount.toLocaleString()}</span>
               </div>
             </CardContent>
-            {needsSchool && (
+            {personalInfo.needsAny && (
               <>
                 <Separator className="mx-6" />
                 <CardContent className="space-y-2">
-                  <h3 className="text-sm font-semibold text-gray-700">โรงเรียน</h3>
-                  <Input placeholder="ชื่อโรงเรียน" value={school} onChange={(event) => setSchool(event.target.value)} />
-                  {schoolError && <p className="text-xs text-red-500">{schoolError}</p>}
+                  <PersonalInfoFields
+                    values={personalInfo.values}
+                    missing={personalInfo.missing}
+                    onChange={personalInfo.setValue}
+                    error={personalInfoError}
+                    title="ข้อมูลส่วนตัว (กรอกครั้งแรกเท่านั้น)"
+                  />
                 </CardContent>
               </>
             )}
