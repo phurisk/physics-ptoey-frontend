@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Loader2 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { useSchoolRequirement } from "@/hooks/use-school-requirement"
 import http from "@/lib/http"
 
 type ApiCourse = {
@@ -45,6 +46,8 @@ export default function CheckoutCoursePage() {
   type ShippingAddress = { name: string; phone: string; address: string; district: string; province: string; postalCode: string }
   const [shipping, setShipping] = useState<ShippingAddress>({ name: "", phone: "", address: "", district: "", province: "", postalCode: "" })
   const [shippingError, setShippingError] = useState<string | null>(null)
+  const [schoolError, setSchoolError] = useState<string | null>(null)
+  const { school, setSchool, needsSchool } = useSchoolRequirement(isAuthenticated)
 
   useEffect(() => {
     if (!couponFromQuery) {
@@ -175,6 +178,11 @@ export default function CheckoutCoursePage() {
     if (!course) return
     if (!isAuthenticated) { router.push(`/courses/${encodeURIComponent(String(id))}`); return }
     setShippingError(null)
+    setSchoolError(null)
+    if (needsSchool && !school.trim()) {
+      setSchoolError("กรุณากรอกชื่อโรงเรียน")
+      return
+    }
     try {
       if (course.isPhysical) {
         const s = shipping
@@ -237,6 +245,7 @@ export default function CheckoutCoursePage() {
         ],
         couponCode: couponCode || undefined,
         shippingAddress: course.isPhysical ? shipping : undefined,
+        school: needsSchool ? school.trim() : undefined,
       })
       const json = res.data || {}
       if (res.status !== 200 && res.status !== 201 || json?.success === false) throw new Error(json?.error || "สร้างคำสั่งซื้อไม่สำเร็จ")
@@ -280,6 +289,13 @@ export default function CheckoutCoursePage() {
                   <div className="text-sm text-gray-700">ยอดชำระ</div>
                   <div className="text-lg font-semibold">฿{finalTotal.toLocaleString()}</div>
                 </div>
+              </div>
+            )}
+            {needsSchool && (
+              <div className="space-y-2">
+                <div className="text-sm font-medium">โรงเรียน</div>
+                <Input placeholder="ชื่อโรงเรียน" value={school} onChange={(e) => setSchool(e.target.value)} />
+                {schoolError && <div className="text-xs text-red-600">{schoolError}</div>}
               </div>
             )}
             {course?.isPhysical && (

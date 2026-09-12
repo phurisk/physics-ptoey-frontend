@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Loader2 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { useSchoolRequirement } from "@/hooks/use-school-requirement"
 import http from "@/lib/http"
 
 type Ebook = {
@@ -41,6 +42,8 @@ export default function CheckoutEbookPage() {
   const [couponError, setCouponError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [shippingError, setShippingError] = useState<string | null>(null)
+  const [schoolError, setSchoolError] = useState<string | null>(null)
+  const { school, setSchool, needsSchool } = useSchoolRequirement(isAuthenticated)
 
   const [shipping, setShipping] = useState({ name: "", phone: "", address: "", district: "", province: "", postalCode: "" })
 
@@ -173,6 +176,11 @@ export default function CheckoutEbookPage() {
     if (!ebook) return
     if (!isAuthenticated) { router.push("/"); return }
     setShippingError(null)
+    setSchoolError(null)
+    if (needsSchool && !school.trim()) {
+      setSchoolError("กรุณากรอกชื่อโรงเรียน")
+      return
+    }
     try {
       if (ebook.isPhysical) {
         const s = shipping
@@ -236,6 +244,7 @@ export default function CheckoutEbookPage() {
       }
       if (couponCode) payload.couponCode = couponCode
       if (ebook.isPhysical) payload.shippingAddress = shipping
+      if (needsSchool) payload.school = school.trim()
       const res = await http.post(`/api/orders`, payload)
       const json = res.data || {}
       if (res.status !== 200 && res.status !== 201 || json?.success === false) throw new Error(json?.error || "สร้างคำสั่งซื้อไม่สำเร็จ")
@@ -279,6 +288,14 @@ export default function CheckoutEbookPage() {
                 <div className="text-lg font-semibold">฿{Math.max(0, (subtotal || 0) - (discount || 0)).toLocaleString()}</div>
               </div>
             </div>
+
+            {needsSchool && (
+              <div className="space-y-2">
+                <div className="text-sm font-medium">โรงเรียน</div>
+                <Input placeholder="ชื่อโรงเรียน" value={school} onChange={(e) => setSchool(e.target.value)} />
+                {schoolError && <div className="text-xs text-red-600">{schoolError}</div>}
+              </div>
+            )}
 
             {ebook.isPhysical && (
               <div className="space-y-2">

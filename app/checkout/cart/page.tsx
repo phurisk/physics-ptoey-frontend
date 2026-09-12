@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { useCart } from "@/components/cart-provider"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/components/ui/use-toast"
+import { useSchoolRequirement } from "@/hooks/use-school-requirement"
 import http from "@/lib/http"
 
 type ShippingAddress = {
@@ -40,6 +41,8 @@ export default function CartCheckoutPage() {
     postalCode: "",
   })
   const [shippingError, setShippingError] = useState<string | null>(null)
+  const [schoolError, setSchoolError] = useState<string | null>(null)
+  const { school, setSchool, needsSchool } = useSchoolRequirement(isAuthenticated)
 
   const couponFromQuery = (searchParams?.get("coupon") || "").trim()
   const [couponCode, setCouponCode] = useState<string>(couponFromQuery)
@@ -234,6 +237,12 @@ export default function CartCheckoutPage() {
       return
     }
 
+    setSchoolError(null)
+    if (needsSchool && !school.trim()) {
+      setSchoolError("กรุณากรอกชื่อโรงเรียน")
+      return
+    }
+
     if (anyPhysical) {
       const required: Array<keyof ShippingAddress> = ["name", "phone", "address", "district", "province", "postalCode"]
       const missing = required.filter((field) => !shipping[field]?.trim())
@@ -267,6 +276,7 @@ export default function CartCheckoutPage() {
         })),
         couponCode: couponCode ? couponCode.trim() : undefined,
         shippingAddress: anyPhysical ? shipping : undefined,
+        school: needsSchool ? school.trim() : undefined,
       })
       const json = res.data || {}
       if (res.status !== 200 && res.status !== 201 || json?.success === false) {
@@ -402,6 +412,16 @@ export default function CartCheckoutPage() {
                 <span>฿{totalAfterDiscount.toLocaleString()}</span>
               </div>
             </CardContent>
+            {needsSchool && (
+              <>
+                <Separator className="mx-6" />
+                <CardContent className="space-y-2">
+                  <h3 className="text-sm font-semibold text-gray-700">โรงเรียน</h3>
+                  <Input placeholder="ชื่อโรงเรียน" value={school} onChange={(event) => setSchool(event.target.value)} />
+                  {schoolError && <p className="text-xs text-red-500">{schoolError}</p>}
+                </CardContent>
+              </>
+            )}
             {anyPhysical && (
               <>
                 <Separator className="mx-6" />
