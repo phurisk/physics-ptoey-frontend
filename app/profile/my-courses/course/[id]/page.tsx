@@ -642,7 +642,12 @@ export default function CourseDetailPage() {
                         className={`w-full h-full transition-opacity ${hasOverlay ? 'pointer-events-none opacity-0' : 'opacity-100'}`}
                         sandbox="allow-scripts allow-same-origin allow-presentation"
                         allowFullScreen
-                        referrerPolicy="no-referrer"
+                        // No referrerPolicy override here (same as the other Vimeo
+                        // embeds in this codebase) — "no-referrer" hides this site's
+                        // origin from player.vimeo.com, which is exactly what Vimeo's
+                        // domain-restricted embed privacy checks against. Any video
+                        // with that restriction enabled would refuse to play for
+                        // every visitor, with no way to tell from here which ones.
                         allow="autoplay; fullscreen; encrypted-media; picture-in-picture; web-share"
                         title={selectedContent.title}
                       />

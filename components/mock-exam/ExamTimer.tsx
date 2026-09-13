@@ -1,6 +1,7 @@
 "use client"
 
 import { Clock } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 function formatDuration(totalSeconds: number) {
   const total = Math.max(0, Math.floor(totalSeconds))
@@ -13,11 +14,12 @@ function formatDuration(totalSeconds: number) {
 }
 
 /**
- * Large, always-visible exam clock. Deliberately NOT `fixed` — the page has a
- * fixed top navbar (see SiteMain's pt-16/pt-20), and a fixed-positioned badge
- * at top-4 landed underneath/behind it, which is what made the old timer read
- * as "hiding in a tiny corner". `sticky` with a top offset past the navbar
- * keeps it in view while scrolling without that overlap.
+ * Compact exam clock, pinned to the top-right. Deliberately NOT `fixed` — the
+ * page has a fixed top navbar (see SiteMain's pt-16/pt-20), and a
+ * fixed-positioned badge at top-4 landed underneath/behind it. `sticky` with
+ * a top offset past the navbar keeps it in view while scrolling without that
+ * overlap, while `justify-end` keeps it a small corner badge instead of a
+ * full-width bar.
  */
 export default function ExamTimer({
   seconds,
@@ -29,17 +31,20 @@ export default function ExamTimer({
   warning?: boolean
 }) {
   return (
-    <div
-      className={`sticky top-20 z-40 mb-4 flex items-center justify-center gap-3 rounded-2xl border-2 px-6 py-3 shadow-md lg:top-24 ${
-        warning ? "border-red-300 bg-red-50" : "border-[#004B7D]/20 bg-white"
-      }`}
-    >
-      <Clock className={`h-7 w-7 shrink-0 ${warning ? "text-red-600" : "text-[#004B7D]"}`} />
-      <div className="text-center leading-none">
-        <div className={`text-3xl font-bold tabular-nums sm:text-4xl ${warning ? "text-red-700" : "text-[#004B7D]"}`}>
-          {formatDuration(seconds)}
+    <div className="sticky top-20 z-40 mb-4 flex justify-end lg:top-24">
+      <div
+        className={cn(
+          "inline-flex items-center gap-2 rounded-xl border-2 px-3 py-1.5 shadow-md",
+          warning ? "border-red-300 bg-red-50" : "border-[#004B7D]/20 bg-white"
+        )}
+      >
+        <Clock className={cn("h-4 w-4 shrink-0", warning ? "text-red-600" : "text-[#004B7D]")} />
+        <div className="text-right leading-none">
+          <div className={cn("text-base font-bold tabular-nums", warning ? "text-red-700" : "text-[#004B7D]")}>
+            {formatDuration(seconds)}
+          </div>
+          <div className={cn("mt-0.5 text-[10px] font-medium", warning ? "text-red-600" : "text-muted-foreground")}>{label}</div>
         </div>
-        <div className={`mt-1 text-xs font-medium ${warning ? "text-red-600" : "text-muted-foreground"}`}>{label}</div>
       </div>
     </div>
   )

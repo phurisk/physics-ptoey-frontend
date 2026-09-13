@@ -161,8 +161,11 @@ export default function MockExamAttemptPage() {
   const answeredCount = data.questions.filter((q) => answers[q.id]?.optionId || answers[q.id]?.textAnswer).length
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+    // Locked to the viewport (minus the fixed navbar's own height — see
+    // SiteMain's pt-16/pt-20) so the page itself never scrolls; only the
+    // content column and pad below scroll on their own.
+    <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-6xl flex-col overflow-hidden px-4 py-4 lg:h-[calc(100vh-5rem)] lg:py-6">
+      <div className="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-foreground">{data.exam.title}</h1>
           <Badge variant="outline" className="mt-1">
@@ -183,14 +186,16 @@ export default function MockExamAttemptPage() {
         </div>
       </div>
 
-      {remaining != null ? (
-        <ExamTimer seconds={remaining} label="เวลาที่เหลือ" warning={remaining <= 300} />
-      ) : (
-        <ExamTimer seconds={elapsed} label={isPractice ? "เวลาที่ใช้ไป (ฝึกซ้อม)" : "เวลาที่ใช้ไป"} />
-      )}
+      <div className="shrink-0">
+        {remaining != null ? (
+          <ExamTimer seconds={remaining} label="เวลาที่เหลือ" warning={remaining <= 300} />
+        ) : (
+          <ExamTimer seconds={elapsed} label={isPractice ? "เวลาที่ใช้ไป (ฝึกซ้อม)" : "เวลาที่ใช้ไป"} />
+        )}
+      </div>
 
-      <div className={padOpen ? "grid grid-cols-1 gap-4 md:grid-cols-[1fr_340px] md:items-start" : ""}>
-        <div>
+      <div className={`min-h-0 flex-1 ${padOpen ? "grid grid-cols-1 gap-4 md:grid-cols-[1fr_340px] md:items-stretch" : "flex flex-col"}`}>
+        <div className="min-h-0 overflow-y-auto">
           {isPdfMode ? (
             <PdfAnswerSheet
               examPdfUrl={data.exam.examPdfUrl!}
@@ -300,13 +305,13 @@ export default function MockExamAttemptPage() {
         </div>
 
         {padOpen && (
-          <div className="h-[75vh] md:sticky md:top-4">
+          <div className="mt-4 h-64 md:mt-0 md:h-auto">
             <AnswerPad />
           </div>
         )}
       </div>
 
-      <div className="mt-6 flex justify-end">
+      <div className="mt-4 flex shrink-0 justify-end">
         <Button size="lg" onClick={handleSubmit} disabled={submitting}>
           {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           ส่งข้อสอบ
