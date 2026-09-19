@@ -55,6 +55,13 @@ const DRAWING_CLASS = "freehand-drawing"
 
 const SELECTION_EVENTS = ["selectstart", "dragstart", "mousedown"] as const
 
+/** True when the event target / focused element is a text field, where
+ *  selecting text is exactly what the student is trying to do. */
+function isEditingText(target?: EventTarget | null): boolean {
+  const el = (target instanceof Element ? target : (target as Node | null)?.parentElement) ?? document.activeElement
+  return !!el && !!(el as Element).closest?.("input, textarea, [contenteditable=''], [contenteditable='true']")
+}
+
 /** perfect-freehand returns an outline polygon; round its corners into a
  *  fillable path. Built as a Path2D (not an SVG string) to skip re-parsing. */
 function outlineToPath(outline: number[][]): Path2D {
@@ -90,6 +97,8 @@ export class FreehandEngine {
   private liveFlushed: Pt[] = []
   private liveStyle: Omit<Stroke, "pts"> | null = null
   private drawing = false
+  /** Selection stays blocked until this timestamp, even with the pen up. */
+  private blockUntil = 0
   private pointerId: number | null = null
   private raf = 0
   private w = 0
@@ -118,13 +127,52 @@ export class FreehandEngine {
     // be bypassed by anything that stops propagation on the way up, and these
     // are the events that actually begin a drag-select.
     for (const type of SELECTION_EVENTS) document.addEventListener(type, this.blockSelection, true)
+    document.addEventListener("selectionchange", this.clearSelectionIfBlocked)
+
+    // Writing letters and equations is many short strokes with quick taps
+    // (the dot of an "i", the two bars of "=", a crossed "x") and small pauses.
+    // Browsers read that as double-tap / press-and-hold and start selecting
+    // text elsewhere on the page. Continuous circling never does, which is why
+    // only equations misbehaved. Turn every selection path off on the canvas
+    // itself, not just while a stroke is in progress.
+    canvas.style.userSelect = "none"
+    canvas.style.setProperty("-webkit-user-select", "none")
+    canvas.style.setProperty("-webkit-touch-callout", "none")
+    canvas.style.setProperty("-webkit-tap-highlight-color", "transparent")
+    canvas.addEventListener("contextmenu", this.preventDefaultEvent)
+    canvas.addEventListener("touchstart", this.preventTouchDefault, { passive: false })
+  }
+
+  private preventDefaultEvent = (e: Event) => e.preventDefault()
+
+  /** Cancels iOS's press-and-hold selection/callout and double-tap word
+   *  select before they start (pointerdown's preventDefault doesn't reach
+   *  touch events). Only in a drawing tool — hand mode must still scroll. */
+  private preventTouchDefault = (e: TouchEvent) => {
+    if (this.settings.tool !== "hand" && e.cancelable) e.preventDefault()
+  }
+
+  /** If the browser selects something anyway during/just after writing,
+   *  throw the selection away instead of leaving the page highlighted. */
+  private clearSelectionIfBlocked = () => {
+    if (!this.drawing && Date.now() >= this.blockUntil) return
+    if (isEditingText()) return
+    window.getSelection()?.removeAllRanges()
   }
 
   /** Suppress the browser's own drag-select while a stroke is in progress.
    *  preventDefault on pointerdown alone is not enough here: Safari and Chrome
    *  still start a text selection from the compatibility mouse events. */
   private blockSelection = (e: Event) => {
-    if (this.drawing) e.preventDefault()
+    if (this.drawing) {
+      e.preventDefault()
+      return
+    }
+    // Just after a stroke: still stop *selection* (the next quick tap of an "="
+    // or a dotted "i"), but never mousedown — that would stop the student
+    // focusing the short-answer box or hitting a toolbar button — and never
+    // inside a text field.
+    if (e.type !== "mousedown" && Date.now() < this.blockUntil && !isEditingText(e.target)) e.preventDefault()
   }
 
   /** Resize the backing store to the CSS box times devicePixelRatio, then
@@ -351,6 +399,7 @@ export class FreehandEngine {
   private endStroke = () => {
     if (!this.drawing) return
     this.drawing = false
+    this.blockUntil = Date.now() + 800
     this.pointerId = null
     document.body.classList.remove(DRAWING_CLASS)
     const points = [...this.liveFlushed, ...this.live]
@@ -377,6 +426,9 @@ export class FreehandEngine {
     window.removeEventListener("pointercancel", this.endStroke)
     window.removeEventListener("blur", this.endStroke)
     for (const type of SELECTION_EVENTS) document.removeEventListener(type, this.blockSelection, true)
+    document.removeEventListener("selectionchange", this.clearSelectionIfBlocked)
+    this.canvas.removeEventListener("contextmenu", this.preventDefaultEvent)
+    this.canvas.removeEventListener("touchstart", this.preventTouchDefault)
     document.body.classList.remove(DRAWING_CLASS)
   }
 }
