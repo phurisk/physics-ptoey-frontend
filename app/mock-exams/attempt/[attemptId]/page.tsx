@@ -57,6 +57,24 @@ export default function MockExamAttemptPage() {
   const [elapsed, setElapsed] = useState(0)
   const submittedRef = useRef(false)
 
+  // The exam screen is a fixed-height app shell: the page itself must never
+  // scroll — only the question column / PDF / answer panel scroll inside it.
+  // Sizing alone isn't enough (100vh overshoots the visible area on mobile
+  // browsers with a collapsing URL bar), so lock the document too.
+  useEffect(() => {
+    const html = document.documentElement
+    const body = document.body
+    const prev = { html: html.style.overflow, body: body.style.overflow, overscroll: body.style.overscrollBehavior }
+    html.style.overflow = "hidden"
+    body.style.overflow = "hidden"
+    body.style.overscrollBehavior = "none"
+    return () => {
+      html.style.overflow = prev.html
+      body.style.overflow = prev.body
+      body.style.overscrollBehavior = prev.overscroll
+    }
+  }, [])
+
   const load = useCallback(async () => {
     try {
       const res = await http.get(`/api/mock-attempts/${attemptId}`)
@@ -164,7 +182,7 @@ export default function MockExamAttemptPage() {
     // Locked to the viewport (minus the fixed navbar's own height — see
     // SiteMain's pt-16/pt-20) so the page itself never scrolls; only the
     // content column and pad below scroll on their own.
-    <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-6xl flex-col overflow-hidden px-4 py-4 lg:h-[calc(100vh-5rem)] lg:py-6">
+    <div className="mx-auto flex h-[calc(100dvh-4rem)] max-w-6xl flex-col overflow-hidden px-4 py-4 lg:h-[calc(100dvh-5rem)] lg:py-6">
       <div className="mb-4 flex shrink-0 flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-foreground">{data.exam.title}</h1>
@@ -194,8 +212,10 @@ export default function MockExamAttemptPage() {
         )}
       </div>
 
-      <div className={`min-h-0 flex-1 ${padOpen ? "grid grid-cols-1 gap-4 md:grid-cols-[1fr_340px] md:items-stretch" : "flex flex-col"}`}>
-        <div className="min-h-0 overflow-y-auto">
+      <div className={`min-h-0 flex-1 ${padOpen ? "grid grid-cols-1 grid-rows-[minmax(0,1fr)_16rem] gap-4 md:grid-cols-[1fr_340px] md:grid-rows-[minmax(0,1fr)]" : "flex flex-col"}`}>
+        {/* Typed-question mode scrolls this column. PDF mode fills it and lets
+            the PDF viewer / answer panel scroll on their own instead. */}
+        <div className={`min-h-0 flex-1 ${isPdfMode ? "" : "overflow-y-auto"}`}>
           {isPdfMode ? (
             <PdfAnswerSheet
               examPdfUrl={data.exam.examPdfUrl!}
@@ -305,7 +325,7 @@ export default function MockExamAttemptPage() {
         </div>
 
         {padOpen && (
-          <div className="mt-4 h-64 md:mt-0 md:h-auto">
+          <div className="min-h-0">
             <AnswerPad />
           </div>
         )}

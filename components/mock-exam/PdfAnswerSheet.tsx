@@ -106,8 +106,14 @@ export default function PdfAnswerSheet({
   )
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]" onContextMenu={(e) => e.preventDefault()}>
-      <div className="flex flex-col overflow-hidden rounded-lg border">
+    // Fills whatever height the exam page gives it (no fixed vh), so the PDF
+    // and the answer panel scroll inside their own boxes instead of stretching
+    // the page.
+    <div
+      className="grid h-full min-h-0 grid-cols-1 grid-rows-[minmax(0,1fr)_minmax(0,40%)] gap-4 lg:grid-cols-[1fr_300px] lg:grid-rows-[minmax(0,1fr)]"
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border">
         <div className="flex flex-wrap items-center gap-2 border-b bg-gray-50 p-2">
           <DrawToolbar
             settings={settings}
@@ -120,12 +126,12 @@ export default function PdfAnswerSheet({
             โหมดมือ = เลื่อนหน้าอย่างเดียว • สิ่งที่เขียนไม่ถูกบันทึก
           </span>
         </div>
-        <div className="h-[75vh] select-none">
+        <div className="min-h-0 flex-1 select-none">
           <PdfViewer fileUrl={examPdfUrl} showLayoutSidebar={false} renderPage={renderPage} />
         </div>
       </div>
 
-      <div className="flex max-h-[75vh] flex-col gap-3 rounded-lg border p-3">
+      <div className="flex min-h-0 flex-col gap-3 rounded-lg border p-3">
         <h3 className="text-sm font-semibold text-gray-900">รายการคำถาม</h3>
         <div className="flex-1 space-y-2 overflow-y-auto">
           {questions.map((q, idx) => (
