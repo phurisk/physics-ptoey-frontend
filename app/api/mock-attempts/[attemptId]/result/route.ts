@@ -18,7 +18,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ attemptI
     const { attemptId } = await params
     const attempt = await prisma.mockExamAttempt.findUnique({
       where: { id: attemptId },
-      include: { mockExam: { select: { id: true, title: true, subject: true, gradeLevel: true, passingMarks: true, examPdfUrl: true } } },
+      include: { mockExam: { select: { id: true, title: true, subject: true, gradeLevel: true, passingMarks: true, examPdfUrl: true, optionLabelStyle: true } } },
     })
     if (!attempt || attempt.userId !== user.userId) {
       return NextResponse.json({ success: false, error: "ไม่พบการทำข้อสอบนี้" }, { status: 404 })

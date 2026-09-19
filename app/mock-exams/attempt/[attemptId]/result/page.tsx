@@ -25,6 +25,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts"
 import PdfViewer from "@/components/pdf/pdf-viewer"
 import { http } from "@/lib/http"
+import { optionLabelFor, type OptionLabelStyle } from "@/lib/mock-exam-option-label"
 
 type QuestionReview = {
   id: string
@@ -64,7 +65,7 @@ type RecommendedCourse = {
 }
 type ResultView = {
   attempt: { id: string; mode: "PRACTICE" | "REAL"; totalMarks: number; obtainedMarks: number; percentage: number; passed: boolean }
-  mockExam: { id: string; title: string; examPdfUrl?: string | null }
+  mockExam: { id: string; title: string; examPdfUrl?: string | null; optionLabelStyle?: OptionLabelStyle }
   questions: QuestionReview[]
   topicBreakdown: TopicBreakdown[]
   comparison: Comparison
@@ -262,7 +263,17 @@ function TimeAllocationCard({ questions }: { questions: QuestionReview[] }) {
   )
 }
 
-function QuestionReviewCard({ question, index, onPreviewImage }: { question: QuestionReview; index: number; onPreviewImage: (url: string) => void }) {
+function QuestionReviewCard({
+  question,
+  index,
+  optionLabelStyle,
+  onPreviewImage,
+}: {
+  question: QuestionReview
+  index: number
+  optionLabelStyle?: OptionLabelStyle
+  onPreviewImage: (url: string) => void
+}) {
   const sa = question.studentAnswer
   const cardTone = sa?.isCorrect === true ? "border-emerald-200 bg-emerald-50/40" : sa?.isCorrect === false ? "border-red-200 bg-red-50/40" : ""
 
@@ -308,7 +319,7 @@ function QuestionReviewCard({ question, index, onPreviewImage }: { question: Que
           </div>
         ) : (
           <div className="space-y-1.5">
-            {question.options.map((opt) => {
+            {question.options.map((opt, optIdx) => {
               const picked = sa?.optionId === opt.id
               return (
                 <div key={opt.id} className="flex items-center gap-2 text-sm">
@@ -319,6 +330,11 @@ function QuestionReviewCard({ question, index, onPreviewImage }: { question: Que
                   ) : (
                     <span className="h-4 w-4 shrink-0" />
                   )}
+                  {/* "1)" / "A)" — the same numbering the student saw while answering, so the
+                      review reads ✔ 1) … ✗ 2) … and can be matched to what they tapped. */}
+                  <span className={`w-6 shrink-0 font-semibold ${opt.isCorrect ? "text-emerald-700" : picked ? "text-red-600" : "text-muted-foreground"}`}>
+                    {optionLabelFor(optIdx, optionLabelStyle)})
+                  </span>
                   {opt.optionImage && (
                     <button type="button" onClick={() => onPreviewImage(opt.optionImage!)} className="shrink-0">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -468,7 +484,7 @@ export default function MockExamResultPage() {
 
           <div className="space-y-4">
             {result.questions.map((q, idx) => (
-              <QuestionReviewCard key={q.id} question={q} index={idx} onPreviewImage={setPreviewImage} />
+              <QuestionReviewCard key={q.id} question={q} index={idx} optionLabelStyle={result.mockExam.optionLabelStyle} onPreviewImage={setPreviewImage} />
             ))}
           </div>
 
