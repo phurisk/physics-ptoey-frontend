@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
+import { ImageUploadField } from "@/components/admin/shared/ImageUploadField"
+import { FileUploadField } from "@/components/admin/shared/FileUploadField"
 import type { AdminEbook } from "@/hooks/admin/useEbooks"
 
 const ebookSchema = z.object({
@@ -185,9 +187,9 @@ export default function EbookModal({
               name="coverImageUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>URL รูปปก</FormLabel>
+                  <FormLabel>รูปปก</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://..." {...field} />
+                    <ImageUploadField value={field.value ?? ""} onChange={field.onChange} uploadType="ebook-cover" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -200,9 +202,9 @@ export default function EbookModal({
                 name="previewUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>URL ตัวอย่าง (Preview)</FormLabel>
+                    <FormLabel>ไฟล์ตัวอย่าง (Preview)</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://..." {...field} />
+                      <FileUploadField value={field.value ?? ""} onChange={field.onChange} uploadType="ebook-preview" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -213,9 +215,9 @@ export default function EbookModal({
                 name="fileUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>URL ไฟล์ (fileUrl)</FormLabel>
+                    <FormLabel>ไฟล์เต็ม (fileUrl)</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://..." {...field} />
+                      <FileUploadField value={field.value ?? ""} onChange={field.onChange} uploadType="ebook-file" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

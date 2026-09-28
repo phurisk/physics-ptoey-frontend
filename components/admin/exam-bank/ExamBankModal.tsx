@@ -1,9 +1,9 @@
 "use client"
-import { useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Edit, Plus, Loader2, FileIcon, Download } from "lucide-react"
+import { Edit, Plus, Loader2, FileIcon, Download, Upload, X } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,7 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import type { AdminExamBank } from "@/hooks/admin/useExamBank"
+import { useToast } from "@/hooks/use-toast"
+import type { AdminExamBank, AdminExamFile } from "@/hooks/admin/useExamBank"
 
 const examBankSchema = z.object({
   title: z.string().min(1, "กรุณาระบุชื่อข้อสอบ"),
@@ -49,6 +50,7 @@ export default function ExamBankModal({
   onSubmit,
   categories,
   submitting = false,
+  onFilesChanged,
 }: {
   open: boolean
   editing: AdminExamBank | null
@@ -56,8 +58,17 @@ export default function ExamBankModal({
   onSubmit: (values: Record<string, unknown>) => Promise<void>
   categories: { id: string; name: string }[]
   submitting?: boolean
+  /** Called after a file is attached/removed, so the parent list (which owns
+   *  `editing`) can refetch and keep file counts/rows in sync. */
+  onFilesChanged?: () => void
 }) {
+  const { toast } = useToast()
   const form = useForm<ExamBankFormValues>({ resolver: zodResolver(examBankSchema), defaultValues: DEFAULT_VALUES })
+
+  const [files, setFiles] = useState<AdminExamFile[]>([])
+  const [uploadingFile, setUploadingFile] = useState(false)
+  const [deletingFileId, setDeletingFileId] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!open) return
@@ -68,13 +79,63 @@ export default function ExamBankModal({
         categoryId: editing.categoryId ?? "",
         isActive: editing.isActive,
       })
+      setFiles(editing.files)
     } else {
       form.reset(DEFAULT_VALUES)
+      setFiles([])
     }
   }, [open, editing, form])
 
   const handleSubmit = async (values: ExamBankFormValues) => {
     await onSubmit(values)
+  }
+
+  const handleAttachFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ""
+    if (!file || !editing) return
+    setUploadingFile(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("type", "exam-bank-file")
+      const uploadRes = await fetch("/api/upload-blob", { method: "POST", body: formData })
+      const uploadResult = await uploadRes.json()
+      if (!uploadResult.success) throw new Error(uploadResult.error || "Upload failed")
+
+      const attachRes = await fetch(`/api/admin/exam-bank/${editing.id}/files`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName: file.name, filePath: uploadResult.data.url, fileType: file.type, fileSize: file.size }),
+      })
+      const attachResult = await attachRes.json()
+      if (!attachResult.success) throw new Error(attachResult.error || "แนบไฟล์ไม่สำเร็จ")
+
+      setFiles((prev) => [attachResult.data as AdminExamFile, ...prev])
+      onFilesChanged?.()
+      toast({ title: "แนบไฟล์สำเร็จ" })
+    } catch (error) {
+      toast({ variant: "destructive", title: `แนบไฟล์ไม่สำเร็จ: ${error instanceof Error ? error.message : ""}` })
+    } finally {
+      setUploadingFile(false)
+    }
+  }
+
+  const handleRemoveFile = async (fileId: string) => {
+    if (!editing) return
+    setDeletingFileId(fileId)
+    try {
+      const res = await fetch(`/api/admin/exam-bank/${editing.id}/files/${fileId}`, { method: "DELETE" })
+      const result = await res.json()
+      if (!result.success) throw new Error(result.error || "ลบไฟล์ไม่สำเร็จ")
+      setFiles((prev) => prev.filter((f) => f.id !== fileId))
+      onFilesChanged?.()
+      toast({ title: "ลบไฟล์สำเร็จ" })
+    } catch (error) {
+      toast({ variant: "destructive", title: error instanceof Error ? error.message : "ลบไฟล์ไม่สำเร็จ" })
+    } finally {
+      setDeletingFileId(null)
+    }
   }
 
   return (
@@ -157,9 +218,16 @@ export default function ExamBankModal({
 
             {editing && (
               <div className="space-y-2">
-                <FormLabel>ไฟล์แนบ</FormLabel>
+                <div className="flex items-center justify-between">
+                  <FormLabel>ไฟล์แนบ</FormLabel>
+                  <input ref={fileInputRef} type="file" className="hidden" onChange={handleAttachFile} />
+                  <Button type="button" variant="outline" size="sm" disabled={uploadingFile} onClick={() => fileInputRef.current?.click()}>
+                    {uploadingFile ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-1.5 h-3.5 w-3.5" />}
+                    แนบไฟล์
+                  </Button>
+                </div>
                 <div className="rounded-md border border-gray-100">
-                  {editing.files.length === 0 ? (
+                  {files.length === 0 ? (
                     <div className="p-3 text-sm text-gray-400">ยังไม่มีไฟล์แนบสำหรับข้อสอบนี้</div>
                   ) : (
                     <Table>
@@ -168,11 +236,11 @@ export default function ExamBankModal({
                           <TableHead>ชื่อไฟล์</TableHead>
                           <TableHead>ประเภท</TableHead>
                           <TableHead>ขนาด</TableHead>
-                          <TableHead className="text-right">ดาวน์โหลด</TableHead>
+                          <TableHead className="text-right">จัดการ</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {editing.files.map((file) => (
+                        {files.map((file) => (
                           <TableRow key={file.id}>
                             <TableCell className="flex items-center gap-1.5 text-sm">
                               <FileIcon className="h-3.5 w-3.5 text-gray-400" />
@@ -181,15 +249,25 @@ export default function ExamBankModal({
                             <TableCell className="text-sm text-gray-600">{file.fileType || "-"}</TableCell>
                             <TableCell className="text-sm text-gray-600">{formatFileSize(file.fileSize)}</TableCell>
                             <TableCell className="text-right">
-                              <a
-                                href={file.filePath}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
-                              >
-                                <Download className="h-3.5 w-3.5" />
-                                เปิดไฟล์
-                              </a>
+                              <div className="flex items-center justify-end gap-3">
+                                <a
+                                  href={file.filePath}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                  เปิดไฟล์
+                                </a>
+                                <button
+                                  type="button"
+                                  disabled={deletingFileId === file.id}
+                                  onClick={() => handleRemoveFile(file.id)}
+                                  className="text-gray-400 hover:text-red-500 disabled:opacity-50"
+                                >
+                                  {deletingFileId === file.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                                </button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -197,9 +275,6 @@ export default function ExamBankModal({
                     </Table>
                   )}
                 </div>
-                <p className="text-xs text-gray-400">
-                  การอัปโหลด/จัดการไฟล์แนบยังไม่พร้อมใช้งานในหน้านี้ (จะเพิ่มในภายหลัง) — รายการด้านบนเป็นแบบอ่านอย่างเดียว
-                </p>
               </div>
             )}
 

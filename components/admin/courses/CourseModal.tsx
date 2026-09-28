@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
+import { ImageUploadField } from "@/components/admin/shared/ImageUploadField"
 import { getSubjectOptions, getGradeLevelOptions } from "@/lib/constants"
 import type { AdminCourse } from "@/hooks/admin/useCourses"
 
@@ -160,9 +161,9 @@ export default function CourseModal({
               name="coverImageUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>URL รูปปกคอร์ส</FormLabel>
+                  <FormLabel>รูปปกคอร์ส</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://..." {...field} />
+                    <ImageUploadField value={field.value ?? ""} onChange={field.onChange} uploadType="course-cover" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

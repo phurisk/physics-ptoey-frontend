@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { FileUploadField } from "@/components/admin/shared/FileUploadField"
 import type { AdminContent } from "./types"
 
 const TYPE_OPTIONS: { value: AdminContent["contentType"]; label: string }[] = [
@@ -74,7 +75,11 @@ export default function ContentModal({
 
           <div className="space-y-2">
             <Label>{urlLabel}</Label>
-            <Input value={contentUrl} onChange={(e) => setContentUrl(e.target.value)} placeholder="https://..." />
+            {contentType === "PDF" ? (
+              <FileUploadField value={contentUrl} onChange={setContentUrl} uploadType="course-content-pdf" accept="application/pdf" />
+            ) : (
+              <Input value={contentUrl} onChange={(e) => setContentUrl(e.target.value)} placeholder="https://..." />
+            )}
           </div>
         </div>
 

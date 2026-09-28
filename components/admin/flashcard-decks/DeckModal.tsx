@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ImageUploadField } from "@/components/admin/shared/ImageUploadField"
 import { getSubjectOptions, getGradeLevelOptions } from "@/lib/constants"
 import { fetchMockTopicsForSubject, type AdminMockTopic } from "@/hooks/admin/useMockTopics"
 import type { AdminFlashcardDeck } from "@/hooks/admin/useFlashcardDecks"
@@ -132,8 +133,8 @@ export default function DeckModal({
           </div>
 
           <div className="space-y-2">
-            <Label>URL รูปปก (ไม่บังคับ)</Label>
-            <Input value={coverImageUrl} onChange={(e) => setCoverImageUrl(e.target.value)} placeholder="https://..." />
+            <Label>รูปปก (ไม่บังคับ)</Label>
+            <ImageUploadField value={coverImageUrl} onChange={setCoverImageUrl} uploadType="flashcard-deck-cover" />
           </div>
 
           <div className="flex items-center justify-between">

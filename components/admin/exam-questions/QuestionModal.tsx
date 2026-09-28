@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
+import { ImageUploadField } from "@/components/admin/shared/ImageUploadField"
 import { getQuestionTypeOptions } from "@/lib/constants"
 import type { AdminQuestion } from "@/hooks/admin/useExamQuestions"
 
@@ -143,9 +144,9 @@ export default function QuestionModal({
               name="questionImage"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>URL รูปภาพประกอบคำถาม (ถ้ามี)</FormLabel>
+                  <FormLabel>รูปภาพประกอบคำถาม (ถ้ามี)</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://..." {...field} />
+                    <ImageUploadField value={field.value ?? ""} onChange={field.onChange} uploadType="exam-question-image" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

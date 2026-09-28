@@ -2,12 +2,43 @@ import { NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/requireAdmin"
 import { uploadToVercelBlob, generateUniqueFilename, validateFile } from "@/lib/vercel-blob"
 
+const IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
+const EBOOK_DOC_TYPES = [
+  "application/pdf",
+  "application/epub+zip",
+  "application/x-mobipocket-ebook",
+  "application/vnd.amazon.ebook",
+  // Some browsers report EPUB/MOBI (and any file the OS has no mapping for)
+  // as this generic type — reject on that alone and a real ebook upload
+  // fails, so it's allowed here too.
+  "application/octet-stream",
+]
+
 const ALLOWED_TYPES: Record<string, string[]> = {
-  "mock-question-image": ["image/jpeg", "image/jpg", "image/png", "image/webp"],
-  "mock-option-image": ["image/jpeg", "image/jpg", "image/png", "image/webp"],
-  "mock-explanation-image": ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"],
+  "mock-question-image": IMAGE_TYPES,
+  "mock-option-image": IMAGE_TYPES,
+  "mock-explanation-image": [...IMAGE_TYPES, "image/gif"],
   "mock-exam-pdf": ["application/pdf"],
-  "flashcard-image": ["image/jpeg", "image/jpg", "image/png", "image/webp"],
+  "flashcard-image": IMAGE_TYPES,
+  "flashcard-front-image": IMAGE_TYPES,
+  "flashcard-back-image": IMAGE_TYPES,
+  "course-cover": IMAGE_TYPES,
+  "exam-question-image": IMAGE_TYPES,
+  "post-image": IMAGE_TYPES,
+  "ebook-cover": IMAGE_TYPES,
+  "course-content-pdf": ["application/pdf"],
+  "flashcard-deck-cover": IMAGE_TYPES,
+  "ebook-preview": EBOOK_DOC_TYPES,
+  "ebook-file": EBOOK_DOC_TYPES,
+  "exam-bank-file": [
+    ...EBOOK_DOC_TYPES,
+    ...IMAGE_TYPES,
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/zip",
+  ],
   general: [],
 }
 
@@ -17,6 +48,17 @@ const FOLDER_BY_TYPE: Record<string, string> = {
   "mock-explanation-image": "mock-explanations",
   "mock-exam-pdf": "mock-exam-pdfs",
   "flashcard-image": "flashcards",
+  "flashcard-front-image": "flashcards",
+  "flashcard-back-image": "flashcards",
+  "course-cover": "course-covers",
+  "exam-question-image": "exam-questions",
+  "post-image": "posts",
+  "ebook-cover": "ebook-covers",
+  "course-content-pdf": "course-content",
+  "flashcard-deck-cover": "flashcard-decks",
+  "ebook-preview": "ebook-previews",
+  "ebook-file": "ebook-files",
+  "exam-bank-file": "exam-bank-files",
   general: "uploads",
 }
 

@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form"
+import { ImageUploadField } from "@/components/admin/shared/ImageUploadField"
 import type { AdminPost } from "@/hooks/admin/usePosts"
 
 const postSchema = z.object({
@@ -171,9 +172,9 @@ export default function PostModal({
                 name="imageUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>URL รูปภาพ</FormLabel>
+                    <FormLabel>รูปภาพ</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://..." {...field} />
+                      <ImageUploadField value={field.value ?? ""} onChange={field.onChange} uploadType="post-image" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -184,9 +185,9 @@ export default function PostModal({
                 name="imageUrlMobileMode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>URL รูปภาพ (มือถือ)</FormLabel>
+                    <FormLabel>รูปภาพ (มือถือ)</FormLabel>
                     <FormControl>
-                      <Input placeholder="https://..." {...field} />
+                      <ImageUploadField value={field.value ?? ""} onChange={field.onChange} uploadType="post-image" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

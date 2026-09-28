@@ -151,6 +151,7 @@ export default function ExamBankManagement() {
         onSubmit={handleSubmitExam}
         categories={categories}
         submitting={submitting}
+        onFilesChanged={fetchExams}
       />
 
       <DeleteModal open={deleteModalOpen} exam={examToDelete} loading={deleting} onConfirm={confirmDelete} onCancel={cancelDelete} />

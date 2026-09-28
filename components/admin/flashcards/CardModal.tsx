@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ImageUploadField } from "@/components/admin/shared/ImageUploadField"
 import type { AdminFlashcard, AdminFlashcardOption } from "@/hooks/admin/useFlashcards"
 
 const MODE_OPTIONS = [
@@ -32,6 +33,8 @@ export default function CardModal({
 }) {
   const [front, setFront] = useState("")
   const [back, setBack] = useState("")
+  const [frontImage, setFrontImage] = useState("")
+  const [backImage, setBackImage] = useState("")
   const [hint, setHint] = useState("")
   const [answerMode, setAnswerMode] = useState<AdminFlashcard["answerMode"]>("SELF_GRADE")
   const [options, setOptions] = useState<AdminFlashcardOption[]>([
@@ -46,6 +49,8 @@ export default function CardModal({
     if (editing) {
       setFront(editing.front)
       setBack(editing.back)
+      setFrontImage(editing.frontImage || "")
+      setBackImage(editing.backImage || "")
       setHint(editing.hint || "")
       setAnswerMode(editing.answerMode)
       setOptions(editing.options.length ? editing.options : [{ optionText: "", isCorrect: false, order: 0 }, { optionText: "", isCorrect: false, order: 1 }])
@@ -54,6 +59,8 @@ export default function CardModal({
     } else {
       setFront("")
       setBack("")
+      setFrontImage("")
+      setBackImage("")
       setHint("")
       setAnswerMode("SELF_GRADE")
       setOptions([
@@ -84,6 +91,8 @@ export default function CardModal({
     onSubmit({
       front,
       back,
+      frontImage: frontImage || null,
+      backImage: backImage || null,
       hint: hint || null,
       answerMode,
       options: answerMode === "MULTIPLE_CHOICE" ? options.map((o, idx) => ({ optionText: o.optionText, isCorrect: o.isCorrect, order: idx })) : [],
@@ -105,8 +114,16 @@ export default function CardModal({
             <Textarea value={front} onChange={(e) => setFront(e.target.value)} rows={2} />
           </div>
           <div className="space-y-2">
+            <Label>รูปประกอบหน้า (ไม่บังคับ)</Label>
+            <ImageUploadField value={frontImage} onChange={setFrontImage} uploadType="flashcard-front-image" />
+          </div>
+          <div className="space-y-2">
             <Label>หลัง (คำตอบ/คำอธิบาย)</Label>
             <Textarea value={back} onChange={(e) => setBack(e.target.value)} rows={2} />
+          </div>
+          <div className="space-y-2">
+            <Label>รูปประกอบหลัง (ไม่บังคับ)</Label>
+            <ImageUploadField value={backImage} onChange={setBackImage} uploadType="flashcard-back-image" />
           </div>
           <div className="space-y-2">
             <Label>คำใบ้ (ไม่บังคับ)</Label>
