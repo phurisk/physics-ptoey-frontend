@@ -20,6 +20,7 @@ export default function AcademicTeam({ teachers = defaultTeachers }: { teachers?
       คณิต: 4,
       ภาษาอังกฤษ: 5,
       ภาษาจีน: 6,
+      ภาษาไทย: 7,
     }),
     [],
   )
