@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  Copy,
 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
@@ -169,6 +170,21 @@ export default function OrderDetailModal({
   }
 
   const canReview = order?.payment && order.payment.status !== "COMPLETED" && order.payment.status !== "REJECTED"
+
+  // One-click copy of the full shipping block so staff can paste it straight
+  // into a courier app/chat, instead of retyping or selecting text by hand —
+  // the old backoffice had this and it was missing here.
+  const copyShippingAddress = async () => {
+    if (!order?.shipping) return
+    const s = order.shipping
+    const text = [`${s.name} (${s.phone})`, `${s.address} ${s.district} ${s.province} ${s.postalCode}`.trim()].join("\n")
+    try {
+      await navigator.clipboard.writeText(text)
+      toast({ title: "คัดลอกที่อยู่จัดส่งแล้ว" })
+    } catch {
+      toast({ variant: "destructive", title: "คัดลอกไม่สำเร็จ" })
+    }
+  }
 
   return (
     <>
@@ -381,9 +397,15 @@ export default function OrderDetailModal({
               {/* Shipping */}
               {order.shipping && (
                 <div className="rounded-lg border border-gray-200 p-4">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
-                    <Truck className="h-4 w-4 text-blue-600" />
-                    ข้อมูลการจัดส่ง
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                      <Truck className="h-4 w-4 text-blue-600" />
+                      ข้อมูลการจัดส่ง
+                    </div>
+                    <Button variant="outline" size="sm" onClick={copyShippingAddress}>
+                      <Copy className="mr-1.5 h-3.5 w-3.5" />
+                      คัดลอกที่อยู่
+                    </Button>
                   </div>
                   <div className="mb-3 grid grid-cols-1 gap-3 text-sm text-gray-700 sm:grid-cols-2">
                     <div>
